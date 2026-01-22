@@ -16,31 +16,40 @@ import AuditLogs from './components/AuditLogs.tsx';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('bar_pos_user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('bar_pos_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
   });
 
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
-    const saved = localStorage.getItem('bar_pos_audit_logs');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('bar_pos_audit_logs');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
   });
 
   const [businesses, setBusinesses] = useState<Business[]>(() => {
-    const saved = localStorage.getItem('bar_pos_businesses');
-    return saved ? JSON.parse(saved) : [
-      { id: 'bus_1', name: 'The Junction Bar', ownerName: 'Jeniffer', googleSheetId: 'sheet_123', subscriptionStatus: 'Active', createdAt: new Date().toISOString() }
-    ];
+    try {
+      const saved = localStorage.getItem('bar_pos_businesses');
+      return saved ? JSON.parse(saved) : [
+        { id: 'bus_1', name: 'The Junction Bar', ownerName: 'Jeniffer', googleSheetId: 'sheet_123', subscriptionStatus: 'Active', createdAt: new Date().toISOString() }
+      ];
+    } catch { return []; }
   });
 
   const [allUsers, setAllUsers] = useState<User[]>(() => {
-    const saved = localStorage.getItem('bar_pos_all_users');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return parsed.map((u: User) => ({
-        ...u,
-        password: u.password || (u.role === Role.SUPER_ADMIN ? 'admin' : '123')
-      }));
-    }
+    try {
+      const saved = localStorage.getItem('bar_pos_all_users');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.map((u: User) => ({
+          ...u,
+          password: u.password || (u.role === Role.SUPER_ADMIN ? 'admin' : '123')
+        }));
+      }
+    } catch (e) { console.error("Cache load fail", e); }
+    
     return [
       { id: '1', name: 'Jeniffer', role: Role.BARTENDER, avatar: 'https://picsum.photos/seed/jen/100/100', businessId: 'bus_1', status: 'Active', password: '123' },
       { id: '2', name: 'Winnie Admin', role: Role.ADMIN, avatar: 'https://picsum.photos/seed/win/100/100', businessId: 'bus_1', status: 'Active', password: '123' },
@@ -80,17 +89,17 @@ const App: React.FC = () => {
 
   const syncWithCloud = async () => {
     if (!navigator.onLine) {
-      alert("Terminal is currently offline.");
+      alert("System is Offline. Connect to the internet to push data to Google Sheets.");
       return;
     }
 
     setIsSyncing(true);
     try {
-      // Safely access env with a fallback to global window property
-      const API_URL = (process.env as any).API_KEY || (window as any).SYNC_API_URL;
+      // Robust detection of the API key from Vercel environment variables
+      const API_URL = (window as any).process?.env?.API_KEY || (window as any).SYNC_API_URL;
       
       if (!API_URL) {
-        alert("Sync API not configured. Please check Vercel environment variables.");
+        alert("Configuration Missing: Please add 'API_KEY' to your Vercel Environment Variables with the Google Apps Script URL.");
         setIsSyncing(false);
         return;
       }
@@ -110,10 +119,10 @@ const App: React.FC = () => {
       const now = new Date().toLocaleString();
       setLastSync(now);
       localStorage.setItem('bar_pos_last_sync', now);
-      addLog('CLOUD_SYNC', 'Data push to Google Sheets successful');
+      addLog('CLOUD_SYNC', 'Successfully exported all local records to Google Sheets');
     } catch (error) {
-      console.error("Sync failed:", error);
-      alert("Sync failed. Check API URL.");
+      console.error("Cloud connection failure:", error);
+      alert("Cloud Sync failed. Verify your Google Apps Script is deployed as 'Web App' and accessible to 'Anyone'.");
     } finally {
       setIsSyncing(false);
     }
@@ -133,8 +142,6 @@ const App: React.FC = () => {
     localStorage.setItem('bar_pos_audit_logs', JSON.stringify(auditLogs));
     if (currentUser) {
       localStorage.setItem('bar_pos_user', JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem('bar_pos_user');
     }
   }, [products, sales, currentUser, businesses, allUsers, auditLogs]);
 
@@ -152,11 +159,11 @@ const App: React.FC = () => {
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
-    addLog('LOGIN', 'User accessed terminal', user);
+    addLog('LOGIN', 'Session started');
   };
 
   const handleLogout = () => {
-    addLog('LOGOUT', 'User left terminal');
+    addLog('LOGOUT', 'Session terminated');
     setCurrentUser(null);
     setCart([]);
   };
@@ -164,7 +171,7 @@ const App: React.FC = () => {
   const updateProfile = useCallback((updatedUser: User) => {
     setAllUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
     setCurrentUser(updatedUser);
-    addLog('PROFILE UPDATE', 'Updated personal profile details');
+    addLog('PROFILE_UPDATE', 'User changed profile details');
   }, [addLog]);
 
   const addToCart = useCallback((product: Product) => {
@@ -211,30 +218,18 @@ const App: React.FC = () => {
       customerPhone
     };
     setSales(prev => [newSale, ...prev]);
-    addLog('SALE', `Processed transaction ${newSale.id} for Ksh ${newSale.totalAmount.toLocaleString()}`);
+    addLog('SALE', `Order ${newSale.id} completed for Ksh ${newSale.totalAmount}`);
     setCart([]);
     return newSale;
   }, [cart, currentUser, addLog]);
 
   const handleAddBusiness = (biz: Omit<Business, 'id' | 'createdAt'>, initialUser: Omit<User, 'id' | 'businessId' | 'status'>) => {
     const newBusinessId = `bus_${Math.random().toString(36).substr(2, 5)}`;
-    const newBizWithMeta: Business = { 
-      ...biz, 
-      id: newBusinessId, 
-      createdAt: new Date().toISOString() 
-    };
-    
+    const newBizWithMeta: Business = { ...biz, id: newBusinessId, createdAt: new Date().toISOString() };
     setBusinesses(prev => [...prev, newBizWithMeta]);
-    
-    const newUser: User = {
-      ...initialUser,
-      id: Math.random().toString(36).substr(2, 9),
-      businessId: newBusinessId,
-      status: 'Active'
-    };
-    
+    const newUser: User = { ...initialUser, id: Math.random().toString(36).substr(2, 9), businessId: newBusinessId, status: 'Active' };
     setAllUsers(prev => [...prev, newUser]);
-    addLog('PARTNER CREATED', `Onboarded business: ${biz.name}`);
+    addLog('PARTNER_ONBOARD', `New business registered: ${biz.name}`);
   };
 
   if (!currentUser) return <Login onLogin={handleLogin} businesses={businesses} allUsers={allUsers} />;
@@ -256,7 +251,7 @@ const App: React.FC = () => {
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {offline && (
           <div className="bg-amber-500 text-white px-4 py-2 text-center text-[10px] font-black uppercase tracking-[0.2em] animate-pulse shrink-0 z-50">
-            Offline Mode Active • Local Storage only
+            Offline Mode • Records saving to local cache
           </div>
         )}
         <header className="h-16 md:h-20 border-b bg-white flex items-center justify-between px-4 md:px-10 shrink-0 shadow-sm z-10">
@@ -284,31 +279,10 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {currentView === 'POS' && (
-            <POS 
-              products={products} 
-              addToCart={addToCart} 
-              cart={cart}
-              updateCartQuantity={updateCartQuantity}
-              removeFromCart={removeFromCart}
-              onCheckout={checkout}
-              businessName={currentBusiness?.name || 'BarSync'}
-            />
-          )}
-          {currentView === 'INVENTORY' && (
-            <Inventory 
-              products={products} 
-              onUpdate={(p) => { setProducts(prev => prev.map(item => item.id === p.id ? p : item)); addLog('STOCK_UPDATE', p.name); }} 
-              onAdd={(p) => { setProducts(prev => [...prev, { ...p, id: Date.now().toString() } as Product]); }}
-              userRole={currentUser.role}
-            />
-          )}
-          {currentView === 'SUPER_ADMIN_PORTAL' && currentUser.role === Role.SUPER_ADMIN && (
-            <SuperAdminPortal businesses={businesses} onAdd={handleAddBusiness} onUpdate={(u) => setBusinesses(prev => prev.map(b => b.id === u.id ? u : b))} sales={sales} />
-          )}
-          {currentView === 'USER_MANAGEMENT' && (
-            <UserManagement users={allUsers.filter(u => u.businessId === currentUser.businessId)} onAdd={(u) => setAllUsers(prev => [...prev, { ...u, id: Date.now().toString(), businessId: currentUser.businessId!, status: 'Active' }])} onUpdate={(u) => setAllUsers(prev => prev.map(item => item.id === u.id ? u : item))} onDelete={(id) => setAllUsers(prev => prev.filter(u => u.id !== id))} />
-          )}
+          {currentView === 'POS' && <POS products={products} addToCart={addToCart} cart={cart} updateCartQuantity={updateCartQuantity} removeFromCart={removeFromCart} onCheckout={checkout} businessName={currentBusiness?.name || 'BarSync'} />}
+          {currentView === 'INVENTORY' && <Inventory products={products} onUpdate={(p) => { setProducts(prev => prev.map(item => item.id === p.id ? p : item)); addLog('STOCK_UPDATE', p.name); }} onAdd={(p) => { setProducts(prev => [...prev, { ...p, id: Date.now().toString() } as Product]); }} userRole={currentUser.role} />}
+          {currentView === 'SUPER_ADMIN_PORTAL' && currentUser.role === Role.SUPER_ADMIN && <SuperAdminPortal businesses={businesses} onAdd={handleAddBusiness} onUpdate={(u) => setBusinesses(prev => prev.map(b => b.id === u.id ? u : b))} sales={sales} />}
+          {currentView === 'USER_MANAGEMENT' && <UserManagement users={allUsers.filter(u => u.businessId === currentUser.businessId)} onAdd={(u) => setAllUsers(prev => [...prev, { ...u, id: Date.now().toString(), businessId: currentUser.businessId!, status: 'Active' }])} onUpdate={(u) => setAllUsers(prev => prev.map(item => item.id === u.id ? u : item))} onDelete={(id) => setAllUsers(prev => prev.filter(u => u.id !== id))} />}
           {currentView === 'REPORTS' && <Reports sales={sales.filter(s => s.businessId === currentUser.businessId)} businessName={currentBusiness?.name || 'BarSync'} />}
           {currentView === 'AUDIT_LOGS' && <AuditLogs logs={currentUser.role === Role.SUPER_ADMIN ? auditLogs : auditLogs.filter(l => l.businessId === currentUser.businessId)} />}
           {currentView === 'SALES' && <SalesHistory sales={sales.filter(s => s.businessId === currentUser.businessId)} />}

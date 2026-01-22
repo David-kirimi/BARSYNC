@@ -125,6 +125,15 @@ const App: React.FC = () => {
     setCurrentUser(user);
     localStorage.setItem('bar_pos_user', JSON.stringify(user));
 
+    // Role-based redirection
+    if (user.role === Role.SUPER_ADMIN) {
+      setCurrentView('SUPER_ADMIN_PORTAL');
+    } else if (user.role === Role.OWNER || user.role === Role.ADMIN) {
+      setCurrentView('ANALYTICS');
+    } else {
+      setCurrentView('POS');
+    }
+
     if (business) {
       setBusinesses(prev => {
         const exists = prev.find(b => b.id === business.id);

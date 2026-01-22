@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { INITIAL_PRODUCTS } from './constants.tsx';
 import { Product, Sale, User, Role, View, CartItem, Business, AuditLog } from './types.ts';
 import Sidebar from './components/Sidebar.tsx';
@@ -34,6 +34,8 @@ const App: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [backendAlive, setBackendAlive] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(localStorage.getItem('bar_pos_last_sync'));
+  
+  const isInitialLoad = useRef(true);
 
   const addLog = useCallback((action: string, details: string, userOverride?: User) => {
     const user = userOverride || currentUser;
@@ -55,7 +57,7 @@ const App: React.FC = () => {
     const backendUrl = currentBiz?.mongoConnectionString || GLOBAL_BACKEND;
 
     if (!navigator.onLine) {
-      if (!isSilent) alert("Device is offline.");
+      if (!isSilent) console.warn("Offline: Sync skipped.");
       return;
     }
 
@@ -76,7 +78,7 @@ const App: React.FC = () => {
         const now = new Date().toLocaleString();
         setLastSync(now);
         localStorage.setItem('bar_pos_last_sync', now);
-        if (!isSilent) alert("Cloud Sync Success.");
+        if (!isSilent) console.log("Cloud Sync Success.");
       }
     } catch (error) {
       console.error("Sync Failure:", error);
@@ -84,6 +86,20 @@ const App: React.FC = () => {
       if (!isSilent) setIsSyncing(false);
     }
   }, [businesses, currentUser, products, sales, auditLogs, allUsers]);
+
+  // AUTO-SYNC EFFECT: Watches for changes and persists to MongoDB
+  useEffect(() => {
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+      return;
+    }
+    if (currentUser && backendAlive) {
+      const timer = setTimeout(() => {
+        syncWithCloud(true);
+      }, 3000); // 3-second debounce for auto-sync
+      return () => clearTimeout(timer);
+    }
+  }, [products, sales, auditLogs, allUsers, currentUser, backendAlive, syncWithCloud]);
 
   // Fetch all businesses if Super Admin
   useEffect(() => {
@@ -110,6 +126,8 @@ const App: React.FC = () => {
 
   const handleLogin = (user: User, business?: Business, initialState?: any) => {
     setCurrentUser(user);
+    localStorage.setItem('bar_pos_user', JSON.stringify(user));
+    
     if (business) {
       setBusinesses(prev => {
         const exists = prev.find(b => b.id === business.id);
@@ -118,12 +136,11 @@ const App: React.FC = () => {
     }
 
     if (initialState) {
-      if (initialState.products) setProducts(initialState.products);
+      if (initialState.products && initialState.products.length > 0) setProducts(initialState.products);
       if (initialState.sales) setSales(initialState.sales);
       if (initialState.auditLogs) setAuditLogs(initialState.auditLogs);
       if (initialState.users) setAllUsers(initialState.users);
     } else if (user.role !== Role.SUPER_ADMIN) {
-      // If no initial state but business user, set at least the current user in allUsers
       setAllUsers([user]);
     }
 
@@ -138,6 +155,7 @@ const App: React.FC = () => {
     setSales([]);
     setAllUsers([]);
     setProducts(INITIAL_PRODUCTS);
+    isInitialLoad.current = true;
   };
 
   const addToCart = useCallback((product: Product) => {
@@ -188,12 +206,8 @@ const App: React.FC = () => {
     setSales(prev => [newSale, ...prev]);
     addLog('SALE', `Order ${newSale.id} (Ksh ${newSale.totalAmount})`);
     setCart([]);
-
-    if (navigator.onLine && backendAlive) {
-      setTimeout(() => syncWithCloud(true), 500);
-    }
     return newSale;
-  }, [cart, currentUser, addLog, syncWithCloud, backendAlive]);
+  }, [cart, currentUser, addLog]);
 
   const handleAddBusiness = async (biz: Omit<Business, 'id' | 'createdAt'>, initialOwner: Omit<User, 'id' | 'businessId' | 'status'>) => {
     const newBusinessId = `bus_${Math.random().toString(36).substr(2, 5)}`;
@@ -220,7 +234,6 @@ const App: React.FC = () => {
     setBusinesses(prev => prev.map(b => b.id === updatedBiz.id ? updatedBiz : b));
   };
 
-  // Staff Management Sync Wrappers
   const handleAddStaff = (u: Omit<User, 'id' | 'businessId' | 'status'>) => {
     const newUser: User = { 
       ...u, 
@@ -230,20 +243,16 @@ const App: React.FC = () => {
     };
     setAllUsers(prev => [...prev, newUser]);
     addLog('USER_ADD', newUser.name);
-    // Trigger sync after state update
-    setTimeout(() => syncWithCloud(true), 100);
   };
 
   const handleUpdateStaff = (u: User) => {
     setAllUsers(prev => prev.map(item => item.id === u.id ? u : item));
     addLog('USER_UPDATE', u.name);
-    setTimeout(() => syncWithCloud(true), 100);
   };
 
   const handleDeleteStaff = (id: string) => {
     setAllUsers(prev => prev.filter(u => u.id !== id));
     addLog('USER_DELETE', `ID: ${id}`);
-    setTimeout(() => syncWithCloud(true), 100);
   };
 
   if (!currentUser) return <Login onLogin={handleLogin} backendUrl={GLOBAL_BACKEND} />;
@@ -294,7 +303,7 @@ const App: React.FC = () => {
 
           <footer className="mt-12 pt-8 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest pb-10">
             <div className="flex items-center gap-3 mb-4 md:mb-0">
-               <span className="bg-indigo-50 text-indigo-500 px-3 py-1 rounded-full border border-indigo-100">Developed by SLIEMTECH 0757983954</span>
+               <span className="bg-indigo-50 text-indigo-500 px-3 py-1 rounded-full border border-indigo-100 font-bold">Developed by SLIEMTECH 0757983954</span>
             </div>
             <div className="flex items-center gap-2">
               <span>© 2026 BARSYNC POS</span>

@@ -143,7 +143,7 @@ app.post('/api/auth/login', async (req, res) => {
     res.status(200).json({ 
       user: userSafe, 
       business, 
-      state: snapshot ? snapshot : null 
+      state: snapshot || null 
     });
   } catch (err) {
     res.status(500).json({ error: 'Login internal error' });
@@ -178,6 +178,7 @@ app.post('/api/sync', async (req, res) => {
     const { businessId, businessName, data } = req.body;
     const collection = db.collection('sync_history');
     
+    // Ensure we are merging or overwriting based on the client's latest data
     await collection.updateOne(
       { businessId },
       { 
@@ -187,7 +188,7 @@ app.post('/api/sync', async (req, res) => {
           products: data.products || [],
           sales: data.sales || [],
           auditLogs: data.auditLogs || [],
-          users: data.users || [] // Persist staff members
+          users: data.users || []
         }
       },
       { upsert: true }

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { INITIAL_PRODUCTS } from './constants.tsx';
 import { Product, Sale, User, Role, View, CartItem, Business, AuditLog } from './types.ts';
+import { useToast } from './components/Toast.tsx';
 import Sidebar from './components/Sidebar.tsx';
 import POS from './components/POS.tsx';
 import Inventory from './components/Inventory.tsx';
@@ -15,9 +16,10 @@ import Profile from './components/Profile.tsx';
 import AuditLogs from './components/AuditLogs.tsx';
 
 // Using empty string for relative paths in unified repo
-const GLOBAL_BACKEND = ''; 
+const GLOBAL_BACKEND = '';
 
 const App: React.FC = () => {
+  const { showToast } = useToast();
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem('bar_pos_user');
@@ -35,7 +37,7 @@ const App: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [backendAlive, setBackendAlive] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(localStorage.getItem('bar_pos_last_sync'));
-  
+
   const isInitialLoad = useRef(true);
 
   const addLog = useCallback((action: string, details: string, userOverride?: User) => {
@@ -60,7 +62,7 @@ const App: React.FC = () => {
     }
 
     if (!isSilent) setIsSyncing(true);
-    
+
     try {
       const response = await fetch(`${GLOBAL_BACKEND}/api/sync`, {
         method: 'POST',
@@ -122,7 +124,7 @@ const App: React.FC = () => {
   const handleLogin = (user: User, business?: Business, initialState?: any) => {
     setCurrentUser(user);
     localStorage.setItem('bar_pos_user', JSON.stringify(user));
-    
+
     if (business) {
       setBusinesses(prev => {
         const exists = prev.find(b => b.id === business.id);
@@ -217,10 +219,10 @@ const App: React.FC = () => {
       if (response.ok) {
         setBusinesses(prev => [...prev, newBizWithMeta]);
         setAllUsers(prev => [...prev, newUser]);
-        alert("Business Provisioned.");
+        showToast("Business Provisioned.", "success");
       }
     } catch (err) {
-      alert("Failed to save.");
+      showToast("Failed to save.", "error");
     }
   };
 
@@ -234,10 +236,10 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden flex-col md:flex-row">
-      <Sidebar 
-        currentView={currentView} 
-        setView={setCurrentView} 
-        user={currentUser} 
+      <Sidebar
+        currentView={currentView}
+        setView={setCurrentView}
+        user={currentUser}
         onLogout={handleLogout}
         offline={!navigator.onLine}
         onSync={() => syncWithCloud()}
@@ -266,7 +268,7 @@ const App: React.FC = () => {
             {currentView === 'POS' && <POS products={products} addToCart={addToCart} cart={cart} updateCartQuantity={updateCartQuantity} removeFromCart={removeFromCart} onCheckout={checkout} businessName={currentBusiness?.name || 'BarSync'} />}
             {currentView === 'INVENTORY' && <Inventory products={products} onUpdate={(p) => setProducts(prev => prev.map(item => item.id === p.id ? p : item))} onAdd={(p) => setProducts(prev => [...prev, { ...p, id: Date.now().toString() } as Product])} userRole={currentUser.role} />}
             {currentView === 'SUPER_ADMIN_PORTAL' && currentUser.role === Role.SUPER_ADMIN && <SuperAdminPortal businesses={businesses} onAdd={handleAddBusiness} onUpdate={updateBusiness} sales={sales} />}
-            {currentView === 'USER_MANAGEMENT' && <UserManagement users={allUsers} onAdd={(u) => setAllUsers(prev => [...prev, { ...u, id: Date.now().toString(), businessId: currentUser.businessId!, status: 'Active' }])} onUpdate={(u) => setAllUsers(prev => prev.map(item => item.id === u.id ? u : item))} onDelete={(id) => setAllUsers(prev => prev.filter(u => u.id !== id))} />}
+            {currentView === 'USER_MANAGEMENT' && <UserManagement users={allUsers} onAdd={(u) => { setAllUsers(prev => [...prev, { ...u, id: Date.now().toString(), businessId: currentUser.businessId!, status: 'Active' }]); syncWithCloud(true); }} onUpdate={(u) => { setAllUsers(prev => prev.map(item => item.id === u.id ? u : item)); syncWithCloud(true); }} onDelete={(id) => { setAllUsers(prev => prev.filter(u => u.id !== id)); syncWithCloud(true); }} />}
             {currentView === 'REPORTS' && <Reports sales={sales.filter(s => s.businessId === currentUser.businessId)} businessName={currentBusiness?.name || 'BarSync'} />}
             {currentView === 'AUDIT_LOGS' && <AuditLogs logs={currentUser.role === Role.SUPER_ADMIN ? auditLogs : auditLogs.filter(l => l.businessId === currentUser.businessId)} />}
             {currentView === 'SALES' && <SalesHistory sales={sales.filter(s => s.businessId === currentUser.businessId)} />}
@@ -276,7 +278,7 @@ const App: React.FC = () => {
 
           <footer className="mt-12 pt-8 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest pb-10">
             <div className="flex items-center gap-3 mb-4 md:mb-0">
-               <span className="bg-indigo-50 text-indigo-500 px-3 py-1 rounded-full border border-indigo-100 font-bold">Developed by SLIEMTECH 0757983954</span>
+              <span className="bg-indigo-50 text-indigo-500 px-3 py-1 rounded-full border border-indigo-100 font-bold">Developed by SLIEMTECH 0757983954</span>
             </div>
             <div className="flex items-center gap-2">
               <span>© 2026 BARSYNC POS</span>

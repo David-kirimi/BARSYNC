@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { User, Role } from '../types';
+import { useToast } from './Toast';
 
 interface UserManagementProps {
   users: User[];
@@ -10,6 +11,7 @@ interface UserManagementProps {
 }
 
 const UserManagement: React.FC<UserManagementProps> = ({ users, onAdd, onUpdate, onDelete }) => {
+  const { showToast } = useToast();
   const [showAdd, setShowAdd] = useState(false);
   const [newUser, setNewUser] = useState<Omit<User, 'id' | 'businessId' | 'status'>>({
     name: '', role: Role.BARTENDER, avatar: 'https://picsum.photos/seed/new/100/100', password: ''
@@ -22,7 +24,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAdd, onUpdate,
           <h2 className="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Business Staff</h2>
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2">Assign roles and access credentials</p>
         </div>
-        <button 
+        <button
           onClick={() => setShowAdd(true)}
           className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 active:scale-95"
         >
@@ -54,7 +56,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAdd, onUpdate,
                 <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">{u.status}</span>
               </div>
               <div className="flex gap-2">
-                <button 
+                <button
                   onClick={() => onUpdate({ ...u, status: u.status === 'Active' ? 'Inactive' : 'Active' })}
                   className="p-3 bg-slate-50 text-slate-400 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 transition-all"
                   title="Toggle Access"
@@ -62,7 +64,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAdd, onUpdate,
                   <i className="fa-solid fa-power-off"></i>
                 </button>
                 {u.role !== Role.OWNER && (
-                   <button 
+                  <button
                     onClick={() => confirm('Remove this member? All data associated with this user will remain in logs.') && onDelete(u.id)}
                     className="p-3 bg-slate-50 text-slate-400 rounded-xl hover:bg-rose-50 hover:text-rose-600 transition-all"
                     title="Delete Staff"
@@ -84,19 +86,19 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAdd, onUpdate,
             <div className="space-y-6">
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Display Name</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   className="w-full border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none font-bold"
                   value={newUser.name}
-                  onChange={e => setNewUser({...newUser, name: e.target.value})}
+                  onChange={e => setNewUser({ ...newUser, name: e.target.value })}
                 />
               </div>
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Access Role</label>
-                <select 
+                <select
                   className="w-full border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none font-bold appearance-none bg-slate-50"
                   value={newUser.role}
-                  onChange={e => setNewUser({...newUser, role: e.target.value as Role})}
+                  onChange={e => setNewUser({ ...newUser, role: e.target.value as Role })}
                 >
                   <option value={Role.BARTENDER}>Bartender (Terminal Only)</option>
                   <option value={Role.ADMIN}>Business Admin (Terminal + Reports)</option>
@@ -105,18 +107,18 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAdd, onUpdate,
               </div>
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Login PIN / Password</label>
-                <input 
-                  type="password" 
+                <input
+                  type="password"
                   className="w-full border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none font-bold tracking-widest"
                   placeholder="Set Access Code"
                   value={newUser.password}
-                  onChange={e => setNewUser({...newUser, password: e.target.value})}
+                  onChange={e => setNewUser({ ...newUser, password: e.target.value })}
                 />
               </div>
               <div className="flex gap-4 pt-6">
                 <button onClick={() => setShowAdd(false)} className="flex-1 py-4 font-black text-[11px] uppercase tracking-widest text-slate-400 hover:bg-slate-50 rounded-2xl transition-all">Dismiss</button>
-                <button 
-                  onClick={() => { if(!newUser.name || !newUser.password) { alert('Name and Password required'); return; } onAdd(newUser); setShowAdd(false); }} 
+                <button
+                  onClick={() => { if (!newUser.name || !newUser.password) { showToast('Name and Password required', 'warning'); return; } onAdd(newUser); setShowAdd(false); showToast('Staff member added!', 'success'); }}
                   className="flex-1 py-4 bg-indigo-600 text-white font-black text-[11px] uppercase tracking-widest rounded-2xl shadow-xl shadow-indigo-200"
                 >
                   Confirm Staff

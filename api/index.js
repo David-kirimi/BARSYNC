@@ -15,7 +15,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors({
-  origin: '*', 
+  origin: '*',
   methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
   credentials: true
 }));
@@ -48,13 +48,13 @@ async function seedDatabase() {
     const masterAdmin = await usersColl.findOne({ name: 'SLIEM', role: 'SUPER_ADMIN' });
     if (!masterAdmin) {
       console.log("🌱 Provisioning Master Admin: SLIEM...");
-      await usersColl.insertOne({ 
-        id: 'super_sliem', 
-        name: 'SLIEM', 
-        role: 'SUPER_ADMIN', 
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=SLIEM', 
-        status: 'Active', 
-        password: '@SLIEM2040' 
+      await usersColl.insertOne({
+        id: 'super_sliem',
+        name: 'SLIEM',
+        role: 'SUPER_ADMIN',
+        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=SLIEM',
+        status: 'Active',
+        password: '@SLIEM2040'
       });
     }
   } catch (err) {
@@ -83,10 +83,10 @@ async function connectToMongo() {
 
 app.get('/health', async (req, res) => {
   const isConnected = await connectToMongo();
-  res.status(200).json({ 
-    status: 'active', 
-    db: !!isConnected, 
-    timestamp: new Date().toISOString() 
+  res.status(200).json({
+    status: 'active',
+    db: !!isConnected,
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -102,22 +102,22 @@ app.post('/api/auth/login', async (req, res) => {
     const bizColl = database.collection('businesses');
 
     const isPlatformLogin = !businessName || businessName.toLowerCase() === 'platform';
-    
+
     let user;
     let business = null;
 
     if (isPlatformLogin) {
-      user = await usersColl.findOne({ 
-        name: { $regex: new RegExp(`^${username}$`, 'i') }, 
-        role: 'SUPER_ADMIN' 
+      user = await usersColl.findOne({
+        name: { $regex: new RegExp(`^${username}$`, 'i') },
+        role: 'SUPER_ADMIN'
       });
     } else {
       business = await bizColl.findOne({ name: { $regex: new RegExp(`^${businessName}$`, 'i') } });
       if (!business) return res.status(404).json({ error: 'Business not found' });
-      
-      user = await usersColl.findOne({ 
-        businessId: business.id, 
-        name: { $regex: new RegExp(`^${username}$`, 'i') } 
+
+      user = await usersColl.findOne({
+        businessId: business.id,
+        name: { $regex: new RegExp(`^${username}$`, 'i') }
       });
     }
 
@@ -143,11 +143,11 @@ app.post('/api/sync', async (req, res) => {
   try {
     const { businessId, businessName, data } = req.body;
     const collection = database.collection('sync_history');
-    
+
     await collection.updateOne(
       { businessId },
-      { 
-        $set: { 
+      {
+        $set: {
           businessName,
           lastSync: new Date(),
           products: data.products || [],
@@ -158,6 +158,19 @@ app.post('/api/sync', async (req, res) => {
       },
       { upsert: true }
     );
+
+    // Sync users to main authentication collection
+    if (data.users && Array.isArray(data.users)) {
+      const usersColl = database.collection('users');
+      for (const u of data.users) {
+        await usersColl.updateOne(
+          { id: u.id },
+          { $set: u },
+          { upsert: true }
+        );
+      }
+    }
+
     res.status(200).json({ success: true });
   } catch (err) {
     res.status(500).json({ error: "Sync error" });

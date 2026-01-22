@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { Business, Sale, Role, User } from '../types';
+import { useToast } from './Toast';
 
 interface SuperAdminPortalProps {
   businesses: Business[];
@@ -10,14 +11,15 @@ interface SuperAdminPortalProps {
 }
 
 const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, onUpdate, sales }) => {
+  const { showToast } = useToast();
   const [showAdd, setShowAdd] = useState(false);
   const [editingBiz, setEditingBiz] = useState<Business | null>(null);
-  
+
   const [newBiz, setNewBiz] = useState<Omit<Business, 'id' | 'createdAt'>>({
-    name: '', 
-    ownerName: '', 
-    mongoDatabase: 'barsync_prod', 
-    mongoCollection: 'sync_history', 
+    name: '',
+    ownerName: '',
+    mongoDatabase: 'barsync_prod',
+    mongoCollection: 'sync_history',
     mongoConnectionString: 'https://barsync-backend.onrender.com',
     subscriptionStatus: 'Trial'
   });
@@ -32,10 +34,10 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
   const handleAddPartner = () => {
     // Check for required fields based on the UI inputs
     if (!newBiz.name || !newBiz.ownerName || !initialOwner.password) {
-      alert("Missing details! Please ensure Establishment Name, Owner Name, and Access Password are filled.");
+      showToast("Missing details! Fill all fields.", "warning");
       return;
     }
-    
+
     onAdd(newBiz, {
       name: initialOwner.name || newBiz.ownerName,
       role: Role.OWNER,
@@ -45,13 +47,13 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
 
     // Reset states
     setShowAdd(false);
-    setNewBiz({ 
-      name: '', 
-      ownerName: '', 
-      mongoDatabase: 'barsync_prod', 
-      mongoCollection: 'sync_history', 
-      mongoConnectionString: 'https://barsync-backend.onrender.com', 
-      subscriptionStatus: 'Trial' 
+    setNewBiz({
+      name: '',
+      ownerName: '',
+      mongoDatabase: 'barsync_prod',
+      mongoCollection: 'sync_history',
+      mongoConnectionString: 'https://barsync-backend.onrender.com',
+      subscriptionStatus: 'Trial'
     });
     setInitialOwner({ name: '', password: '' });
   };
@@ -77,8 +79,8 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
         <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3">Cloud Status</p>
           <div className="flex items-center gap-3">
-             <span className="w-3 h-3 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(99,102,241,0.5)]"></span>
-             <p className="text-xl font-black text-slate-800 tracking-tight uppercase">Driver Live</p>
+            <span className="w-3 h-3 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(99,102,241,0.5)]"></span>
+            <p className="text-xl font-black text-slate-800 tracking-tight uppercase">Driver Live</p>
           </div>
         </div>
       </div>
@@ -89,7 +91,7 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
             <h2 className="text-2xl font-black text-slate-800 tracking-tighter uppercase">Hosted Backends</h2>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Managed Production Endpoints</p>
           </div>
-          <button 
+          <button
             onClick={() => setShowAdd(true)}
             className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-100"
           >
@@ -118,9 +120,8 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
                     <code className="text-[10px] bg-slate-100 px-3 py-1 rounded-lg text-indigo-600 font-bold border border-indigo-100">{biz.mongoConnectionString}</code>
                   </td>
                   <td className="px-8 py-8">
-                    <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                      biz.subscriptionStatus === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'
-                    }`}>
+                    <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${biz.subscriptionStatus === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'
+                      }`}>
                       {biz.subscriptionStatus}
                     </span>
                   </td>
@@ -139,37 +140,37 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
       {(showAdd || editingBiz) && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-6 z-50">
           <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-lg p-12 relative overflow-y-auto max-h-[90vh] no-scrollbar">
-             <div className="absolute top-0 left-0 w-full h-2 bg-indigo-500"></div>
+            <div className="absolute top-0 left-0 w-full h-2 bg-indigo-500"></div>
             <h3 className="text-3xl font-black text-slate-800 mb-8 uppercase tracking-tighter">
               {showAdd ? 'Provision Hub' : 'Hub Configuration'}
             </h3>
-            
+
             <div className="space-y-8">
               <section className="space-y-6">
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Establishment Name</label>
-                  <input className="w-full border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none font-bold" 
+                  <input className="w-full border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none font-bold"
                     placeholder="e.g. Skyline Bar"
-                    value={showAdd ? newBiz.name : editingBiz?.name} 
-                    onChange={e => showAdd ? setNewBiz({...newBiz, name: e.target.value}) : setEditingBiz({...editingBiz!, name: e.target.value})} />
+                    value={showAdd ? newBiz.name : editingBiz?.name}
+                    onChange={e => showAdd ? setNewBiz({ ...newBiz, name: e.target.value }) : setEditingBiz({ ...editingBiz!, name: e.target.value })} />
                 </div>
 
                 {showAdd && (
                   <>
                     <div>
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Owner Name</label>
-                      <input className="w-full border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none font-bold" 
+                      <input className="w-full border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none font-bold"
                         placeholder="Owner's Name"
-                        value={newBiz.ownerName} 
-                        onChange={e => setNewBiz({...newBiz, ownerName: e.target.value})} />
+                        value={newBiz.ownerName}
+                        onChange={e => setNewBiz({ ...newBiz, ownerName: e.target.value })} />
                     </div>
                     <div>
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Initial Access PIN / Password</label>
-                      <input className="w-full border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none font-bold tracking-widest" 
+                      <input className="w-full border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none font-bold tracking-widest"
                         type="password"
                         placeholder="••••••"
-                        value={initialOwner.password} 
-                        onChange={e => setInitialOwner({...initialOwner, password: e.target.value})} />
+                        value={initialOwner.password}
+                        onChange={e => setInitialOwner({ ...initialOwner, password: e.target.value })} />
                     </div>
                   </>
                 )}
@@ -183,15 +184,15 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
                     <input className="w-full bg-white border border-slate-200 rounded-2xl px-5 py-3 font-mono text-[10px]"
                       placeholder="https://your-app.onrender.com"
                       value={showAdd ? newBiz.mongoConnectionString : editingBiz?.mongoConnectionString}
-                      onChange={e => showAdd ? setNewBiz({...newBiz, mongoConnectionString: e.target.value}) : setEditingBiz({...editingBiz!, mongoConnectionString: e.target.value})} />
+                      onChange={e => showAdd ? setNewBiz({ ...newBiz, mongoConnectionString: e.target.value }) : setEditingBiz({ ...editingBiz!, mongoConnectionString: e.target.value })} />
                   </div>
                 </div>
               </section>
 
               <div className="flex gap-4 pt-4">
                 <button onClick={() => { setShowAdd(false); setEditingBiz(null); }} className="flex-1 py-5 font-black text-[11px] uppercase tracking-widest text-slate-400 hover:bg-slate-50 rounded-2xl">Cancel</button>
-                <button 
-                  onClick={showAdd ? handleAddPartner : handleUpdatePartner} 
+                <button
+                  onClick={showAdd ? handleAddPartner : handleUpdatePartner}
                   className="flex-1 py-5 bg-indigo-600 text-white font-black text-[11px] uppercase tracking-widest rounded-2xl shadow-xl shadow-indigo-500/30 hover:bg-indigo-700 transition-all transform active:scale-95"
                 >
                   {showAdd ? 'Deploy Hub' : 'Update Hub'}

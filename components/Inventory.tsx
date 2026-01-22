@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Product, Role } from '../types';
 import { CATEGORIES } from '../constants';
+import { useToast } from './Toast';
 
 interface InventoryProps {
   products: Product[];
@@ -11,19 +12,21 @@ interface InventoryProps {
 }
 
 const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRole }) => {
+  const { showToast } = useToast();
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const [form, setForm] = useState<Partial<Product>>({});
 
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredProducts = products.filter(p =>
+    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleQuickStock = (product: Product, delta: number) => {
     onUpdate({ ...product, stock: Math.max(0, product.stock + delta) });
+    showToast(`${product.name} stock updated`, 'success');
   };
 
   const openEdit = (product: Product) => {
@@ -45,8 +48,10 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
   const saveForm = () => {
     if (isAdding) {
       onAdd(form as Omit<Product, 'id' | 'openingStock' | 'additions'>);
+      showToast(`${form.name} registered`, 'success');
     } else if (editingProduct) {
       onUpdate({ ...editingProduct, ...form } as Product);
+      showToast(`${form.name} updated`, 'success');
     }
     closeModals();
   };
@@ -67,15 +72,15 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
         <div className="flex w-full md:w-auto gap-3">
           <div className="relative flex-1 md:w-64">
             <i className="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"></i>
-            <input 
-              type="text" 
-              placeholder="Search stock..." 
+            <input
+              type="text"
+              placeholder="Search stock..."
               className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
-          <button 
+          <button
             onClick={openAdd}
             className="bg-indigo-600 text-white p-4 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95"
           >
@@ -100,7 +105,7 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-start">
                   <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">{p.category}</span>
-                  <button 
+                  <button
                     onClick={() => openEdit(p)}
                     className="text-slate-300 hover:text-indigo-600 transition-colors p-1"
                   >
@@ -118,19 +123,19 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
                 <p className={`text-xl font-black ${p.stock < 10 ? 'text-rose-500' : 'text-slate-800'}`}>{p.stock} <span className="text-[10px] font-bold text-slate-400">PCS</span></p>
               </div>
               <div className="flex items-center gap-2">
-                <button 
+                <button
                   onClick={() => handleQuickStock(p, -1)}
                   className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 hover:bg-rose-50 hover:text-rose-600 transition-all active:scale-90"
                 >
                   <i className="fa-solid fa-minus text-xs"></i>
                 </button>
-                <button 
+                <button
                   onClick={() => handleQuickStock(p, 1)}
                   className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all active:scale-90"
                 >
                   <i className="fa-solid fa-plus text-xs"></i>
                 </button>
-                <button 
+                <button
                   onClick={() => handleQuickStock(p, 5)}
                   className="px-3 h-10 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all active:scale-90"
                 >
@@ -162,59 +167,59 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
             <div className="space-y-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Item Label</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
                   value={form.name}
                   placeholder="e.g. Tusker Cider"
-                  onChange={e => setForm({...form, name: e.target.value})}
+                  onChange={e => setForm({ ...form, name: e.target.value })}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Category</label>
-                  <select 
+                  <select
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all appearance-none"
                     value={form.category}
-                    onChange={e => setForm({...form, category: e.target.value})}
+                    onChange={e => setForm({ ...form, category: e.target.value })}
                   >
                     {CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Unit Price</label>
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
                     value={form.price}
-                    onChange={e => setForm({...form, price: Number(e.target.value)})}
+                    onChange={e => setForm({ ...form, price: Number(e.target.value) })}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Current Count</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
                   value={form.stock}
-                  onChange={e => setForm({...form, stock: Number(e.target.value)})}
+                  onChange={e => setForm({ ...form, stock: Number(e.target.value) })}
                 />
               </div>
 
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Image Resource URL</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
                   placeholder="https://..."
                   value={form.imageUrl}
-                  onChange={e => setForm({...form, imageUrl: e.target.value})}
+                  onChange={e => setForm({ ...form, imageUrl: e.target.value })}
                 />
               </div>
 
-              <button 
+              <button
                 onClick={saveForm}
                 className="w-full py-5 bg-indigo-600 text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-3 mt-4"
               >

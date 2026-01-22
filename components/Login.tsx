@@ -30,13 +30,13 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
-    
+
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000); 
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
 
     try {
       const targetUrl = backendUrl ? `${backendUrl}/api/auth/login` : '/api/auth/login';
-      
+
       const response = await fetch(targetUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -61,9 +61,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
     } catch (err: any) {
       clearTimeout(timeoutId);
       console.error("Login System Error:", err);
-      
+
       setShowDemoOption(true);
-      
+
       if (err.message === "TIMEOUT") {
         setError('Gateway timeout. Server may be sleeping.');
       } else if (err.message === "INVALID_RESPONSE") {
@@ -111,7 +111,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
             <div className="space-y-4">
               <div className="relative">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Workplace</label>
-                <input 
+                <input
                   type="text"
                   placeholder="Establishment Name"
                   className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-slate-800 transition-all"
@@ -122,7 +122,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
 
               <div className="relative">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Profile Name</label>
-                <input 
+                <input
                   type="text"
                   required
                   placeholder="Username"
@@ -134,7 +134,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
 
               <div className="relative">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Access PIN</label>
-                <input 
+                <input
                   type="password"
                   required
                   placeholder="••••••"
@@ -153,7 +153,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
             )}
 
             <div className="space-y-3">
-              <button 
+              <button
                 type="submit"
                 disabled={isSubmitting}
                 className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
@@ -172,7 +172,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
               </button>
 
               {(showDemoOption || !isSubmitting) && (
-                <button 
+                <button
                   type="button"
                   onClick={enterDemoMode}
                   className="w-full py-4 bg-slate-100 text-slate-600 border border-slate-200 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-200 transition-all"
@@ -186,9 +186,14 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
 
           <div className="pt-6 border-t border-slate-50 text-center">
             <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest flex items-center justify-center gap-2">
-               <i className="fa-solid fa-shield-check"></i> End-to-End Encryption Active
+              <i className="fa-solid fa-shield-check"></i> End-to-End Encryption Active
             </p>
           </div>
+        </div>
+
+        <div className="mt-12 text-center space-y-2">
+          <p className="text-[10px] font-black text-indigo-400/60 uppercase tracking-[0.3em]">System Developed by SLIEMTECH</p>
+          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">© {new Date().getFullYear()} BARSYNC • All Rights Reserved</p>
         </div>
       </div>
 

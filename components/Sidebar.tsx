@@ -18,12 +18,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
     { id: 'SUPER_ADMIN_PORTAL' as View, label: 'Platform Hub', icon: 'fa-server', roles: [Role.SUPER_ADMIN] },
     { id: 'POS' as View, label: 'Terminal', icon: 'fa-cash-register', roles: [Role.ADMIN, Role.BARTENDER, Role.OWNER] },
     { id: 'INVENTORY' as View, label: 'Inventory', icon: 'fa-boxes-stacked', roles: [Role.ADMIN, Role.OWNER] },
-    { id: 'USER_MANAGEMENT' as View, label: 'Staff', icon: 'fa-users-gear', roles: [Role.ADMIN, Role.OWNER] },
-    { id: 'AUDIT_LOGS' as View, label: 'Activity Logs', icon: 'fa-clipboard-list', roles: [Role.ADMIN, Role.OWNER, Role.SUPER_ADMIN] },
-    { id: 'REPORTS' as View, label: 'Reports', icon: 'fa-file-invoice-dollar', roles: [Role.ADMIN, Role.OWNER] },
-    { id: 'SALES' as View, label: 'Log', icon: 'fa-receipt', roles: [Role.ADMIN, Role.BARTENDER, Role.OWNER] },
-    { id: 'ANALYTICS' as View, label: 'Stats', icon: 'fa-chart-line', roles: [Role.ADMIN, Role.OWNER] },
-    { id: 'PROFILE' as View, label: 'My Profile', icon: 'fa-circle-user', roles: [Role.SUPER_ADMIN, Role.ADMIN, Role.BARTENDER, Role.OWNER] },
+    { id: 'USER_MANAGEMENT' as View, label: 'Staff Hub', icon: 'fa-users-gear', roles: [Role.ADMIN, Role.OWNER] },
+    { id: 'AUDIT_LOGS' as View, label: 'Audit Trail', icon: 'fa-shield-halved', roles: [Role.ADMIN, Role.OWNER, Role.SUPER_ADMIN] },
+    { id: 'REPORTS' as View, label: 'BI Reports', icon: 'fa-file-invoice-dollar', roles: [Role.ADMIN, Role.OWNER] },
+    { id: 'SALES' as View, label: 'Sales Log', icon: 'fa-receipt', roles: [Role.ADMIN, Role.BARTENDER, Role.OWNER] },
+    { id: 'ANALYTICS' as View, label: 'BI Stats', icon: 'fa-chart-line', roles: [Role.ADMIN, Role.OWNER] },
+    { id: 'PROFILE' as View, label: 'Account', icon: 'fa-circle-user', roles: [Role.SUPER_ADMIN, Role.ADMIN, Role.BARTENDER, Role.OWNER] },
   ];
 
   const visibleItems = menuItems.filter(item => item.roles.includes(user.role));
@@ -59,7 +59,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
             </div>
             <div>
               <h2 className="text-white font-black text-lg tracking-tighter leading-none uppercase">BARSYNC</h2>
-              <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mt-1">Enterprise</p>
+              <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mt-1">Cloud Atlas</p>
             </div>
           </div>
 
@@ -82,31 +82,33 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
         </div>
 
         <div className="mt-auto p-6 space-y-4">
-          {/* Cloud Sync Center */}
-          <div className="bg-slate-900/80 rounded-3xl p-5 border border-slate-800 backdrop-blur-sm">
+          {/* Cloud Sync Center - MongoDB Optimized */}
+          <div className="bg-slate-900/80 rounded-3xl p-5 border border-slate-800 backdrop-blur-sm shadow-inner">
             <div className="flex items-center justify-between mb-4">
-               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Cloud Hub</span>
+               <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2">
+                 <i className="fa-solid fa-database text-[8px]"></i> Atlas Hub
+               </span>
                <button 
                 onClick={onSync}
                 disabled={isSyncing || offline}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isSyncing ? 'bg-indigo-500 text-white animate-spin' : 'bg-slate-800 text-slate-400 hover:text-indigo-400'}`}
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isSyncing ? 'bg-emerald-500 text-white animate-spin' : 'bg-slate-800 text-slate-400 hover:text-emerald-400'}`}
                >
-                 <i className="fa-solid fa-arrows-rotate text-xs"></i>
+                 <i className="fa-solid fa-cloud-arrow-up text-xs"></i>
                </button>
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-[9px] text-slate-400 font-bold uppercase">Status</p>
+                <p className="text-[9px] text-slate-400 font-bold uppercase">Cloud State</p>
                 <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${offline ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
+                  <span className={`w-2 h-2 rounded-full ${offline ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`}></span>
                   <span className="text-[8px] font-black text-white uppercase tracking-widest">
-                    {offline ? 'OFFLINE' : 'LIVE'}
+                    {offline ? 'OFFLINE' : 'ONLINE'}
                   </span>
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <p className="text-[9px] text-slate-400 font-bold uppercase">Last Sync</p>
-                <p className="text-[8px] font-black text-indigo-400 uppercase">
+                <p className="text-[9px] text-slate-400 font-bold uppercase">Last Push</p>
+                <p className="text-[8px] font-black text-emerald-400 uppercase">
                   {lastSync ? lastSync.split(',')[1] : 'Never'}
                 </p>
               </div>

@@ -10,7 +10,8 @@ export interface Business {
   id: string;
   name: string;
   ownerName: string;
-  googleSheetId: string;
+  mongoDatabase: string; // Replaced googleSheetId
+  mongoCollection: string; // Added for granular control
   subscriptionStatus: 'Active' | 'Trial' | 'Expired';
   createdAt: string;
   logo?: string;

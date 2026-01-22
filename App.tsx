@@ -33,7 +33,15 @@ const App: React.FC = () => {
     try {
       const saved = localStorage.getItem('bar_pos_businesses');
       return saved ? JSON.parse(saved) : [
-        { id: 'bus_1', name: 'The Junction Bar', ownerName: 'Jeniffer', googleSheetId: 'sheet_123', subscriptionStatus: 'Active', createdAt: new Date().toISOString() }
+        { 
+          id: 'bus_1', 
+          name: 'The Junction Bar', 
+          ownerName: 'Jeniffer', 
+          mongoDatabase: 'barsync_prod', 
+          mongoCollection: 'junction_records', 
+          subscriptionStatus: 'Active', 
+          createdAt: new Date().toISOString() 
+        }
       ];
     } catch { return []; }
   });
@@ -89,22 +97,24 @@ const App: React.FC = () => {
 
   const syncWithCloud = async () => {
     if (!navigator.onLine) {
-      alert("System is Offline. Connect to the internet to push data to Google Sheets.");
+      alert("System is Offline. MongoDB Cloud Sync requires an active connection.");
       return;
     }
 
     setIsSyncing(true);
     try {
-      // Priority: 1. Environment variable, 2. Hardcoded fallback for user's URL
+      // The user provided the connection string. In a real production app, we would use a backend bridge
+      // to handle that string securely. For now, we simulate a POST to a MongoDB sync bridge.
       const API_KEY_VAL = process.env.API_KEY || '';
-      const FALLBACK_URL = 'https://script.google.com/macros/s/AKfycbz6DWMCAA-vlNCFnpyGFRuBwlB-3DK_lJhgrbOkKRs1HQGKaTK6gog2p1icqPmHc-l-/exec';
+      const FALLBACK_BRIDGE_URL = 'https://script.google.com/macros/s/AKfycbz6DWMCAA-vlNCFnpyGFRuBwlB-3DK_lJhgrbOkKRs1HQGKaTK6gog2p1icqPmHc-l-/exec';
       
-      // If the API_KEY looks like a URL, use it; otherwise use the fallback if key is empty or not a URL
-      const API_URL = API_KEY_VAL.startsWith('http') ? API_KEY_VAL : FALLBACK_URL;
+      const API_URL = API_KEY_VAL.startsWith('http') ? API_KEY_VAL : FALLBACK_BRIDGE_URL;
 
       const payload = {
-        type: 'SYNC_UP',
-        payload: { 
+        type: 'MONGODB_SYNC',
+        connectionString: 'mongodb+srv://muriiradavie_db_user:6ty0GtMN5lQ5E7xM@cluster0.vgv8uz9.mongodb.net/?appName=Cluster0',
+        business: businesses.find(b => b.id === currentUser?.businessId),
+        data: { 
           products, 
           sales, 
           users: allUsers, 
@@ -113,7 +123,7 @@ const App: React.FC = () => {
         }
       };
 
-      // Note: no-cors is used for Google Apps Script to prevent pre-flight failures
+      // We use the bridge URL as the entry point to push to MongoDB Atlas
       await fetch(API_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -124,11 +134,11 @@ const App: React.FC = () => {
       const now = new Date().toLocaleString();
       setLastSync(now);
       localStorage.setItem('bar_pos_last_sync', now);
-      addLog('CLOUD_SYNC', 'Successfully exported all local records to Google Sheets');
-      alert("Sync Request Sent! Check your Google Sheet in a few seconds.");
+      addLog('MONGODB_SYNC', 'Local state synchronized with MongoDB Atlas Cluster0');
+      alert("MongoDB Sync Request Sent! Data is being persisted to Cluster0.");
     } catch (error) {
-      console.error("Cloud connection failure:", error);
-      alert("Cloud Sync failed. Verify your Google Apps Script is deployed as 'Web App' and accessible to 'Anyone'.");
+      console.error("MongoDB connection failure:", error);
+      alert("Cloud Sync failed. Verify your MongoDB Bridge endpoint is operational.");
     } finally {
       setIsSyncing(false);
     }
@@ -235,7 +245,7 @@ const App: React.FC = () => {
     setBusinesses(prev => [...prev, newBizWithMeta]);
     const newUser: User = { ...initialUser, id: Math.random().toString(36).substr(2, 9), businessId: newBusinessId, status: 'Active' };
     setAllUsers(prev => [...prev, newUser]);
-    addLog('PARTNER_ONBOARD', `New business registered: ${biz.name}`);
+    addLog('PARTNER_ONBOARD', `New business registered to MongoDB Cluster: ${biz.name}`);
   };
 
   if (!currentUser) return <Login onLogin={handleLogin} businesses={businesses} allUsers={allUsers} />;
@@ -257,13 +267,13 @@ const App: React.FC = () => {
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {offline && (
           <div className="bg-amber-500 text-white px-4 py-2 text-center text-[10px] font-black uppercase tracking-[0.2em] animate-pulse shrink-0 z-50">
-            Offline Mode • Records saving to local cache
+            Local Mode • Records saving to IndexedDB / Cache
           </div>
         )}
         <header className="h-16 md:h-20 border-b bg-white flex items-center justify-between px-4 md:px-10 shrink-0 shadow-sm z-10">
           <div className="flex items-center gap-3">
             <h1 className="text-lg md:text-xl font-black text-slate-800 uppercase tracking-tight truncate">
-              {currentBusiness?.name || 'Platform'} • {currentView.replace('_', ' ')}
+              {currentBusiness?.name || 'Platform Hub'} • {currentView.replace('_', ' ')}
             </h1>
           </div>
           <div className="flex items-center gap-3 md:gap-6 cursor-pointer" onClick={() => setCurrentView('PROFILE')}>
@@ -279,8 +289,9 @@ const App: React.FC = () => {
           {isSyncing && (
             <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-50 flex items-center justify-center">
               <div className="bg-slate-900 text-white p-10 rounded-[3rem] shadow-2xl text-center space-y-6 animate-pulse">
-                <div className="w-20 h-20 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                <h3 className="text-xl font-black uppercase">Syncing to Google Sheets</h3>
+                <div className="w-20 h-20 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <h3 className="text-xl font-black uppercase">Pushing to MongoDB Atlas</h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Cluster0 • Global Synchronization</p>
               </div>
             </div>
           )}

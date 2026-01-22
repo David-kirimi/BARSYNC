@@ -40,9 +40,22 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
       name: '',
       category: 'Beer',
       price: 0,
+      buyingPrice: 0,
       stock: 0,
       imageUrl: ''
     });
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setForm(prev => ({ ...prev, imageUrl: reader.result as string }));
+        showToast("Image selected", "info");
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const saveForm = () => {
@@ -113,7 +126,15 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
                   </button>
                 </div>
                 <h3 className="text-sm font-black text-slate-800 uppercase leading-tight mb-1 truncate">{p.name}</h3>
-                <p className="text-lg font-black text-slate-900">Ksh {p.price.toLocaleString()}</p>
+                <div className="flex justify-between items-end">
+                  <p className="text-lg font-black text-slate-900">Ksh {p.price.toLocaleString()}</p>
+                  {(userRole === Role.OWNER || userRole === Role.ADMIN) && p.buyingPrice && (
+                    <div className="text-right">
+                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Profit</p>
+                      <p className="text-[10px] font-black text-emerald-600">+Ksh {(p.price - p.buyingPrice).toLocaleString()}</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -188,7 +209,7 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Unit Price</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Unit Price (Sale)</label>
                   <input
                     type="number"
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
@@ -197,6 +218,19 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
                   />
                 </div>
               </div>
+
+              {(userRole === Role.OWNER || userRole === Role.ADMIN) && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Unit Buying Price (Cost)</label>
+                  <input
+                    type="number"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-mono"
+                    value={form.buyingPrice}
+                    placeholder="Profit tracking cost..."
+                    onChange={e => setForm({ ...form, buyingPrice: Number(e.target.value) })}
+                  />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Current Count</label>
@@ -209,14 +243,20 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Image Resource URL</label>
-                <input
-                  type="text"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
-                  placeholder="https://..."
-                  value={form.imageUrl}
-                  onChange={e => setForm({ ...form, imageUrl: e.target.value })}
-                />
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Product Icon</label>
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+                    placeholder="Resource URL (optional)"
+                    value={form.imageUrl}
+                    onChange={e => setForm({ ...form, imageUrl: e.target.value })}
+                  />
+                  <label className="shrink-0 bg-slate-100 hover:bg-slate-200 text-slate-600 h-14 w-14 rounded-2xl flex items-center justify-center cursor-pointer transition-all active:scale-95 border border-slate-200 border-dashed">
+                    <i className="fa-solid fa-cloud-arrow-up"></i>
+                    <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                  </label>
+                </div>
               </div>
 
               <button

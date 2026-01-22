@@ -34,6 +34,7 @@ export interface Product {
   name: string;
   category: string;
   price: number;
+  buyingPrice?: number;
   stock: number;
   openingStock: number;
   additions: number;

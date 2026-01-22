@@ -13,6 +13,20 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, products }) => {
   const [insights, setInsights] = useState<string | null>(null);
   const [loadingInsights, setLoadingInsights] = useState(false);
 
+  const { totalRev, totalProfit } = useMemo(() => {
+    let rev = 0;
+    let profit = 0;
+    sales.forEach(sale => {
+      rev += sale.totalAmount;
+      sale.items.forEach(item => {
+        if (item.buyingPrice) {
+          profit += (item.price - item.buyingPrice) * item.quantity;
+        }
+      });
+    });
+    return { totalRev: rev, totalProfit: profit };
+  }, [sales]);
+
   const hourlyData = useMemo(() => {
     const hours = Array.from({ length: 24 }, (_, i) => ({
       hour: `${i}:00`,
@@ -50,16 +64,16 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, products }) => {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
       const lowStockItems = products.filter(p => p.stock < 10).map(p => `${p.name} (${p.stock} left)`);
       const topSelling = topItems.map(i => `${i.name} (${i.qty} units)`).join(', ');
-      const totalRev = sales.reduce((sum, s) => sum + s.totalAmount, 0);
 
       const prompt = `You are a business consultant for a high-end bar called BarSync. 
       Analyze the following data and provide 3-4 short, actionable bullet points to improve profitability:
       - Total Revenue: Ksh ${totalRev}
+      - Estimated Gross Profit: Ksh ${totalProfit}
       - Top Selling Items: ${topSelling}
       - Critical Low Stock: ${lowStockItems.join(', ')}
       - Peak Hours: ${hourlyData.slice(-3).map(h => h.hour).join(', ')}
       
-      Keep the advice specific to inventory, staffing, or promotions. Be concise.`;
+      Keep the advice specific to inventory, staffing, or promotions. Focus on maximizing margins. Be concise.`;
 
       const response = await ai.models.generateContent({
         model: 'gemini-1.5-flash',
@@ -77,6 +91,17 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, products }) => {
 
   return (
     <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Revenue</p>
+          <h4 className="text-2xl font-black text-slate-800 mt-1">Ksh {totalRev.toLocaleString()}</h4>
+        </div>
+        <div className="bg-indigo-50 p-6 rounded-3xl border border-indigo-100 shadow-sm">
+          <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Gross Profit</p>
+          <h4 className="text-2xl font-black text-indigo-700 mt-1">Ksh {totalProfit.toLocaleString()}</h4>
+        </div>
+      </div>
+
       {/* AI Insights Section */}
       <div className="bg-gradient-to-br from-indigo-900 to-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden group border border-indigo-500/20">
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
@@ -90,8 +115,8 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, products }) => {
             {insights ? (
               <div className="mt-4 prose prose-invert max-w-none text-sm leading-relaxed text-indigo-100 font-medium">
                 <div className="whitespace-pre-line">{insights}</div>
-                <button 
-                  onClick={() => setInsights(null)} 
+                <button
+                  onClick={() => setInsights(null)}
                   className="mt-4 text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:text-white transition-colors"
                 >
                   Clear Analysis
@@ -101,7 +126,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, products }) => {
               <p className="text-sm text-slate-400 font-medium">Get real-time business advice based on your current sales and inventory trends.</p>
             )}
           </div>
-          <button 
+          <button
             onClick={generateAIInsights}
             disabled={loadingInsights}
             className="shrink-0 bg-indigo-500 hover:bg-indigo-400 text-white px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all shadow-xl shadow-indigo-500/20 active:scale-95 disabled:opacity-50 flex items-center gap-3"
@@ -134,14 +159,14 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, products }) => {
               <AreaChart data={hourlyData}>
                 <defs>
                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1} />
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="hour" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
-                <Tooltip 
+                <Tooltip
                   contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px' }}
                   labelStyle={{ fontWeight: 'bold', marginBottom: '4px' }}
                 />
@@ -160,7 +185,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, products }) => {
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
                 <XAxis type="number" hide />
                 <YAxis dataKey="name" type="category" width={120} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#475569', fontWeight: 800 }} />
-                <Tooltip 
+                <Tooltip
                   cursor={{ fill: '#f8fafc' }}
                   contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                 />

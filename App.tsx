@@ -14,7 +14,7 @@ import Reports from './components/Reports.tsx';
 import Profile from './components/Profile.tsx';
 import AuditLogs from './components/AuditLogs.tsx';
 
-const GLOBAL_BACKEND = 'https://barsync-backend.onrender.com';
+const GLOBAL_BACKEND = window.location.origin; // Same repo: use relative origin
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -53,9 +53,6 @@ const App: React.FC = () => {
   }, [currentUser]);
 
   const syncWithCloud = useCallback(async (isSilent = false) => {
-    const currentBiz = businesses.find(b => b.id === currentUser?.businessId);
-    const backendUrl = currentBiz?.mongoConnectionString || GLOBAL_BACKEND;
-
     if (!navigator.onLine) {
       if (!isSilent) console.warn("Offline: Sync skipped.");
       return;
@@ -64,12 +61,12 @@ const App: React.FC = () => {
     if (!isSilent) setIsSyncing(true);
     
     try {
-      const response = await fetch(`${backendUrl}/api/sync`, {
+      const response = await fetch(`${GLOBAL_BACKEND}/api/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          businessId: currentBiz?.id || 'admin_node',
-          businessName: currentBiz?.name || 'Platform Hub',
+          businessId: currentUser?.businessId || 'admin_node',
+          businessName: 'Business Node',
           data: { sales, products, auditLogs, users: allUsers }
         })
       });
@@ -85,9 +82,8 @@ const App: React.FC = () => {
     } finally {
       if (!isSilent) setIsSyncing(false);
     }
-  }, [businesses, currentUser, products, sales, auditLogs, allUsers]);
+  }, [currentUser, products, sales, auditLogs, allUsers]);
 
-  // AUTO-SYNC EFFECT: Watches for changes and persists to MongoDB
   useEffect(() => {
     if (isInitialLoad.current) {
       isInitialLoad.current = false;
@@ -96,12 +92,11 @@ const App: React.FC = () => {
     if (currentUser && backendAlive) {
       const timer = setTimeout(() => {
         syncWithCloud(true);
-      }, 3000); // 3-second debounce for auto-sync
+      }, 3000);
       return () => clearTimeout(timer);
     }
   }, [products, sales, auditLogs, allUsers, currentUser, backendAlive, syncWithCloud]);
 
-  // Fetch all businesses if Super Admin
   useEffect(() => {
     if (currentUser?.role === Role.SUPER_ADMIN) {
       fetch(`${GLOBAL_BACKEND}/api/admin/businesses`)
@@ -111,7 +106,6 @@ const App: React.FC = () => {
     }
   }, [currentUser]);
 
-  // Backend Health Check
   useEffect(() => {
     const checkBackend = async () => {
       try {
@@ -158,7 +152,7 @@ const App: React.FC = () => {
     isInitialLoad.current = true;
   };
 
-  const addToCart = useCallback((product: Product) => {
+  const addToCart = (product: Product) => {
     if (product.stock <= 0) return;
     setProducts(prev => prev.map(p => p.id === product.id ? { ...p, stock: p.stock - 1 } : p));
     setCart(prev => {
@@ -166,9 +160,9 @@ const App: React.FC = () => {
       if (existing) return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
       return [...prev, { ...product, quantity: 1 }];
     });
-  }, []);
+  };
 
-  const updateCartQuantity = useCallback((productId: string, delta: number) => {
+  const updateCartQuantity = (productId: string, delta: number) => {
     setCart(prev => prev.map(item => {
       if (item.id === productId) {
         const newQty = Math.max(1, item.quantity + delta);
@@ -181,15 +175,15 @@ const App: React.FC = () => {
       }
       return item;
     }));
-  }, [products]);
+  };
 
-  const removeFromCart = useCallback((productId: string) => {
+  const removeFromCart = (productId: string) => {
     const item = cart.find(i => i.id === productId);
     if (item) setProducts(p => p.map(prod => prod.id === productId ? { ...prod, stock: prod.stock + item.quantity } : prod));
     setCart(prev => prev.filter(item => item.id !== productId));
-  }, [cart]);
+  };
 
-  const checkout = useCallback((paymentMethod: 'Cash' | 'Mpesa', customerPhone?: string) => {
+  const checkout = (paymentMethod: 'Cash' | 'Mpesa', customerPhone?: string) => {
     if (cart.length === 0 || !currentUser) return;
     const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const newSale: Sale = {
@@ -202,12 +196,11 @@ const App: React.FC = () => {
       salesPerson: currentUser.name,
       customerPhone
     };
-    
     setSales(prev => [newSale, ...prev]);
     addLog('SALE', `Order ${newSale.id} (Ksh ${newSale.totalAmount})`);
     setCart([]);
     return newSale;
-  }, [cart, currentUser, addLog]);
+  };
 
   const handleAddBusiness = async (biz: Omit<Business, 'id' | 'createdAt'>, initialOwner: Omit<User, 'id' | 'businessId' | 'status'>) => {
     const newBusinessId = `bus_${Math.random().toString(36).substr(2, 5)}`;
@@ -223,36 +216,15 @@ const App: React.FC = () => {
       if (response.ok) {
         setBusinesses(prev => [...prev, newBizWithMeta]);
         setAllUsers(prev => [...prev, newUser]);
-        alert("Business Provisioned in MongoDB.");
+        alert("Business Provisioned.");
       }
     } catch (err) {
-      alert("Failed to save to MongoDB.");
+      alert("Failed to save.");
     }
   };
 
   const updateBusiness = (updatedBiz: Business) => {
     setBusinesses(prev => prev.map(b => b.id === updatedBiz.id ? updatedBiz : b));
-  };
-
-  const handleAddStaff = (u: Omit<User, 'id' | 'businessId' | 'status'>) => {
-    const newUser: User = { 
-      ...u, 
-      id: Date.now().toString(), 
-      businessId: currentUser?.businessId!, 
-      status: 'Active' 
-    };
-    setAllUsers(prev => [...prev, newUser]);
-    addLog('USER_ADD', newUser.name);
-  };
-
-  const handleUpdateStaff = (u: User) => {
-    setAllUsers(prev => prev.map(item => item.id === u.id ? u : item));
-    addLog('USER_UPDATE', u.name);
-  };
-
-  const handleDeleteStaff = (id: string) => {
-    setAllUsers(prev => prev.filter(u => u.id !== id));
-    addLog('USER_DELETE', `ID: ${id}`);
   };
 
   if (!currentUser) return <Login onLogin={handleLogin} backendUrl={GLOBAL_BACKEND} />;
@@ -291,9 +263,9 @@ const App: React.FC = () => {
         <div className="flex-1 overflow-auto p-4 md:p-10 no-scrollbar relative flex flex-col">
           <div className="flex-1">
             {currentView === 'POS' && <POS products={products} addToCart={addToCart} cart={cart} updateCartQuantity={updateCartQuantity} removeFromCart={removeFromCart} onCheckout={checkout} businessName={currentBusiness?.name || 'BarSync'} />}
-            {currentView === 'INVENTORY' && <Inventory products={products} onUpdate={(p) => { setProducts(prev => prev.map(item => item.id === p.id ? p : item)); addLog('STOCK_UPDATE', p.name); }} onAdd={(p) => setProducts(prev => [...prev, { ...p, id: Date.now().toString() } as Product])} userRole={currentUser.role} />}
+            {currentView === 'INVENTORY' && <Inventory products={products} onUpdate={(p) => setProducts(prev => prev.map(item => item.id === p.id ? p : item))} onAdd={(p) => setProducts(prev => [...prev, { ...p, id: Date.now().toString() } as Product])} userRole={currentUser.role} />}
             {currentView === 'SUPER_ADMIN_PORTAL' && currentUser.role === Role.SUPER_ADMIN && <SuperAdminPortal businesses={businesses} onAdd={handleAddBusiness} onUpdate={updateBusiness} sales={sales} />}
-            {currentView === 'USER_MANAGEMENT' && <UserManagement users={allUsers} onAdd={handleAddStaff} onUpdate={handleUpdateStaff} onDelete={handleDeleteStaff} />}
+            {currentView === 'USER_MANAGEMENT' && <UserManagement users={allUsers} onAdd={(u) => setAllUsers(prev => [...prev, { ...u, id: Date.now().toString(), businessId: currentUser.businessId!, status: 'Active' }])} onUpdate={(u) => setAllUsers(prev => prev.map(item => item.id === u.id ? u : item))} onDelete={(id) => setAllUsers(prev => prev.filter(u => u.id !== id))} />}
             {currentView === 'REPORTS' && <Reports sales={sales.filter(s => s.businessId === currentUser.businessId)} businessName={currentBusiness?.name || 'BarSync'} />}
             {currentView === 'AUDIT_LOGS' && <AuditLogs logs={currentUser.role === Role.SUPER_ADMIN ? auditLogs : auditLogs.filter(l => l.businessId === currentUser.businessId)} />}
             {currentView === 'SALES' && <SalesHistory sales={sales.filter(s => s.businessId === currentUser.businessId)} />}

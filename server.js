@@ -8,7 +8,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Enable CORS for your frontend
+// CORS setup
 app.use(cors({
   origin: [
     'http://localhost:5173',       // dev frontend
@@ -35,6 +35,8 @@ const client = new MongoClient(uri, {
     strict: true,
     deprecationErrors: true,
   },
+  tls: true,                          // enforce TLS
+  tlsAllowInvalidCertificates: false, // validate certs
   connectTimeoutMS: 10000,
   socketTimeoutMS: 45000,
 });
@@ -46,11 +48,11 @@ async function startServer() {
     console.log("Connecting to MongoDB...");
     await client.connect();
 
-    // Test the connection
+    // Test connection
     await client.db("admin").command({ ping: 1 });
     console.log("✅ Connected to MongoDB Atlas");
 
-    db = client.db(DB_NAME); // use your explicit DB name
+    db = client.db(DB_NAME); // explicit DB name
 
     app.listen(PORT, () => {
       console.log(`🚀 BarSync Backend Hub active on port ${PORT}`);
@@ -61,7 +63,7 @@ async function startServer() {
   }
 }
 
-// Health check endpoint
+// Health check
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'active', 
@@ -70,7 +72,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Sync endpoint
+// POS sync endpoint
 app.post('/api/sync', async (req, res) => {
   if (!db) return res.status(503).json({ error: "Database offline" });
 
@@ -81,7 +83,7 @@ app.post('/api/sync', async (req, res) => {
     const collection = db.collection('sync_history');
     const logsCollection = db.collection('audit_logs');
 
-    // 1. Log the sync attempt
+    // Log the sync attempt
     await logsCollection.insertOne({
       businessId,
       businessName,
@@ -90,7 +92,7 @@ app.post('/api/sync', async (req, res) => {
       itemCount: data?.sales?.length || 0
     });
 
-    // 2. State Snapshot (Upsert)
+    // Upsert state snapshot
     const result = await collection.updateOne(
       { businessId },
       { 

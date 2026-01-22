@@ -321,14 +321,14 @@ app.post('/api/admin/businesses', async (req, res) => {
 
 // --- STATIC ASSETS & SPA CATCH-ALL LAST ---
 
-app.use(express.static(path.join(__dirname, 'dist')));
+app.use(express.static(path.join(__dirname, '..', 'dist')));
 
 app.get('*', (req, res) => {
   // If request is for an API that doesn't exist, don't serve index.html
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'API route not found' });
   }
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
 });
 
 // Export the app for Vercel

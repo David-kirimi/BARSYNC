@@ -3,15 +3,31 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/index"
+      "destination": "/api/index.js"
     },
     {
       "source": "/health",
-      "destination": "/api/index"
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/assets/(.*)",
+      "destination": "/dist/assets/$1"
+    },
+    {
+      "source": "/manifest.json",
+      "destination": "/dist/manifest.json"
+    },
+    {
+      "source": "/sw.js",
+      "destination": "/dist/sw.js"
+    },
+    {
+      "source": "/icon-(.*).png",
+      "destination": "/dist/icon-$1.png"
     },
     {
       "source": "/(.*)",
-      "destination": "/dist/$1"
+      "destination": "/api/index.js"
     }
   ]
 }

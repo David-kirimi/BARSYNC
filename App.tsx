@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { INITIAL_PRODUCTS } from './constants';
 import { Product, Sale, User, Role, View, CartItem, Business, AuditLog } from './types';
@@ -173,7 +174,28 @@ const App: React.FC = () => {
     return newSale;
   }, [cart, currentUser, addLog]);
 
-  if (!currentUser) return <Login onLogin={handleLogin} />;
+  const handleAddBusiness = (biz: Omit<Business, 'id' | 'createdAt'>, initialUser: Omit<User, 'id' | 'businessId' | 'status'>) => {
+    const newBusinessId = `bus_${Math.random().toString(36).substr(2, 5)}`;
+    const newBizWithMeta: Business = { 
+      ...biz, 
+      id: newBusinessId, 
+      createdAt: new Date().toISOString() 
+    };
+    
+    setBusinesses(prev => [...prev, newBizWithMeta]);
+    
+    const newUser: User = {
+      ...initialUser,
+      id: Math.random().toString(36).substr(2, 9),
+      businessId: newBusinessId,
+      status: 'Active'
+    };
+    
+    setAllUsers(prev => [...prev, newUser]);
+    addLog('PARTNER CREATED', `Onboarded business: ${biz.name} with initial owner: ${newUser.name}`);
+  };
+
+  if (!currentUser) return <Login onLogin={handleLogin} businesses={businesses} allUsers={allUsers} />;
 
   const currentBusiness = businesses.find(b => b.id === currentUser.businessId);
 
@@ -225,7 +247,6 @@ const App: React.FC = () => {
                 addLog('STOCK UPDATE', `Updated product: ${p.name}`);
               }} 
               onAdd={(p) => {
-                // Fix: Properly initialize Product properties including openingStock and additions
                 setProducts(prev => [...prev, { 
                   ...p, 
                   id: Math.random().toString(36).substr(2, 9),
@@ -240,7 +261,7 @@ const App: React.FC = () => {
           {currentView === 'SUPER_ADMIN_PORTAL' && currentUser.role === Role.SUPER_ADMIN && (
             <SuperAdminPortal 
               businesses={businesses}
-              onAdd={(biz) => setBusinesses(prev => [...prev, { ...biz, id: `bus_${Math.random().toString(36).substr(2, 5)}`, createdAt: new Date().toISOString() }])}
+              onAdd={handleAddBusiness}
               onUpdate={(updated) => setBusinesses(prev => prev.map(b => b.id === updated.id ? updated : b))}
               sales={sales}
             />

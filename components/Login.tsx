@@ -1,44 +1,67 @@
 
-import React, { useState, useEffect } from 'react';
-import { User, Role } from '../types';
+import React, { useState } from 'react';
+import { User, Role, Business } from '../types';
 
 interface LoginProps {
   onLogin: (user: User) => void;
+  businesses: Business[];
+  allUsers: User[];
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+const Login: React.FC<LoginProps> = ({ onLogin, businesses, allUsers }) => {
+  const [businessName, setBusinessName] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [displayUsers, setDisplayUsers] = useState<User[]>([]);
-
-  useEffect(() => {
-    const savedUsers = localStorage.getItem('bar_pos_all_users');
-    if (savedUsers) {
-      setDisplayUsers(JSON.parse(savedUsers));
-    } else {
-      // Fallback if App.tsx hasn't initialized storage yet
-      setDisplayUsers([
-        { id: '1', name: 'Jeniffer', role: Role.BARTENDER, avatar: 'https://picsum.photos/seed/jen/100/100', businessId: 'bus_1', status: 'Active', password: '123' },
-        { id: '2', name: 'Winnie Admin', role: Role.ADMIN, avatar: 'https://picsum.photos/seed/win/100/100', businessId: 'bus_1', status: 'Active', password: '123' },
-        { id: 'super_1', name: 'Platform Owner', role: Role.SUPER_ADMIN, avatar: 'https://picsum.photos/seed/owner/100/100', status: 'Active', password: 'admin' },
-      ]);
-    }
-  }, []);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLoginAttempt = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUser) return;
-    
-    // Safety check: if for some reason password is still undefined in storage
-    const storedPassword = selectedUser.password || (selectedUser.role === Role.SUPER_ADMIN ? 'admin' : '123');
-    
-    if (storedPassword === password) {
-      onLogin({ ...selectedUser, password: storedPassword });
-    } else {
-      setError('Invalid password. Please try again.');
-      setPassword('');
-    }
+    setError('');
+    setIsSubmitting(true);
+
+    // Brief delay to simulate server-side check and improve UX feel
+    setTimeout(() => {
+      let targetUser: User | undefined;
+
+      const isPlatformAuth = !businessName || businessName.toLowerCase() === 'platform';
+
+      if (isPlatformAuth) {
+        // Attempting to login as Super Admin
+        targetUser = allUsers.find(u => 
+          u.role === Role.SUPER_ADMIN && 
+          u.name.toLowerCase() === username.toLowerCase()
+        );
+      } else {
+        // Find business first
+        const biz = businesses.find(b => b.name.toLowerCase() === businessName.toLowerCase());
+        
+        if (!biz) {
+          setError('Business not found. Check the name and try again.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Find user within that business
+        targetUser = allUsers.find(u => 
+          u.businessId === biz.id && 
+          u.name.toLowerCase() === username.toLowerCase()
+        );
+      }
+
+      if (targetUser) {
+        const storedPassword = targetUser.password || (targetUser.role === Role.SUPER_ADMIN ? 'admin' : '123');
+        if (storedPassword === password) {
+          onLogin(targetUser);
+        } else {
+          setError('Invalid credentials. Access denied.');
+        }
+      } else {
+        setError('Account not recognized for this business.');
+      }
+      
+      setIsSubmitting(false);
+    }, 600);
   };
 
   return (
@@ -49,79 +72,112 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <i className="fa-solid fa-beer-mug-empty"></i>
           </div>
           <h1 className="text-4xl font-black text-white mb-2 tracking-tighter">BARSYNC</h1>
-          <p className="text-indigo-400/80 font-medium uppercase tracking-[0.3em] text-[10px]">Secure Terminal Access</p>
+          <p className="text-indigo-400/80 font-medium uppercase tracking-[0.3em] text-[10px]">Terminal Gateway</p>
         </div>
 
-        <div className="bg-white/95 backdrop-blur rounded-[2.5rem] p-10 shadow-2xl space-y-8 border border-white/20">
-          {!selectedUser ? (
-            <>
-              <div className="text-center">
-                <h2 className="text-2xl font-black text-slate-800 tracking-tight">Select Profile</h2>
-                <p className="text-slate-500 text-sm mt-1">Select your profile to sign in</p>
-              </div>
-              <div className="space-y-3 max-h-64 overflow-y-auto pr-2 no-scrollbar">
-                {displayUsers.map(user => (
-                  <button
-                    key={user.id}
-                    onClick={() => setSelectedUser(user)}
-                    className="w-full flex items-center gap-4 p-4 border border-slate-100 rounded-3xl hover:bg-white hover:shadow-xl hover:border-indigo-200 transition-all text-left group"
-                  >
-                    <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-xl shadow-sm" />
-                    <div className="flex-1">
-                      <p className="font-black text-slate-800 uppercase text-xs">{user.name}</p>
-                      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{user.role}</p>
-                    </div>
-                    <i className="fa-solid fa-chevron-right text-slate-300"></i>
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : (
-            <form onSubmit={handleLoginAttempt} className="space-y-6">
-              <button 
-                type="button" 
-                onClick={() => { setSelectedUser(null); setError(''); setPassword(''); }}
-                className="text-indigo-500 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:text-indigo-700 transition-colors"
-              >
-                <i className="fa-solid fa-arrow-left"></i> Change User
-              </button>
-              
-              <div className="text-center">
-                <img src={selectedUser.avatar} className="w-20 h-20 rounded-3xl mx-auto mb-4 shadow-xl border-4 border-white" />
-                <h2 className="text-2xl font-black text-slate-800 tracking-tight">{selectedUser.name}</h2>
-                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">{selectedUser.role}</p>
-              </div>
+        <div className="bg-white/95 backdrop-blur rounded-[3rem] p-10 shadow-2xl space-y-8 border border-white/20">
+          <div className="text-center">
+            <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase">Sign In</h2>
+            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">Authorized access only</p>
+          </div>
 
-              <div className="space-y-4">
+          <form onSubmit={handleLoginAttempt} className="space-y-6">
+            <div className="space-y-4">
+              {/* Business Input */}
+              <div className="relative">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Workplace</label>
                 <div className="relative">
-                  <i className="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"></i>
+                  <i className="fa-solid fa-building absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
                   <input 
-                    type="password"
-                    placeholder="Enter PIN / Password"
-                    autoFocus
-                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold tracking-widest text-center"
-                    value={password}
-                    onChange={e => { setPassword(e.target.value); setError(''); }}
+                    type="text"
+                    required
+                    placeholder="e.g. The Junction"
+                    className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-slate-800 transition-all"
+                    value={businessName}
+                    onChange={e => setBusinessName(e.target.value)}
                   />
                 </div>
-                {error && <p className="text-rose-500 text-[10px] font-bold text-center uppercase tracking-widest">{error}</p>}
-                <button 
-                  type="submit"
-                  className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95"
-                >
-                  Enter Terminal
-                </button>
               </div>
-            </form>
-          )}
 
-          <div className="pt-6 border-t border-slate-100 text-center">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-center gap-2">
-               <i className="fa-solid fa-shield-halved"></i> Biometric Auth Disabled
+              {/* Username Input */}
+              <div className="relative">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Profile Name</label>
+                <div className="relative">
+                  <i className="fa-solid fa-user absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
+                  <input 
+                    type="text"
+                    required
+                    placeholder="Enter Username"
+                    className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-slate-800 transition-all"
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Password Input */}
+              <div className="relative">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Access PIN</label>
+                <div className="relative">
+                  <i className="fa-solid fa-key absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
+                  <input 
+                    type="password"
+                    required
+                    placeholder="••••••"
+                    className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-slate-800 tracking-widest transition-all"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {error && (
+              <div className="bg-rose-50 border border-rose-100 text-rose-500 p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-center animate-shake">
+                <i className="fa-solid fa-triangle-exclamation mr-2"></i>
+                {error}
+              </div>
+            )}
+
+            <button 
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
+            >
+              {isSubmitting ? (
+                <>
+                  <i className="fa-solid fa-circle-notch animate-spin"></i>
+                  Verifying...
+                </>
+              ) : (
+                <>
+                  <i className="fa-solid fa-right-to-bracket"></i>
+                  Enter Terminal
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="pt-6 border-t border-slate-50 text-center">
+            <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest flex items-center justify-center gap-2">
+               <i className="fa-solid fa-shield-halved"></i> 256-Bit SSL Encryption
             </p>
           </div>
         </div>
+        
+        <p className="text-center text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-8">
+          Need access? Contact your business owner
+        </p>
       </div>
+
+      <style>{`
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-5px); }
+          75% { transform: translateX(5px); }
+        }
+        .animate-shake { animation: shake 0.2s ease-in-out 0s 2; }
+      `}</style>
     </div>
   );
 };

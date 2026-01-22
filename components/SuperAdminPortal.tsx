@@ -1,10 +1,10 @@
 
 import React, { useState } from 'react';
-import { Business, Sale } from '../types';
+import { Business, Sale, Role, User } from '../types';
 
 interface SuperAdminPortalProps {
   businesses: Business[];
-  onAdd: (biz: Omit<Business, 'id' | 'createdAt'>) => void;
+  onAdd: (biz: Omit<Business, 'id' | 'createdAt'>, initialUser: Omit<User, 'id' | 'businessId' | 'status'>) => void;
   onUpdate: (biz: Business) => void;
   sales: Sale[];
 }
@@ -14,8 +14,28 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
   const [newBiz, setNewBiz] = useState<Omit<Business, 'id' | 'createdAt'>>({
     name: '', ownerName: '', googleSheetId: '', subscriptionStatus: 'Trial'
   });
+  const [initialOwner, setInitialOwner] = useState({
+    name: '',
+    password: ''
+  });
 
   const totalRevenue = sales.reduce((sum, s) => sum + s.totalAmount, 0);
+
+  const handleAddPartner = () => {
+    if (!newBiz.name || !newBiz.ownerName || !initialOwner.password) {
+      alert("Please fill in all business and owner details.");
+      return;
+    }
+    onAdd(newBiz, {
+      name: initialOwner.name || newBiz.ownerName,
+      role: Role.OWNER,
+      avatar: `https://picsum.photos/seed/${newBiz.name}/100/100`,
+      password: initialOwner.password
+    });
+    setShowAdd(false);
+    setNewBiz({ name: '', ownerName: '', googleSheetId: '', subscriptionStatus: 'Trial' });
+    setInitialOwner({ name: '', password: '' });
+  };
 
   return (
     <div className="space-y-10">
@@ -117,34 +137,65 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
 
       {showAdd && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-6 z-50">
-          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-lg p-12 relative overflow-hidden">
+          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-lg p-12 relative overflow-y-auto max-h-[90vh] no-scrollbar">
              <div className="absolute top-0 left-0 w-full h-2 bg-indigo-500"></div>
             <h3 className="text-3xl font-black text-slate-800 mb-8 uppercase tracking-tighter">Onboard New Partner</h3>
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Business Name</label>
-                  <input className="w-full border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold" 
-                    value={newBiz.name} onChange={e => setNewBiz({...newBiz, name: e.target.value})} />
+            
+            <div className="space-y-8">
+              <section className="space-y-4">
+                <h4 className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] border-b border-indigo-50 pb-2">Business Information</h4>
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Business Name</label>
+                    <input className="w-full border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold" 
+                      placeholder="The Junction"
+                      value={newBiz.name} onChange={e => setNewBiz({...newBiz, name: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Owner's Full Name</label>
+                    <input className="w-full border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold"
+                      placeholder="Jeniffer Maina"
+                      value={newBiz.ownerName} onChange={e => setNewBiz({...newBiz, ownerName: e.target.value})} />
+                  </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Primary Owner</label>
-                  <input className="w-full border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold"
-                    value={newBiz.ownerName} onChange={e => setNewBiz({...newBiz, ownerName: e.target.value})} />
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Google Sync Sheet ID</label>
+                  <div className="relative">
+                    <i className="fa-brands fa-google absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
+                    <input className="w-full border border-slate-200 rounded-2xl pl-12 pr-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-mono text-sm"
+                      placeholder="sheet_id_from_url"
+                      value={newBiz.googleSheetId} onChange={e => setNewBiz({...newBiz, googleSheetId: e.target.value})} />
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Google Cloud Sync Sheet ID</label>
-                <div className="relative">
-                   <i className="fa-brands fa-google absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
-                   <input className="w-full border border-slate-200 rounded-2xl pl-12 pr-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-mono text-sm"
-                    placeholder="Enter sheet_id from URL"
-                    value={newBiz.googleSheetId} onChange={e => setNewBiz({...newBiz, googleSheetId: e.target.value})} />
+              </section>
+
+              <section className="space-y-4 bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
+                <h4 className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Initial Terminal Access</h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Owner Terminal Name</label>
+                    <input className="w-full bg-white border border-slate-200 rounded-2xl px-5 py-3 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold" 
+                      placeholder="e.g. Jeniffer (Boss)"
+                      value={initialOwner.name} onChange={e => setInitialOwner({...initialOwner, name: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Initial Terminal Password</label>
+                    <input className="w-full bg-white border border-slate-200 rounded-2xl px-5 py-3 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold tracking-widest"
+                      type="password"
+                      placeholder="Set access pin"
+                      value={initialOwner.password} onChange={e => setInitialOwner({...initialOwner, password: e.target.value})} />
+                  </div>
                 </div>
-              </div>
-              <div className="flex gap-4 mt-12">
+              </section>
+
+              <div className="flex gap-4 pt-4">
                 <button onClick={() => setShowAdd(false)} className="flex-1 py-5 font-black text-[11px] uppercase tracking-widest text-slate-400 hover:bg-slate-50 rounded-2xl transition-all">Dismiss</button>
-                <button onClick={() => { onAdd(newBiz); setShowAdd(false); }} className="flex-1 py-5 bg-indigo-600 text-white font-black text-[11px] uppercase tracking-widest rounded-2xl shadow-xl shadow-indigo-500/30 hover:bg-indigo-700 transition-all transform active:scale-95">Complete Onboarding</button>
+                <button 
+                  onClick={handleAddPartner} 
+                  className="flex-1 py-5 bg-indigo-600 text-white font-black text-[11px] uppercase tracking-widest rounded-2xl shadow-xl shadow-indigo-500/30 hover:bg-indigo-700 transition-all transform active:scale-95"
+                >
+                  Complete Onboarding
+                </button>
               </div>
             </div>
           </div>

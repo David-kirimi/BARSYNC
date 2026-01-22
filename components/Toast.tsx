@@ -26,24 +26,27 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }, 4000);
     }, []);
 
-    // Debug: Show a welcome toast on first load to verify system
+    // Show a welcome toast to verify system visibility
     useEffect(() => {
-        showToast("Terminal session active", "info");
+        const timer = setTimeout(() => {
+            showToast("Terminal session active", "info");
+        }, 1000);
+        return () => clearTimeout(timer);
     }, [showToast]);
 
     return (
         <ToastContext.Provider value={{ showToast }}>
             {children}
-            <div className="fixed top-6 left-1/2 -translate-x-1/2 md:top-auto md:bottom-10 md:right-10 md:left-auto z-[99999] flex flex-col gap-3 pointer-events-none">
+            <div className="fixed top-6 left-1/2 -translate-x-1/2 md:top-auto md:bottom-10 md:right-10 md:left-auto z-[999999] flex flex-col gap-3 pointer-events-none md:translate-x-0">
                 {toasts.map(toast => (
                     <div
                         key={toast.id}
                         className={`
-              pointer-events-auto px-6 py-4 rounded-2xl shadow-2xl border flex items-center gap-4 animate-slide-up min-w-[300px] backdrop-blur-md
-              ${toast.type === 'success' ? 'bg-emerald-500/90 text-white border-emerald-400 shadow-emerald-500/20' : ''}
-              ${toast.type === 'error' ? 'bg-rose-500/90 text-white border-rose-400 shadow-rose-500/20' : ''}
-              ${toast.type === 'warning' ? 'bg-amber-500/90 text-white border-amber-400 shadow-amber-500/20' : ''}
-              ${toast.type === 'info' ? 'bg-indigo-600/90 text-white border-indigo-500 shadow-indigo-500/20' : ''}
+              pointer-events-auto px-6 py-4 rounded-2xl shadow-2xl border flex items-center gap-4 animate-slide-up min-w-[320px] backdrop-blur-md
+              ${toast.type === 'success' ? 'bg-emerald-500 text-white border-emerald-400 shadow-emerald-500/20' : ''}
+              ${toast.type === 'error' ? 'bg-rose-500 text-white border-rose-400 shadow-rose-500/20' : ''}
+              ${toast.type === 'warning' ? 'bg-amber-500 text-white border-amber-400 shadow-amber-500/20' : ''}
+              ${toast.type === 'info' ? 'bg-indigo-600 text-white border-indigo-500 shadow-indigo-500/20' : ''}
             `}
                     >
                         <div className="bg-white/20 w-8 h-8 rounded-xl flex items-center justify-center shrink-0">

@@ -85,13 +85,17 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
           {/* Cloud Sync Center - MongoDB Optimized */}
           <div className="bg-slate-900/80 rounded-3xl p-5 border border-slate-800 backdrop-blur-sm shadow-inner">
             <div className="flex items-center justify-between mb-4">
-               <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2">
-                 <i className="fa-solid fa-database text-[8px]"></i> Atlas Hub
-               </span>
+               <div className="flex flex-col">
+                 <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2">
+                   <i className="fa-solid fa-database text-[8px]"></i> Atlas Hub
+                 </span>
+                 <span className="text-[7px] text-emerald-300/60 font-black uppercase tracking-[0.2em]">Auto-Sync On</span>
+               </div>
                <button 
                 onClick={onSync}
                 disabled={isSyncing || offline}
                 className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isSyncing ? 'bg-emerald-500 text-white animate-spin' : 'bg-slate-800 text-slate-400 hover:text-emerald-400'}`}
+                title="Force Cloud Update"
                >
                  <i className="fa-solid fa-cloud-arrow-up text-xs"></i>
                </button>

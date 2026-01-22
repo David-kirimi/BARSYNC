@@ -11,9 +11,17 @@ interface SuperAdminPortalProps {
 
 const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, onUpdate, sales }) => {
   const [showAdd, setShowAdd] = useState(false);
+  const [editingBiz, setEditingBiz] = useState<Business | null>(null);
+  
   const [newBiz, setNewBiz] = useState<Omit<Business, 'id' | 'createdAt'>>({
-    name: '', ownerName: '', mongoDatabase: '', mongoCollection: '', subscriptionStatus: 'Trial'
+    name: '', 
+    ownerName: '', 
+    mongoDatabase: '', 
+    mongoCollection: '', 
+    mongoConnectionString: '',
+    subscriptionStatus: 'Trial'
   });
+
   const [initialOwner, setInitialOwner] = useState({
     name: '',
     password: ''
@@ -33,8 +41,15 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
       password: initialOwner.password
     });
     setShowAdd(false);
-    setNewBiz({ name: '', ownerName: '', mongoDatabase: '', mongoCollection: '', subscriptionStatus: 'Trial' });
+    setNewBiz({ name: '', ownerName: '', mongoDatabase: '', mongoCollection: '', mongoConnectionString: '', subscriptionStatus: 'Trial' });
     setInitialOwner({ name: '', password: '' });
+  };
+
+  const handleUpdatePartner = () => {
+    if (editingBiz) {
+      onUpdate(editingBiz);
+      setEditingBiz(null);
+    }
   };
 
   return (
@@ -115,22 +130,26 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
                         {biz.mongoDatabase || 'not_set'}
                       </div>
                       <div className="flex items-center gap-2 font-mono text-[9px] text-slate-400">
-                        <i className="fa-solid fa-layer-group text-[8px]"></i>
-                        {biz.mongoCollection || 'default'}
+                        <i className="fa-solid fa-link text-[8px]"></i>
+                        {biz.mongoConnectionString ? 'Cluster Connected' : 'Missing String'}
                       </div>
                     </div>
                   </td>
                   <td className="px-10 py-8 text-right">
                     <div className="flex items-center justify-end gap-3">
                       <button 
-                        onClick={() => onUpdate({ ...biz, subscriptionStatus: biz.subscriptionStatus === 'Active' ? 'Expired' : 'Active' })}
+                        onClick={() => setEditingBiz(biz)}
                         className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-indigo-600 transition-all shadow-sm"
-                        title="Update Status"
+                        title="Configure Node"
+                      >
+                        <i className="fa-solid fa-gear"></i>
+                      </button>
+                      <button 
+                        onClick={() => onUpdate({ ...biz, subscriptionStatus: biz.subscriptionStatus === 'Active' ? 'Expired' : 'Active' })}
+                        className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-emerald-600 transition-all shadow-sm"
+                        title="Toggle Access"
                       >
                         <i className="fa-solid fa-plug"></i>
-                      </button>
-                      <button className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-rose-500 transition-all shadow-sm">
-                        <i className="fa-solid fa-trash-can"></i>
                       </button>
                     </div>
                   </td>
@@ -141,11 +160,14 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
         </div>
       </div>
 
-      {showAdd && (
+      {/* Add/Edit Modal */}
+      {(showAdd || editingBiz) && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-6 z-50">
           <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-lg p-12 relative overflow-y-auto max-h-[90vh] no-scrollbar">
              <div className="absolute top-0 left-0 w-full h-2 bg-emerald-500"></div>
-            <h3 className="text-3xl font-black text-slate-800 mb-8 uppercase tracking-tighter">Atlas Partner Onboarding</h3>
+            <h3 className="text-3xl font-black text-slate-800 mb-8 uppercase tracking-tighter">
+              {showAdd ? 'Atlas Partner Onboarding' : 'Configure Partner Node'}
+            </h3>
             
             <div className="space-y-8">
               <section className="space-y-4">
@@ -155,57 +177,70 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Business Name</label>
                     <input className="w-full border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold" 
                       placeholder="The Junction"
-                      value={newBiz.name} onChange={e => setNewBiz({...newBiz, name: e.target.value})} />
+                      value={showAdd ? newBiz.name : editingBiz?.name} 
+                      onChange={e => showAdd ? setNewBiz({...newBiz, name: e.target.value}) : setEditingBiz({...editingBiz!, name: e.target.value})} />
                   </div>
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Primary Owner</label>
                     <input className="w-full border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold"
                       placeholder="Jeniffer Maina"
-                      value={newBiz.ownerName} onChange={e => setNewBiz({...newBiz, ownerName: e.target.value})} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Target Database</label>
-                    <input className="w-full border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-mono text-xs"
-                      placeholder="e.g. pos_main"
-                      value={newBiz.mongoDatabase} onChange={e => setNewBiz({...newBiz, mongoDatabase: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Collection Node</label>
-                    <input className="w-full border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-mono text-xs"
-                      placeholder="e.g. junction_tx"
-                      value={newBiz.mongoCollection} onChange={e => setNewBiz({...newBiz, mongoCollection: e.target.value})} />
+                      value={showAdd ? newBiz.ownerName : editingBiz?.ownerName}
+                      onChange={e => showAdd ? setNewBiz({...newBiz, ownerName: e.target.value}) : setEditingBiz({...editingBiz!, ownerName: e.target.value})} />
                   </div>
                 </div>
               </section>
 
               <section className="space-y-4 bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
-                <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em]">Partner Credentials</h4>
+                <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em]">MongoDB Atlas Sync Settings</h4>
                 <div className="space-y-4">
                   <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Terminal ID</label>
-                    <input className="w-full bg-white border border-slate-200 rounded-2xl px-5 py-3 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold" 
-                      placeholder="Owner Username"
-                      value={initialOwner.name} onChange={e => setInitialOwner({...initialOwner, name: e.target.value})} />
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Connection String (mongodb+srv://...)</label>
+                    <textarea className="w-full bg-white border border-slate-200 rounded-2xl px-5 py-3 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-mono text-[10px] h-24"
+                      placeholder="Enter your MongoDB Atlas SRV string here"
+                      value={showAdd ? newBiz.mongoConnectionString : editingBiz?.mongoConnectionString}
+                      onChange={e => showAdd ? setNewBiz({...newBiz, mongoConnectionString: e.target.value}) : setEditingBiz({...editingBiz!, mongoConnectionString: e.target.value})} />
                   </div>
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Access Token (PIN)</label>
-                    <input className="w-full bg-white border border-slate-200 rounded-2xl px-5 py-3 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold tracking-widest"
-                      type="password"
-                      placeholder="Initial Access Code"
-                      value={initialOwner.password} onChange={e => setInitialOwner({...initialOwner, password: e.target.value})} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Database</label>
+                      <input className="w-full bg-white border border-slate-200 rounded-2xl px-5 py-3 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-mono text-xs"
+                        placeholder="e.g. pos_main"
+                        value={showAdd ? newBiz.mongoDatabase : editingBiz?.mongoDatabase}
+                        onChange={e => showAdd ? setNewBiz({...newBiz, mongoDatabase: e.target.value}) : setEditingBiz({...editingBiz!, mongoDatabase: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Collection</label>
+                      <input className="w-full bg-white border border-slate-200 rounded-2xl px-5 py-3 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-mono text-xs"
+                        placeholder="e.g. transactions"
+                        value={showAdd ? newBiz.mongoCollection : editingBiz?.mongoCollection}
+                        onChange={e => showAdd ? setNewBiz({...newBiz, mongoCollection: e.target.value}) : setEditingBiz({...editingBiz!, mongoCollection: e.target.value})} />
+                    </div>
                   </div>
                 </div>
               </section>
 
+              {showAdd && (
+                <section className="space-y-4 bg-slate-900 p-6 rounded-[2rem]">
+                  <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Initial Owner Account</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <input className="w-full bg-slate-800 border border-slate-700 rounded-2xl px-5 py-3 text-white font-bold placeholder:text-slate-600 outline-none" 
+                      placeholder="Username"
+                      value={initialOwner.name} onChange={e => setInitialOwner({...initialOwner, name: e.target.value})} />
+                    <input className="w-full bg-slate-800 border border-slate-700 rounded-2xl px-5 py-3 text-white font-bold tracking-widest placeholder:text-slate-600 outline-none"
+                      type="password"
+                      placeholder="PIN"
+                      value={initialOwner.password} onChange={e => setInitialOwner({...initialOwner, password: e.target.value})} />
+                  </div>
+                </section>
+              )}
+
               <div className="flex gap-4 pt-4">
-                <button onClick={() => setShowAdd(false)} className="flex-1 py-5 font-black text-[11px] uppercase tracking-widest text-slate-400 hover:bg-slate-50 rounded-2xl transition-all">Cancel</button>
+                <button onClick={() => { setShowAdd(false); setEditingBiz(null); }} className="flex-1 py-5 font-black text-[11px] uppercase tracking-widest text-slate-400 hover:bg-slate-50 rounded-2xl transition-all">Cancel</button>
                 <button 
-                  onClick={handleAddPartner} 
+                  onClick={showAdd ? handleAddPartner : handleUpdatePartner} 
                   className="flex-1 py-5 bg-emerald-600 text-white font-black text-[11px] uppercase tracking-widest rounded-2xl shadow-xl shadow-emerald-500/30 hover:bg-emerald-700 transition-all transform active:scale-95"
                 >
-                  Deploy Node
+                  {showAdd ? 'Deploy Node' : 'Update Node'}
                 </button>
               </div>
             </div>

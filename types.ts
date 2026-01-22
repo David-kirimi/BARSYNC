@@ -10,8 +10,9 @@ export interface Business {
   id: string;
   name: string;
   ownerName: string;
-  mongoDatabase: string; // Replaced googleSheetId
-  mongoCollection: string; // Added for granular control
+  mongoDatabase: string;
+  mongoCollection: string;
+  mongoConnectionString?: string; // New: target specific cluster
   subscriptionStatus: 'Active' | 'Trial' | 'Expired';
   createdAt: string;
   logo?: string;
@@ -22,10 +23,10 @@ export interface User {
   name: string;
   role: Role;
   avatar: string;
-  businessId?: string; // Null for SUPER_ADMIN
+  businessId?: string;
   phone?: string;
   status: 'Active' | 'Inactive';
-  password?: string; // Added for authentication
+  password?: string;
 }
 
 export interface Product {

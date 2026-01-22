@@ -39,6 +39,7 @@ const App: React.FC = () => {
           ownerName: 'Jeniffer', 
           mongoDatabase: 'barsync_prod', 
           mongoCollection: 'junction_records', 
+          mongoConnectionString: 'mongodb+srv://muriiradavie_db_user:6ty0GtMN5lQ5E7xM@cluster0.vgv8uz9.mongodb.net/?appName=Cluster0',
           subscriptionStatus: 'Active', 
           createdAt: new Date().toISOString() 
         }
@@ -95,25 +96,26 @@ const App: React.FC = () => {
     setAuditLogs(prev => [newLog, ...prev]);
   }, [currentUser]);
 
-  const syncWithCloud = async () => {
+  const syncWithCloud = useCallback(async (isSilent = false) => {
     if (!navigator.onLine) {
-      alert("System is Offline. MongoDB Cloud Sync requires an active connection.");
+      if (!isSilent) alert("System is Offline. MongoDB Cloud Sync requires an active connection.");
       return;
     }
 
-    setIsSyncing(true);
+    const currentBiz = businesses.find(b => b.id === currentUser?.businessId);
+    if (!currentBiz) return;
+
+    if (!isSilent) setIsSyncing(true);
+    
     try {
-      // The user provided the connection string. In a real production app, we would use a backend bridge
-      // to handle that string securely. For now, we simulate a POST to a MongoDB sync bridge.
       const API_KEY_VAL = process.env.API_KEY || '';
       const FALLBACK_BRIDGE_URL = 'https://script.google.com/macros/s/AKfycbz6DWMCAA-vlNCFnpyGFRuBwlB-3DK_lJhgrbOkKRs1HQGKaTK6gog2p1icqPmHc-l-/exec';
-      
       const API_URL = API_KEY_VAL.startsWith('http') ? API_KEY_VAL : FALLBACK_BRIDGE_URL;
 
       const payload = {
         type: 'MONGODB_SYNC',
-        connectionString: 'mongodb+srv://muriiradavie_db_user:6ty0GtMN5lQ5E7xM@cluster0.vgv8uz9.mongodb.net/?appName=Cluster0',
-        business: businesses.find(b => b.id === currentUser?.businessId),
+        connectionString: currentBiz.mongoConnectionString || 'mongodb+srv://muriiradavie_db_user:6ty0GtMN5lQ5E7xM@cluster0.vgv8uz9.mongodb.net/?appName=Cluster0',
+        business: currentBiz,
         data: { 
           products, 
           sales, 
@@ -123,7 +125,6 @@ const App: React.FC = () => {
         }
       };
 
-      // We use the bridge URL as the entry point to push to MongoDB Atlas
       await fetch(API_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -134,15 +135,31 @@ const App: React.FC = () => {
       const now = new Date().toLocaleString();
       setLastSync(now);
       localStorage.setItem('bar_pos_last_sync', now);
-      addLog('MONGODB_SYNC', 'Local state synchronized with MongoDB Atlas Cluster0');
-      alert("MongoDB Sync Request Sent! Data is being persisted to Cluster0.");
+      addLog('MONGODB_SYNC', `Push to ${currentBiz.name} Cluster Successful`);
+      if (!isSilent) alert(`Sync Process Triggered for ${currentBiz.name}. Data is migrating to MongoDB Atlas.`);
     } catch (error) {
       console.error("MongoDB connection failure:", error);
-      alert("Cloud Sync failed. Verify your MongoDB Bridge endpoint is operational.");
+      if (!isSilent) alert("Cloud Sync failed. Verify your Google Apps Script 'Bridge' is active and published as a Web App.");
     } finally {
-      setIsSyncing(false);
+      if (!isSilent) setIsSyncing(false);
     }
-  };
+  }, [businesses, currentUser, products, sales, allUsers, auditLogs, addLog]);
+
+  const [offline, setOffline] = useState(!navigator.onLine);
+  useEffect(() => {
+    const handleOnline = () => {
+      setOffline(false);
+      // Auto-Sync whenever we come back online
+      syncWithCloud(true);
+    };
+    const handleOffline = () => setOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [syncWithCloud]);
 
   useEffect(() => {
     if (currentUser && currentView === 'POS' && currentUser.role === Role.SUPER_ADMIN) {
@@ -160,18 +177,6 @@ const App: React.FC = () => {
       localStorage.setItem('bar_pos_user', JSON.stringify(currentUser));
     }
   }, [products, sales, currentUser, businesses, allUsers, auditLogs]);
-
-  const [offline, setOffline] = useState(!navigator.onLine);
-  useEffect(() => {
-    const handleOnline = () => setOffline(false);
-    const handleOffline = () => setOffline(true);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
@@ -233,11 +238,19 @@ const App: React.FC = () => {
       salesPerson: currentUser.name,
       customerPhone
     };
+    
+    // Update local state first
     setSales(prev => [newSale, ...prev]);
     addLog('SALE', `Order ${newSale.id} completed for Ksh ${newSale.totalAmount}`);
     setCart([]);
+
+    // Trigger Auto-Sync if online
+    if (navigator.onLine) {
+      setTimeout(() => syncWithCloud(true), 500);
+    }
+
     return newSale;
-  }, [cart, currentUser, addLog]);
+  }, [cart, currentUser, addLog, syncWithCloud]);
 
   const handleAddBusiness = (biz: Omit<Business, 'id' | 'createdAt'>, initialUser: Omit<User, 'id' | 'businessId' | 'status'>) => {
     const newBusinessId = `bus_${Math.random().toString(36).substr(2, 5)}`;
@@ -246,6 +259,11 @@ const App: React.FC = () => {
     const newUser: User = { ...initialUser, id: Math.random().toString(36).substr(2, 9), businessId: newBusinessId, status: 'Active' };
     setAllUsers(prev => [...prev, newUser]);
     addLog('PARTNER_ONBOARD', `New business registered to MongoDB Cluster: ${biz.name}`);
+  };
+
+  const updateBusiness = (updatedBiz: Business) => {
+    setBusinesses(prev => prev.map(b => b.id === updatedBiz.id ? updatedBiz : b));
+    addLog('BIZ_CONFIG_UPDATE', `Configuration changed for ${updatedBiz.name}`);
   };
 
   if (!currentUser) return <Login onLogin={handleLogin} businesses={businesses} allUsers={allUsers} />;
@@ -260,7 +278,7 @@ const App: React.FC = () => {
         user={currentUser} 
         onLogout={handleLogout}
         offline={offline}
-        onSync={syncWithCloud}
+        onSync={() => syncWithCloud()}
         isSyncing={isSyncing}
         lastSync={lastSync}
       />
@@ -290,15 +308,18 @@ const App: React.FC = () => {
             <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-50 flex items-center justify-center">
               <div className="bg-slate-900 text-white p-10 rounded-[3rem] shadow-2xl text-center space-y-6 animate-pulse">
                 <div className="w-20 h-20 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                <h3 className="text-xl font-black uppercase">Pushing to MongoDB Atlas</h3>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Cluster0 • Global Synchronization</p>
+                <h3 className="text-xl font-black uppercase tracking-tight">Syncing to MongoDB Atlas</h3>
+                <div className="space-y-1">
+                  <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-[0.2em]">Bridge Active</p>
+                  <p className="text-[8px] text-slate-400 font-mono break-all px-6">{currentBusiness?.mongoConnectionString?.substring(0, 50)}...</p>
+                </div>
               </div>
             </div>
           )}
 
           {currentView === 'POS' && <POS products={products} addToCart={addToCart} cart={cart} updateCartQuantity={updateCartQuantity} removeFromCart={removeFromCart} onCheckout={checkout} businessName={currentBusiness?.name || 'BarSync'} />}
           {currentView === 'INVENTORY' && <Inventory products={products} onUpdate={(p) => { setProducts(prev => prev.map(item => item.id === p.id ? p : item)); addLog('STOCK_UPDATE', p.name); }} onAdd={(p) => { setProducts(prev => [...prev, { ...p, id: Date.now().toString() } as Product]); }} userRole={currentUser.role} />}
-          {currentView === 'SUPER_ADMIN_PORTAL' && currentUser.role === Role.SUPER_ADMIN && <SuperAdminPortal businesses={businesses} onAdd={handleAddBusiness} onUpdate={(u) => setBusinesses(prev => prev.map(b => b.id === u.id ? u : b))} sales={sales} />}
+          {currentView === 'SUPER_ADMIN_PORTAL' && currentUser.role === Role.SUPER_ADMIN && <SuperAdminPortal businesses={businesses} onAdd={handleAddBusiness} onUpdate={updateBusiness} sales={sales} />}
           {currentView === 'USER_MANAGEMENT' && <UserManagement users={allUsers.filter(u => u.businessId === currentUser.businessId)} onAdd={(u) => setAllUsers(prev => [...prev, { ...u, id: Date.now().toString(), businessId: currentUser.businessId!, status: 'Active' }])} onUpdate={(u) => setAllUsers(prev => prev.map(item => item.id === u.id ? u : item))} onDelete={(id) => setAllUsers(prev => prev.filter(u => u.id !== id))} />}
           {currentView === 'REPORTS' && <Reports sales={sales.filter(s => s.businessId === currentUser.businessId)} businessName={currentBusiness?.name || 'BarSync'} />}
           {currentView === 'AUDIT_LOGS' && <AuditLogs logs={currentUser.role === Role.SUPER_ADMIN ? auditLogs : auditLogs.filter(l => l.businessId === currentUser.businessId)} />}

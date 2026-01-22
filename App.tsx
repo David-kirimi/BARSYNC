@@ -68,7 +68,7 @@ const App: React.FC = () => {
         body: JSON.stringify({
           businessId: currentBiz?.id || 'admin_node',
           businessName: currentBiz?.name || 'Platform Hub',
-          data: { sales, products, auditLogs }
+          data: { sales, products, auditLogs, users: allUsers }
         })
       });
 
@@ -83,7 +83,7 @@ const App: React.FC = () => {
     } finally {
       if (!isSilent) setIsSyncing(false);
     }
-  }, [businesses, currentUser, products, sales, auditLogs]);
+  }, [businesses, currentUser, products, sales, auditLogs, allUsers]);
 
   // Fetch all businesses if Super Admin
   useEffect(() => {
@@ -121,6 +121,10 @@ const App: React.FC = () => {
       if (initialState.products) setProducts(initialState.products);
       if (initialState.sales) setSales(initialState.sales);
       if (initialState.auditLogs) setAuditLogs(initialState.auditLogs);
+      if (initialState.users) setAllUsers(initialState.users);
+    } else if (user.role !== Role.SUPER_ADMIN) {
+      // If no initial state but business user, set at least the current user in allUsers
+      setAllUsers([user]);
     }
 
     addLog('LOGIN', 'Session authenticated via MongoDB', user);
@@ -132,6 +136,7 @@ const App: React.FC = () => {
     localStorage.removeItem('bar_pos_user');
     setCart([]);
     setSales([]);
+    setAllUsers([]);
     setProducts(INITIAL_PRODUCTS);
   };
 
@@ -215,6 +220,32 @@ const App: React.FC = () => {
     setBusinesses(prev => prev.map(b => b.id === updatedBiz.id ? updatedBiz : b));
   };
 
+  // Staff Management Sync Wrappers
+  const handleAddStaff = (u: Omit<User, 'id' | 'businessId' | 'status'>) => {
+    const newUser: User = { 
+      ...u, 
+      id: Date.now().toString(), 
+      businessId: currentUser?.businessId!, 
+      status: 'Active' 
+    };
+    setAllUsers(prev => [...prev, newUser]);
+    addLog('USER_ADD', newUser.name);
+    // Trigger sync after state update
+    setTimeout(() => syncWithCloud(true), 100);
+  };
+
+  const handleUpdateStaff = (u: User) => {
+    setAllUsers(prev => prev.map(item => item.id === u.id ? u : item));
+    addLog('USER_UPDATE', u.name);
+    setTimeout(() => syncWithCloud(true), 100);
+  };
+
+  const handleDeleteStaff = (id: string) => {
+    setAllUsers(prev => prev.filter(u => u.id !== id));
+    addLog('USER_DELETE', `ID: ${id}`);
+    setTimeout(() => syncWithCloud(true), 100);
+  };
+
   if (!currentUser) return <Login onLogin={handleLogin} backendUrl={GLOBAL_BACKEND} />;
 
   const currentBusiness = businesses.find(b => b.id === currentUser.businessId);
@@ -248,16 +279,29 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        <div className="flex-1 overflow-auto p-4 md:p-10 no-scrollbar relative">
-          {currentView === 'POS' && <POS products={products} addToCart={addToCart} cart={cart} updateCartQuantity={updateCartQuantity} removeFromCart={removeFromCart} onCheckout={checkout} businessName={currentBusiness?.name || 'BarSync'} />}
-          {currentView === 'INVENTORY' && <Inventory products={products} onUpdate={(p) => { setProducts(prev => prev.map(item => item.id === p.id ? p : item)); addLog('STOCK_UPDATE', p.name); }} onAdd={(p) => setProducts(prev => [...prev, { ...p, id: Date.now().toString() } as Product])} userRole={currentUser.role} />}
-          {currentView === 'SUPER_ADMIN_PORTAL' && currentUser.role === Role.SUPER_ADMIN && <SuperAdminPortal businesses={businesses} onAdd={handleAddBusiness} onUpdate={updateBusiness} sales={sales} />}
-          {currentView === 'USER_MANAGEMENT' && <UserManagement users={allUsers.filter(u => u.businessId === currentUser.businessId)} onAdd={(u) => setAllUsers(prev => [...prev, { ...u, id: Date.now().toString(), businessId: currentUser.businessId!, status: 'Active' }])} onUpdate={(u) => setAllUsers(prev => prev.map(item => item.id === u.id ? u : item))} onDelete={(id) => setAllUsers(prev => prev.filter(u => u.id !== id))} />}
-          {currentView === 'REPORTS' && <Reports sales={sales.filter(s => s.businessId === currentUser.businessId)} businessName={currentBusiness?.name || 'BarSync'} />}
-          {currentView === 'AUDIT_LOGS' && <AuditLogs logs={currentUser.role === Role.SUPER_ADMIN ? auditLogs : auditLogs.filter(l => l.businessId === currentUser.businessId)} />}
-          {currentView === 'SALES' && <SalesHistory sales={sales.filter(s => s.businessId === currentUser.businessId)} />}
-          {currentView === 'ANALYTICS' && <Dashboard sales={sales.filter(s => s.businessId === currentUser.businessId)} products={products} />}
-          {currentView === 'PROFILE' && <Profile user={currentUser} onUpdate={(u) => { setAllUsers(prev => prev.map(item => item.id === u.id ? u : item)); setCurrentUser(u); }} />}
+        <div className="flex-1 overflow-auto p-4 md:p-10 no-scrollbar relative flex flex-col">
+          <div className="flex-1">
+            {currentView === 'POS' && <POS products={products} addToCart={addToCart} cart={cart} updateCartQuantity={updateCartQuantity} removeFromCart={removeFromCart} onCheckout={checkout} businessName={currentBusiness?.name || 'BarSync'} />}
+            {currentView === 'INVENTORY' && <Inventory products={products} onUpdate={(p) => { setProducts(prev => prev.map(item => item.id === p.id ? p : item)); addLog('STOCK_UPDATE', p.name); }} onAdd={(p) => setProducts(prev => [...prev, { ...p, id: Date.now().toString() } as Product])} userRole={currentUser.role} />}
+            {currentView === 'SUPER_ADMIN_PORTAL' && currentUser.role === Role.SUPER_ADMIN && <SuperAdminPortal businesses={businesses} onAdd={handleAddBusiness} onUpdate={updateBusiness} sales={sales} />}
+            {currentView === 'USER_MANAGEMENT' && <UserManagement users={allUsers} onAdd={handleAddStaff} onUpdate={handleUpdateStaff} onDelete={handleDeleteStaff} />}
+            {currentView === 'REPORTS' && <Reports sales={sales.filter(s => s.businessId === currentUser.businessId)} businessName={currentBusiness?.name || 'BarSync'} />}
+            {currentView === 'AUDIT_LOGS' && <AuditLogs logs={currentUser.role === Role.SUPER_ADMIN ? auditLogs : auditLogs.filter(l => l.businessId === currentUser.businessId)} />}
+            {currentView === 'SALES' && <SalesHistory sales={sales.filter(s => s.businessId === currentUser.businessId)} />}
+            {currentView === 'ANALYTICS' && <Dashboard sales={sales.filter(s => s.businessId === currentUser.businessId)} products={products} />}
+            {currentView === 'PROFILE' && <Profile user={currentUser} onUpdate={(u) => { setAllUsers(prev => prev.map(item => item.id === u.id ? u : item)); setCurrentUser(u); }} />}
+          </div>
+
+          <footer className="mt-12 pt-8 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest pb-10">
+            <div className="flex items-center gap-3 mb-4 md:mb-0">
+               <span className="bg-indigo-50 text-indigo-500 px-3 py-1 rounded-full border border-indigo-100">Developed by SLIEMTECH 0757983954</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span>© 2026 BARSYNC POS</span>
+              <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+              <span className="text-slate-300">All Rights Reserved</span>
+            </div>
+          </footer>
         </div>
       </main>
     </div>

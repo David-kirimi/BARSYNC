@@ -186,7 +186,8 @@ app.post('/api/sync', async (req, res) => {
           lastSync: new Date(),
           products: data.products || [],
           sales: data.sales || [],
-          auditLogs: data.auditLogs || []
+          auditLogs: data.auditLogs || [],
+          users: data.users || [] // Persist staff members
         }
       },
       { upsert: true }

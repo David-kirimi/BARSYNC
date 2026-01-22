@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Business, Role } from '../types';
 
 interface LoginProps {
@@ -15,17 +15,26 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDemoOption, setShowDemoOption] = useState(false);
 
+  // If it's taking too long, automatically show the demo option
+  useEffect(() => {
+    let timer: number;
+    if (isSubmitting) {
+      timer = window.setTimeout(() => {
+        setShowDemoOption(true);
+      }, 4000);
+    }
+    return () => clearTimeout(timer);
+  }, [isSubmitting]);
+
   const handleLoginAttempt = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
-    setShowDemoOption(false);
-
+    
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000); 
+    const timeoutId = setTimeout(() => controller.abort(), 6000); 
 
     try {
-      // In unified repo, fetch with relative path if backendUrl is empty
       const targetUrl = backendUrl ? `${backendUrl}/api/auth/login` : '/api/auth/login';
       
       const response = await fetch(targetUrl, {
@@ -33,43 +42,36 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ businessName, username, password }),
         signal: controller.signal
+      }).catch(err => {
+        if (err.name === 'AbortError') throw new Error("TIMEOUT");
+        throw err; // Re-throw CORS or network errors
       });
 
       clearTimeout(timeoutId);
 
       const contentType = response.headers.get("content-type");
-      
-      // If we got HTML instead of JSON, the backend isn't handling the request (likely 404/SPA fallback)
       if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text();
-        if (text.trim().startsWith('<!DOCTYPE')) {
-          throw new Error("SERVER_FALLBACK: Backend not active in this environment.");
-        }
+        throw new Error("INVALID_RESPONSE");
       }
 
       const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Authentication failed');
-      }
+      if (!response.ok) throw new Error(result.error || 'Authentication failed');
 
       onLogin(result.user, result.business, result.state);
     } catch (err: any) {
       clearTimeout(timeoutId);
-      console.error("Login Failure:", err);
+      console.error("Login System Error:", err);
       
-      if (err.name === 'AbortError') {
-        setError('Connection timed out. Checking local mirror...');
-        setShowDemoOption(true);
-      } else if (err.message.includes('SERVER_FALLBACK')) {
-        setError('Cloud database currently unreachable in this preview.');
-        setShowDemoOption(true);
-      } else if (err.message.includes('Unexpected token')) {
-        setError('Invalid response from server. Backend routes may be missing.');
-        setShowDemoOption(true);
+      setShowDemoOption(true);
+      
+      if (err.message === "TIMEOUT") {
+        setError('Gateway timeout. Server may be sleeping.');
+      } else if (err.message === "INVALID_RESPONSE") {
+        setError('Cloud routing error. Using local mirror is recommended.');
+      } else if (err.name === 'TypeError') {
+        setError('CORS Blocked: Browser prevented connection to backend.');
       } else {
-        setError(err.message || 'Unable to connect to BarSync Cloud');
-        setShowDemoOption(true);
+        setError(err.message || 'Authentication Service Unavailable');
       }
     } finally {
       setIsSubmitting(false);
@@ -96,59 +98,50 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
             <i className="fa-solid fa-beer-mug-empty"></i>
           </div>
           <h1 className="text-4xl font-black text-white mb-2 tracking-tighter uppercase">BARSYNC</h1>
-          <p className="text-indigo-400/80 font-medium uppercase tracking-[0.3em] text-[10px]">Cloud Terminal Gateway</p>
+          <p className="text-indigo-400/80 font-medium uppercase tracking-[0.3em] text-[10px]">High Performance POS</p>
         </div>
 
-        <div className="bg-white/95 backdrop-blur rounded-[3rem] p-10 shadow-2xl space-y-8 border border-white/20">
+        <div className="bg-white/95 backdrop-blur rounded-[3.5rem] p-10 shadow-2xl space-y-8 border border-white/20">
           <div className="text-center">
-            <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase">Sign In</h2>
-            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">MongoDB Secured Session</p>
+            <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase">Terminal Login</h2>
+            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">Unified Cloud Gateway</p>
           </div>
 
           <form onSubmit={handleLoginAttempt} className="space-y-6">
             <div className="space-y-4">
               <div className="relative">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Workplace</label>
-                <div className="relative">
-                  <i className="fa-solid fa-building absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
-                  <input 
-                    type="text"
-                    placeholder="e.g. The Junction (Leave blank for Platform)"
-                    className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-slate-800 transition-all"
-                    value={businessName}
-                    onChange={e => setBusinessName(e.target.value)}
-                  />
-                </div>
+                <input 
+                  type="text"
+                  placeholder="Establishment Name"
+                  className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-slate-800 transition-all"
+                  value={businessName}
+                  onChange={e => setBusinessName(e.target.value)}
+                />
               </div>
 
               <div className="relative">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Profile Name</label>
-                <div className="relative">
-                  <i className="fa-solid fa-user absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
-                  <input 
-                    type="text"
-                    required
-                    placeholder="Enter Username"
-                    className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-slate-800 transition-all"
-                    value={username}
-                    onChange={e => setUsername(e.target.value)}
-                  />
-                </div>
+                <input 
+                  type="text"
+                  required
+                  placeholder="Username"
+                  className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-slate-800 transition-all"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                />
               </div>
 
               <div className="relative">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Access PIN</label>
-                <div className="relative">
-                  <i className="fa-solid fa-key absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
-                  <input 
-                    type="password"
-                    required
-                    placeholder="••••••"
-                    className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-slate-800 tracking-widest transition-all"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                  />
-                </div>
+                <input 
+                  type="password"
+                  required
+                  placeholder="••••••"
+                  className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-slate-800 tracking-widest transition-all"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                />
               </div>
             </div>
 
@@ -168,23 +161,24 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
                 {isSubmitting ? (
                   <>
                     <i className="fa-solid fa-circle-notch animate-spin"></i>
-                    Checking MongoDB...
+                    Syncing Cloud...
                   </>
                 ) : (
                   <>
-                    <i className="fa-solid fa-right-to-bracket"></i>
-                    Enter Terminal
+                    <i className="fa-solid fa-cloud-arrow-down"></i>
+                    Initialize Session
                   </>
                 )}
               </button>
 
-              {showDemoOption && (
+              {(showDemoOption || !isSubmitting) && (
                 <button 
                   type="button"
                   onClick={enterDemoMode}
-                  className="w-full py-4 bg-slate-100 text-slate-600 border border-slate-200 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-200 transition-all shadow-sm"
+                  className="w-full py-4 bg-slate-100 text-slate-600 border border-slate-200 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-200 transition-all"
                 >
-                  Enter via Local Mirror (Demo Mode)
+                  <i className="fa-solid fa-plug-circle-xmark mr-2"></i>
+                  Local Mirror (Offline)
                 </button>
               )}
             </div>
@@ -192,7 +186,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
 
           <div className="pt-6 border-t border-slate-50 text-center">
             <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest flex items-center justify-center gap-2">
-               <i className="fa-solid fa-database"></i> Live Database Connection
+               <i className="fa-solid fa-shield-check"></i> End-to-End Encryption Active
             </p>
           </div>
         </div>

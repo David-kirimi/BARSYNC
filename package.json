@@ -24,7 +24,8 @@
     "recharts": "^3.7.0",
     "path": "^0.12.7",
     "url": "^0.11.4",
-    "@vercel/node": "^3.0.0"
+    "@vercel/node": "^3.0.0",
+    "@google/genai": "^1.38.0"
   },
   "engines": {
     "node": ">=18.0.0"

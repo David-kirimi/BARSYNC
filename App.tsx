@@ -85,11 +85,12 @@ const App: React.FC = () => {
         localStorage.setItem('bar_pos_last_sync', now);
         if (!isSilent) showToast("Cloud Synced", "success");
       } else {
-        if (!isSilent) showToast("Cloud Sync Failed", "error");
+        const errData = await response.json().catch(() => ({}));
+        if (!isSilent) showToast(`Sync Failed: ${errData.error || response.statusText}`, "error");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Sync Failure:", error);
-      if (!isSilent) showToast("Sync Error: Backend unreachable", "error");
+      if (!isSilent) showToast(`Sync Error: ${error.message}`, "error");
     } finally {
       if (!isSilent) setIsSyncing(false);
     }

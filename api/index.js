@@ -163,6 +163,14 @@ app.post('/api/sync', async (req, res) => {
 
   try {
     const { businessId, businessName, data } = req.body;
+
+    if (!data) {
+      console.error("[Sync] Missing 'data' object in request body");
+      return res.status(400).json({ error: "Missing data payload" });
+    }
+
+    console.log(`[Sync] START: Business="${businessName}" ID="${businessId}" Sales=${data.sales?.length || 0} Users=${data.users?.length || 0}`);
+
     const collection = database.collection('sync_history');
 
     await collection.updateOne(
@@ -183,22 +191,35 @@ app.post('/api/sync', async (req, res) => {
     // Sync users to main authentication collection
     if (data.users && Array.isArray(data.users)) {
       const usersColl = database.collection('users');
-      for (const u of data.users) {
-        const { password, ...otherData } = u;
-        const updateData = { ...otherData };
-        if (password) updateData.password = password; // Only update password if provided
+      console.log(`[Sync] Processing ${data.users.length} users for auth collection...`);
 
-        await usersColl.updateOne(
-          { id: u.id },
-          { $set: updateData },
-          { upsert: true }
-        );
+      for (const u of data.users) {
+        if (!u.id) {
+          console.warn(`[Sync] Skipping user without ID: ${u.name}`);
+          continue;
+        }
+
+        try {
+          const { password, ...otherData } = u;
+          const updateData = { ...otherData };
+          if (password) updateData.password = password;
+
+          await usersColl.updateOne(
+            { id: u.id },
+            { $set: updateData },
+            { upsert: true }
+          );
+        } catch (uErr) {
+          console.error(`[Sync] Error updating user ${u.id}:`, uErr.message);
+        }
       }
     }
 
+    console.log(`[Sync] SUCCESS: Data persisted for ${businessName}`);
     res.status(200).json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: "Sync error" });
+    console.error("[Sync] CRITICAL FAILURE:", err);
+    res.status(500).json({ error: "Sync internal error", details: err.message });
   }
 });
 

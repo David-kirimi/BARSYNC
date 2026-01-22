@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { User, Business, Role } from '../types';
+import Register from './Register';
 
 interface LoginProps {
   onLogin: (user: User, business?: Business, initialState?: any) => void;
@@ -14,6 +15,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDemoOption, setShowDemoOption] = useState(false);
+  const [view, setView] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
 
   // If it's taking too long, automatically show the demo option
   useEffect(() => {
@@ -110,89 +112,108 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
         </div>
 
         <div className="bg-white/95 backdrop-blur rounded-[3.5rem] p-10 shadow-2xl space-y-8 border border-white/20">
-          <div className="text-center">
-            <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase">Terminal Login</h2>
-            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">Unified Cloud Gateway</p>
-          </div>
-
-          <form onSubmit={handleLoginAttempt} className="space-y-6">
-            <div className="space-y-4">
-              <div className="relative">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Workplace</label>
-                <input
-                  type="text"
-                  placeholder="Establishment Name"
-                  className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-slate-800 transition-all"
-                  value={businessName}
-                  onChange={e => setBusinessName(e.target.value)}
-                />
+          {view === 'LOGIN' ? (
+            <>
+              <div className="text-center">
+                <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase">Terminal Login</h2>
+                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">Unified Cloud Gateway</p>
               </div>
 
-              <div className="relative">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Profile Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Username"
-                  className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-slate-800 transition-all"
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                />
-              </div>
+              <form onSubmit={handleLoginAttempt} className="space-y-6">
+                <div className="space-y-4">
+                  <div className="relative">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Workplace</label>
+                    <input
+                      type="text"
+                      placeholder="Establishment Name"
+                      className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-slate-800 transition-all"
+                      value={businessName}
+                      onChange={e => setBusinessName(e.target.value)}
+                    />
+                  </div>
 
-              <div className="relative">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Access PIN</label>
-                <input
-                  type="password"
-                  required
-                  placeholder="••••••"
-                  className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-slate-800 tracking-widest transition-all"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                />
-              </div>
-            </div>
+                  <div className="relative">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Profile Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Username"
+                      className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-slate-800 transition-all"
+                      value={username}
+                      onChange={e => setUsername(e.target.value)}
+                    />
+                  </div>
 
-            {error && (
-              <div className="bg-rose-50 border border-rose-100 text-rose-500 p-4 rounded-2xl text-[9px] font-black uppercase tracking-widest text-center animate-shake">
-                <i className="fa-solid fa-triangle-exclamation mr-2"></i>
-                {error}
-              </div>
-            )}
+                  <div className="relative">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Access PIN</label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="••••••"
+                      className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-slate-800 tracking-widest transition-all"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                    />
+                  </div>
+                </div>
 
-            <div className="space-y-3">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
-              >
-                {isSubmitting ? (
-                  <>
-                    <i className="fa-solid fa-circle-notch animate-spin"></i>
-                    Syncing Cloud...
-                  </>
-                ) : (
-                  <>
-                    <i className="fa-solid fa-cloud-arrow-down"></i>
-                    Initialize Session
-                  </>
+                {error && (
+                  <div className="bg-rose-50 border border-rose-100 text-rose-500 p-4 rounded-2xl text-[9px] font-black uppercase tracking-widest text-center animate-shake">
+                    <i className="fa-solid fa-triangle-exclamation mr-2"></i>
+                    {error}
+                  </div>
                 )}
-              </button>
 
-              {(showDemoOption || !isSubmitting) && (
-                <button
-                  type="button"
-                  onClick={enterDemoMode}
-                  className="w-full py-4 bg-slate-100 text-slate-600 border border-slate-200 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-200 transition-all"
-                >
-                  <i className="fa-solid fa-plug-circle-xmark mr-2"></i>
-                  Local Mirror (Offline)
-                </button>
-              )}
-            </div>
-          </form>
+                <div className="space-y-3">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <i className="fa-solid fa-circle-notch animate-spin"></i>
+                        Syncing Cloud...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fa-solid fa-cloud-arrow-down"></i>
+                        Initialize Session
+                      </>
+                    )}
+                  </button>
 
-          <div className="pt-6 border-t border-slate-50 text-center">
+                  {(showDemoOption || !isSubmitting) && (
+                    <button
+                      type="button"
+                      onClick={enterDemoMode}
+                      className="w-full py-4 bg-slate-100 text-slate-600 border border-slate-200 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-200 transition-all"
+                    >
+                      <i className="fa-solid fa-plug-circle-xmark mr-2"></i>
+                      Local Mirror (Offline)
+                    </button>
+                  )}
+                </div>
+              </form>
+            </>
+          ) : (
+            <Register
+              backendUrl={backendUrl}
+              onBack={() => setView('LOGIN')}
+              onSuccess={(user, biz) => onLogin(user, biz)}
+            />
+          )}
+
+          <div className="pt-6 border-t border-slate-50 text-center space-y-4">
+            {view === 'LOGIN' ? (
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-loose">
+                New Business? <button onClick={() => setView('REGISTER')} className="text-indigo-600 hover:text-indigo-700 underline px-2">Register Terminal</button>
+              </p>
+            ) : (
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-loose">
+                Already registered? <button onClick={() => setView('LOGIN')} className="text-indigo-600 hover:text-indigo-700 underline px-2">Login to Terminal</button>
+              </p>
+            )}
             <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest flex items-center justify-center gap-2">
               <i className="fa-solid fa-shield-check"></i> End-to-End Encryption Active
             </p>

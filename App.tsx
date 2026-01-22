@@ -82,9 +82,20 @@ const App: React.FC = () => {
       });
 
       if (response.ok) {
+        const body = await response.json();
         const now = new Date().toLocaleString();
         setLastSync(now);
         localStorage.setItem('bar_pos_last_sync', now);
+
+        if (body.state) {
+          const cloud = body.state;
+          // After sync, the cloud's merged result is the new source of truth
+          if (cloud.sales) setSales(cloud.sales);
+          if (cloud.products) setProducts(cloud.products);
+          if (cloud.users) setAllUsers(cloud.users);
+          if (cloud.auditLogs) setAuditLogs(cloud.auditLogs);
+        }
+
         if (!isSilent) showToast("Cloud Synced", "success");
       } else {
         const errData = await response.json().catch(() => ({}));

@@ -157,6 +157,64 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const database = await connectToMongo();
+    if (!database) return res.status(503).json({ error: "Database offline" });
+
+    const { businessName, ownerName, password, plan } = req.body;
+
+    if (!businessName || !ownerName || !password) {
+      return res.status(400).json({ error: "Missing required registration details" });
+    }
+
+    const bizColl = database.collection('businesses');
+    const usersColl = database.collection('users');
+
+    // Check if business name exists
+    const existing = await bizColl.findOne({ name: { $regex: new RegExp(`^${businessName.trim()}$`, 'i') } });
+    if (existing) {
+      return res.status(409).json({ error: "Business name already registered" });
+    }
+
+    const businessId = `bus_${Math.random().toString(36).substr(2, 5)}`;
+    const newBusiness = {
+      id: businessId,
+      name: businessName.trim(),
+      ownerName: ownerName.trim(),
+      subscriptionStatus: 'Trial',
+      subscriptionPlan: plan || 'Basic',
+      paymentStatus: 'Pending',
+      createdAt: new Date().toISOString(),
+      mongoDatabase: 'barsync_prod',
+      mongoCollection: 'sync_history',
+      mongoConnectionString: 'https://barsync-backend.onrender.com'
+    };
+
+    const ownerId = `user_${Math.random().toString(36).substr(2, 5)}`;
+    const newOwner = {
+      id: ownerId,
+      name: ownerName.trim(),
+      role: 'OWNER',
+      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${ownerName.trim()}`,
+      businessId,
+      status: 'Active',
+      password: password.trim()
+    };
+
+    await bizColl.insertOne(newBusiness);
+    await usersColl.insertOne(newOwner);
+
+    console.log(`[Register] SUCCESS: New Business "${businessName}" by "${ownerName}"`);
+
+    const { password: _, ...userSafe } = newOwner;
+    res.status(201).json({ user: userSafe, business: newBusiness });
+  } catch (err) {
+    console.error("Registration Error:", err);
+    res.status(500).json({ error: "Internal server error during registration" });
+  }
+});
+
 app.post('/api/sync', async (req, res) => {
   const database = await connectToMongo();
   if (!database) return res.status(503).json({ error: "Database offline" });
@@ -172,19 +230,33 @@ app.post('/api/sync', async (req, res) => {
     console.log(`[Sync] START: Business="${businessName}" ID="${businessId}" Sales=${data.sales?.length || 0} Users=${data.users?.length || 0}`);
 
     const collection = database.collection('sync_history');
+    const existing = await collection.findOne({ businessId });
+
+    const mergeArrays = (base = [], incoming = []) => {
+      const map = new Map();
+      base.forEach(item => map.set(item.id, item));
+      incoming.forEach(item => {
+        if (item.id) {
+          // Deep merge or simple replace? Simple replace for now, 
+          // but we follow current item as truth for its own ID
+          map.set(item.id, { ...(map.get(item.id) || {}), ...item });
+        }
+      });
+      return Array.from(map.values());
+    };
+
+    const mergedData = {
+      businessName: businessName || (existing ? existing.businessName : 'Unknown'),
+      lastSync: new Date(),
+      products: mergeArrays(existing?.products, data.products),
+      sales: mergeArrays(existing?.sales, data.sales),
+      auditLogs: mergeArrays(existing?.auditLogs, data.auditLogs),
+      users: mergeArrays(existing?.users, data.users)
+    };
 
     await collection.updateOne(
       { businessId },
-      {
-        $set: {
-          businessName,
-          lastSync: new Date(),
-          products: data.products || [],
-          sales: data.sales || [],
-          auditLogs: data.auditLogs || [],
-          users: data.users || []
-        }
-      },
+      { $set: mergedData },
       { upsert: true }
     );
 
@@ -215,8 +287,8 @@ app.post('/api/sync', async (req, res) => {
       }
     }
 
-    console.log(`[Sync] SUCCESS: Data persisted for ${businessName}`);
-    res.status(200).json({ success: true });
+    console.log(`[Sync] SUCCESS: Data merged for ${businessName}`);
+    res.status(200).json({ success: true, state: mergedData });
   } catch (err) {
     console.error("[Sync] CRITICAL FAILURE:", err);
     res.status(500).json({ error: "Sync internal error", details: err.message });

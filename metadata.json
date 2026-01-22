@@ -1,0 +1,7 @@
+{
+  "name": "BarSync POS",
+  "description": "A high-performance, offline-capable POS system for bars and restaurants, featuring role-based access, inventory management, and Google Sheets compatible data export.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

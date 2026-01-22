@@ -62,7 +62,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, products }) => {
       Keep the advice specific to inventory, staffing, or promotions. Be concise.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-1.5-flash',
         contents: prompt,
       });
 

@@ -35,22 +35,22 @@
     "react/jsx-runtime": "https://esm.sh/react@19.0.0/jsx-runtime",
     "recharts": "https://esm.sh/recharts@3.7.0",
     "react-dom/": "https://esm.sh/react-dom@19.0.0/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.38.0",
-    "mongodb": "https://esm.sh/mongodb@^7.0.0",
+    "@google/genai": "https://esm.sh/@google/genai@1.38.0",
     "express": "https://esm.sh/express@^5.2.1",
-    "dotenv": "https://esm.sh/dotenv@^17.2.3",
+    "mongodb": "https://esm.sh/mongodb@^7.0.0",
     "cors": "https://esm.sh/cors@^2.8.5",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "vite": "https://esm.sh/vite@^7.3.1",
+    "dotenv": "https://esm.sh/dotenv@^17.2.3",
+    "path": "https://esm.sh/path@^0.12.7",
     "url": "https://esm.sh/url@^0.11.4",
-    "path": "https://esm.sh/path@^0.12.7"
+    "vite": "https://esm.sh/vite@^7.3.1",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
 }
 </script>
 </head>
 <body class="text-slate-900">
   <div id="root"></div>
-  <!-- Entry point for the application -->
-  <script type="module" src="index.tsx"></script>
+  <!-- Use relative path to avoid CORS issues in some preview environments -->
+  <script type="module" src="./index.tsx"></script>
 </body>
 </html>

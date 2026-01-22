@@ -16,81 +16,90 @@ const PORT = process.env.PORT || 5000;
 
 app.use(cors({
   origin: '*', 
-  methods: ['GET', 'POST', 'DELETE'],
+  methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
   credentials: true
 }));
 
 app.use(express.json({ limit: '50mb' }));
 
-// Serve static files from the Vite build directory 'dist'
-app.use(express.static(path.join(__dirname, 'dist')));
-
 const uri = process.env.MONGODB_URI;
 const DB_NAME = process.env.DB_NAME || 'barsync';
 
-if (!uri) {
-  console.error("❌ ERROR: MONGODB_URI is missing.");
-  // On Vercel build phase, this might fail, so we catch it gracefully
-  if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
-     process.exit(1);
-  }
-}
+let db = null;
+let client = null;
 
-const client = uri ? new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  }
-}) : null;
-
-let db;
-
-async function seedDatabase() {
-  if (!db) return;
-  const usersColl = db.collection('users');
-  
-  // Ensure SLIEM (Master Admin) exists
-  const masterAdmin = await usersColl.findOne({ name: 'SLIEM', role: 'SUPER_ADMIN' });
-  if (!masterAdmin) {
-    console.log("🌱 Provisioning Master Admin: SLIEM...");
-    await usersColl.insertOne({ 
-      id: 'super_sliem', 
-      name: 'SLIEM', 
-      role: 'SUPER_ADMIN', 
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=SLIEM', 
-      status: 'Active', 
-      password: '@SLIEM2040' 
-    });
-  }
-}
-
-async function startServer() {
-  if (client) {
-    try {
-      await client.connect();
-      db = client.db(DB_NAME);
-      console.log("✅ Connected to MongoDB Atlas");
-      await seedDatabase();
-    } catch (err) {
-      console.error("❌ Connection failed:", err.message);
-      // Retry logic if not on Vercel
-      if (!process.env.VERCEL) setTimeout(startServer, 10000); 
-    }
-  }
-
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 BarSync Unified Node active on port ${PORT}`);
+if (uri) {
+  client = new MongoClient(uri, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true,
+    },
+    // Prevent long hangs if DB is unreachable
+    serverSelectionTimeoutMS: 5000,
+    connectTimeoutMS: 5000,
   });
 }
 
-// --- AUTHENTICATION ---
-app.post('/api/auth/login', async (req, res) => {
-  if (!db) return res.status(503).json({ error: "Database not connected" });
+async function seedDatabase() {
+  if (!db) return;
   try {
-    const { businessName, username, password } = req.body;
     const usersColl = db.collection('users');
-    const bizColl = db.collection('businesses');
+    const masterAdmin = await usersColl.findOne({ name: 'SLIEM', role: 'SUPER_ADMIN' });
+    if (!masterAdmin) {
+      console.log("🌱 Provisioning Master Admin: SLIEM...");
+      await usersColl.insertOne({ 
+        id: 'super_sliem', 
+        name: 'SLIEM', 
+        role: 'SUPER_ADMIN', 
+        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=SLIEM', 
+        status: 'Active', 
+        password: '@SLIEM2040' 
+      });
+    }
+  } catch (err) {
+    console.error("Seeding error:", err);
+  }
+}
+
+// Connect to MongoDB once
+async function connectToMongo() {
+  if (db) return db;
+  if (!client) return null;
+  try {
+    // Try to connect with a 5s timeout
+    await client.connect();
+    db = client.db(DB_NAME);
+    console.log("✅ Connected to MongoDB Atlas");
+    await seedDatabase();
+    return db;
+  } catch (err) {
+    console.error("❌ MongoDB Connection failed:", err.message);
+    return null;
+  }
+}
+
+// --- API ROUTES FIRST ---
+
+app.get('/health', async (req, res) => {
+  const isConnected = await connectToMongo();
+  res.status(200).json({ 
+    status: 'active', 
+    db: !!isConnected, 
+    timestamp: new Date().toISOString() 
+  });
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const database = await connectToMongo();
+    if (!database) {
+      return res.status(503).json({ error: "Database Connection Timeout. Check MongoDB Atlas IP whitelisting." });
+    }
+
+    const { businessName, username, password } = req.body;
+    const usersColl = database.collection('users');
+    const bizColl = database.collection('businesses');
 
     const isPlatformLogin = !businessName || businessName.toLowerCase() === 'platform';
     
@@ -116,22 +125,24 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const syncColl = db.collection('sync_history');
+    const syncColl = database.collection('sync_history');
     const snapshot = await syncColl.findOne({ businessId: isPlatformLogin ? 'admin_node' : business.id });
 
     const { password: _, ...userSafe } = user;
     res.status(200).json({ user: userSafe, business, state: snapshot || null });
   } catch (err) {
-    res.status(500).json({ error: 'Login internal error' });
+    console.error("Login Error:", err);
+    res.status(500).json({ error: 'Internal server error during authentication' });
   }
 });
 
-// --- SYNC ---
 app.post('/api/sync', async (req, res) => {
-  if (!db) return res.status(503).json({ error: "Database offline" });
+  const database = await connectToMongo();
+  if (!database) return res.status(503).json({ error: "Database offline" });
+
   try {
     const { businessId, businessName, data } = req.body;
-    const collection = db.collection('sync_history');
+    const collection = database.collection('sync_history');
     
     await collection.updateOne(
       { businessId },
@@ -154,9 +165,10 @@ app.post('/api/sync', async (req, res) => {
 });
 
 app.get('/api/admin/businesses', async (req, res) => {
-  if (!db) return res.status(503).json({ error: "Database offline" });
+  const database = await connectToMongo();
+  if (!database) return res.status(503).json({ error: "Database offline" });
   try {
-    const biz = await db.collection('businesses').find().toArray();
+    const biz = await database.collection('businesses').find().toArray();
     res.json(biz);
   } catch (err) {
     res.status(500).json({ error: 'Fetch failed' });
@@ -164,24 +176,37 @@ app.get('/api/admin/businesses', async (req, res) => {
 });
 
 app.post('/api/admin/businesses', async (req, res) => {
-  if (!db) return res.status(503).json({ error: "Database offline" });
+  const database = await connectToMongo();
+  if (!database) return res.status(503).json({ error: "Database offline" });
   try {
     const { business, owner } = req.body;
-    await db.collection('businesses').insertOne(business);
-    await db.collection('users').insertOne(owner);
+    await database.collection('businesses').insertOne(business);
+    await database.collection('users').insertOne(owner);
     res.status(201).json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Provisioning failed' });
   }
 });
 
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'active', db: !!db });
-});
+// --- STATIC ASSETS & SPA CATCH-ALL LAST ---
 
-// For any other request, serve the index.html from dist (SPA Support)
+app.use(express.static(path.join(__dirname, 'dist')));
+
 app.get('*', (req, res) => {
+  // If request is for an API that doesn't exist, don't serve index.html
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'API route not found' });
+  }
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-startServer();
+// Export the app for Vercel
+export default app;
+
+// Start server locally or on Render
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 BarSync Node active on port ${PORT}`);
+    connectToMongo();
+  });
+}

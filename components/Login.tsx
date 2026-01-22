@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { User, Business } from '../types';
+import { User, Business, Role } from '../types';
 
 interface LoginProps {
   onLogin: (user: User, business?: Business, initialState?: any) => void;
@@ -13,18 +13,39 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDemoOption, setShowDemoOption] = useState(false);
 
   const handleLoginAttempt = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
+    setShowDemoOption(false);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); 
 
     try {
-      const response = await fetch(`${backendUrl}/api/auth/login`, {
+      // In unified repo, fetch with relative path if backendUrl is empty
+      const targetUrl = backendUrl ? `${backendUrl}/api/auth/login` : '/api/auth/login';
+      
+      const response = await fetch(targetUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ businessName, username, password })
+        body: JSON.stringify({ businessName, username, password }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
+
+      const contentType = response.headers.get("content-type");
+      
+      // If we got HTML instead of JSON, the backend isn't handling the request (likely 404/SPA fallback)
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        if (text.trim().startsWith('<!DOCTYPE')) {
+          throw new Error("SERVER_FALLBACK: Backend not active in this environment.");
+        }
+      }
 
       const result = await response.json();
 
@@ -34,10 +55,37 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
 
       onLogin(result.user, result.business, result.state);
     } catch (err: any) {
-      setError(err.message || 'Connection to backend failed');
+      clearTimeout(timeoutId);
+      console.error("Login Failure:", err);
+      
+      if (err.name === 'AbortError') {
+        setError('Connection timed out. Checking local mirror...');
+        setShowDemoOption(true);
+      } else if (err.message.includes('SERVER_FALLBACK')) {
+        setError('Cloud database currently unreachable in this preview.');
+        setShowDemoOption(true);
+      } else if (err.message.includes('Unexpected token')) {
+        setError('Invalid response from server. Backend routes may be missing.');
+        setShowDemoOption(true);
+      } else {
+        setError(err.message || 'Unable to connect to BarSync Cloud');
+        setShowDemoOption(true);
+      }
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const enterDemoMode = () => {
+    const mockUser: User = {
+      id: 'demo_user',
+      name: username || 'STAFF',
+      role: (username && username.toUpperCase() === 'SLIEM') ? Role.SUPER_ADMIN : (businessName ? Role.ADMIN : Role.BARTENDER),
+      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username || 'Demo'}`,
+      businessId: 'bus_demo',
+      status: 'Active'
+    };
+    onLogin(mockUser);
   };
 
   return (
@@ -47,7 +95,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
           <div className="w-20 h-20 bg-indigo-500 rounded-[2rem] flex items-center justify-center text-white text-4xl mx-auto mb-6 shadow-2xl shadow-indigo-500/40 rotate-12">
             <i className="fa-solid fa-beer-mug-empty"></i>
           </div>
-          <h1 className="text-4xl font-black text-white mb-2 tracking-tighter">BARSYNC</h1>
+          <h1 className="text-4xl font-black text-white mb-2 tracking-tighter uppercase">BARSYNC</h1>
           <p className="text-indigo-400/80 font-medium uppercase tracking-[0.3em] text-[10px]">Cloud Terminal Gateway</p>
         </div>
 
@@ -105,29 +153,41 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
             </div>
 
             {error && (
-              <div className="bg-rose-50 border border-rose-100 text-rose-500 p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-center animate-shake">
+              <div className="bg-rose-50 border border-rose-100 text-rose-500 p-4 rounded-2xl text-[9px] font-black uppercase tracking-widest text-center animate-shake">
                 <i className="fa-solid fa-triangle-exclamation mr-2"></i>
                 {error}
               </div>
             )}
 
-            <button 
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
-            >
-              {isSubmitting ? (
-                <>
-                  <i className="fa-solid fa-circle-notch animate-spin"></i>
-                  Checking MongoDB...
-                </>
-              ) : (
-                <>
-                  <i className="fa-solid fa-right-to-bracket"></i>
-                  Enter Terminal
-                </>
+            <div className="space-y-3">
+              <button 
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
+              >
+                {isSubmitting ? (
+                  <>
+                    <i className="fa-solid fa-circle-notch animate-spin"></i>
+                    Checking MongoDB...
+                  </>
+                ) : (
+                  <>
+                    <i className="fa-solid fa-right-to-bracket"></i>
+                    Enter Terminal
+                  </>
+                )}
+              </button>
+
+              {showDemoOption && (
+                <button 
+                  type="button"
+                  onClick={enterDemoMode}
+                  className="w-full py-4 bg-slate-100 text-slate-600 border border-slate-200 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-200 transition-all shadow-sm"
+                >
+                  Enter via Local Mirror (Demo Mode)
+                </button>
               )}
-            </button>
+            </div>
           </form>
 
           <div className="pt-6 border-t border-slate-50 text-center">

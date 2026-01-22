@@ -14,7 +14,8 @@ import Reports from './components/Reports.tsx';
 import Profile from './components/Profile.tsx';
 import AuditLogs from './components/AuditLogs.tsx';
 
-const GLOBAL_BACKEND = window.location.origin; // Same repo: use relative origin
+// Using empty string for relative paths in unified repo
+const GLOBAL_BACKEND = ''; 
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {

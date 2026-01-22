@@ -55,9 +55,9 @@ const App: React.FC = () => {
     setAuditLogs(prev => [newLog, ...prev]);
   }, [currentUser]);
 
-  const syncWithCloud = useCallback(async (isSilent = false) => {
+  const syncWithCloud = useCallback(async (isSilent = false, usersOverride?: User[]) => {
     if (!navigator.onLine) {
-      if (!isSilent) console.warn("Offline: Sync skipped.");
+      if (!isSilent) showToast("Offline: Sync skipped", "warning");
       return;
     }
 
@@ -70,7 +70,12 @@ const App: React.FC = () => {
         body: JSON.stringify({
           businessId: currentUser?.businessId || 'admin_node',
           businessName: 'Business Node',
-          data: { sales, products, auditLogs, users: allUsers }
+          data: {
+            sales,
+            products,
+            auditLogs,
+            users: usersOverride || allUsers // Use direct data if provided to avoid race condition
+          }
         })
       });
 
@@ -78,14 +83,17 @@ const App: React.FC = () => {
         const now = new Date().toLocaleString();
         setLastSync(now);
         localStorage.setItem('bar_pos_last_sync', now);
-        if (!isSilent) console.log("Cloud Sync Success.");
+        if (!isSilent) showToast("Cloud Synced", "success");
+      } else {
+        if (!isSilent) showToast("Cloud Sync Failed", "error");
       }
     } catch (error) {
       console.error("Sync Failure:", error);
+      if (!isSilent) showToast("Sync Error: Backend unreachable", "error");
     } finally {
       if (!isSilent) setIsSyncing(false);
     }
-  }, [currentUser, products, sales, auditLogs, allUsers]);
+  }, [currentUser, products, sales, auditLogs, allUsers, showToast]);
 
   useEffect(() => {
     if (isInitialLoad.current) {
@@ -277,7 +285,20 @@ const App: React.FC = () => {
             {currentView === 'POS' && <POS products={products} addToCart={addToCart} cart={cart} updateCartQuantity={updateCartQuantity} removeFromCart={removeFromCart} onCheckout={checkout} businessName={currentBusiness?.name || 'BarSync'} />}
             {currentView === 'INVENTORY' && <Inventory products={products} onUpdate={(p) => setProducts(prev => prev.map(item => item.id === p.id ? p : item))} onAdd={(p) => setProducts(prev => [...prev, { ...p, id: Date.now().toString() } as Product])} userRole={currentUser.role} />}
             {currentView === 'SUPER_ADMIN_PORTAL' && currentUser.role === Role.SUPER_ADMIN && <SuperAdminPortal businesses={businesses} onAdd={handleAddBusiness} onUpdate={updateBusiness} sales={sales} />}
-            {currentView === 'USER_MANAGEMENT' && <UserManagement users={allUsers} onAdd={(u) => { setAllUsers(prev => [...prev, { ...u, id: Date.now().toString(), businessId: currentUser.businessId!, status: 'Active' }]); syncWithCloud(true); }} onUpdate={(u) => { setAllUsers(prev => prev.map(item => item.id === u.id ? u : item)); syncWithCloud(true); }} onDelete={(id) => { setAllUsers(prev => prev.filter(u => u.id !== id)); syncWithCloud(true); }} />}
+            {currentView === 'USER_MANAGEMENT' && <UserManagement users={allUsers} onAdd={(u) => {
+              const newUser: User = { ...u, id: `user_${Math.random().toString(36).substr(2, 5)}`, businessId: currentUser.businessId!, status: 'Active' };
+              const nextUsers = [...allUsers, newUser];
+              setAllUsers(nextUsers);
+              syncWithCloud(false, nextUsers); // Force immediate non-silent sync after staff addition
+            }} onUpdate={(u) => {
+              const nextUsers = allUsers.map(item => item.id === u.id ? u : item);
+              setAllUsers(nextUsers);
+              syncWithCloud(true, nextUsers);
+            }} onDelete={(id) => {
+              const nextUsers = allUsers.filter(u => u.id !== id);
+              setAllUsers(nextUsers);
+              syncWithCloud(true, nextUsers);
+            }} />}
             {currentView === 'REPORTS' && <Reports sales={sales.filter(s => s.businessId === currentUser.businessId)} businessName={currentBusiness?.name || 'BarSync'} />}
             {currentView === 'AUDIT_LOGS' && <AuditLogs logs={currentUser.role === Role.SUPER_ADMIN ? auditLogs : auditLogs.filter(l => l.businessId === currentUser.businessId)} />}
             {currentView === 'SALES' && <SalesHistory sales={sales.filter(s => s.businessId === currentUser.businessId)} />}

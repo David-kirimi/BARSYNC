@@ -1,18 +1,18 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { INITIAL_PRODUCTS } from './constants';
-import { Product, Sale, User, Role, View, CartItem, Business, AuditLog } from './types';
-import Sidebar from './components/Sidebar';
-import POS from './components/POS';
-import Inventory from './components/Inventory';
-import SalesHistory from './components/SalesHistory';
-import Dashboard from './components/Dashboard';
-import Login from './components/Login';
-import SuperAdminPortal from './components/SuperAdminPortal';
-import UserManagement from './components/UserManagement';
-import Reports from './components/Reports';
-import Profile from './components/Profile';
-import AuditLogs from './components/AuditLogs';
+import { INITIAL_PRODUCTS } from './constants.tsx';
+import { Product, Sale, User, Role, View, CartItem, Business, AuditLog } from './types.ts';
+import Sidebar from './components/Sidebar.tsx';
+import POS from './components/POS.tsx';
+import Inventory from './components/Inventory.tsx';
+import SalesHistory from './components/SalesHistory.tsx';
+import Dashboard from './components/Dashboard.tsx';
+import Login from './components/Login.tsx';
+import SuperAdminPortal from './components/SuperAdminPortal.tsx';
+import UserManagement from './components/UserManagement.tsx';
+import Reports from './components/Reports.tsx';
+import Profile from './components/Profile.tsx';
+import AuditLogs from './components/AuditLogs.tsx';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -86,8 +86,8 @@ const App: React.FC = () => {
 
     setIsSyncing(true);
     try {
-      // Priority: 1. Build-time Env Var, 2. Global variable, 3. Manual URL (for dev)
-      const API_URL = process.env.API_KEY || (window as any).SYNC_API_URL;
+      // Safely access env with a fallback to global window property
+      const API_URL = (process.env as any).API_KEY || (window as any).SYNC_API_URL;
       
       if (!API_URL) {
         alert("Sync API not configured. Please check Vercel environment variables.");
@@ -100,8 +100,6 @@ const App: React.FC = () => {
         payload: { products, sales, users: allUsers, logs: auditLogs }
       };
 
-      // We use 'no-cors' only if the API doesn't return data, 
-      // but Google Apps Script requires a redirect follow for standard POST.
       await fetch(API_URL, {
         method: 'POST',
         mode: 'no-cors',

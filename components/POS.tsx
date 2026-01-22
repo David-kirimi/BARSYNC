@@ -21,6 +21,7 @@ const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const [showReceipt, setShowReceipt] = useState(false);
   const [custPhone, setCustPhone] = useState('');
+  const [mobileCartExpanded, setMobileCartExpanded] = useState(false);
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
@@ -52,7 +53,7 @@ const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity
   };
 
   return (
-    <div className="flex h-full flex-col lg:flex-row gap-4 lg:gap-8 pb-16 md:pb-0">
+    <div className="flex h-full flex-col lg:flex-row gap-4 lg:gap-8 pb-32 lg:pb-0">
       <div className="flex-1 flex flex-col min-w-0">
         <div className="mb-4 lg:mb-8 space-y-4">
           <div className="relative group">
@@ -111,7 +112,8 @@ const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity
         </div>
       </div>
 
-      <div className="w-full lg:w-[26rem] bg-white border border-slate-200 rounded-[2rem] lg:rounded-[3rem] shadow-2xl flex flex-col shrink-0 overflow-hidden mt-4 lg:mt-0 max-h-[500px] lg:max-h-full">
+      {/* Desktop Cart - Hidden on Mobile */}
+      <div className="hidden lg:flex w-full lg:w-[26rem] bg-white border border-slate-200 rounded-[3rem] shadow-2xl flex-col shrink-0 overflow-hidden">
         <div className="p-6 lg:p-8 border-b border-slate-100 flex items-center justify-between shrink-0">
           <h2 className="text-xl font-black text-slate-800 tracking-tighter uppercase">Current Order</h2>
           <button onClick={() => cart.forEach(i => removeFromCart(i.id))} className="text-rose-500 hover:text-rose-700 font-black text-[10px] uppercase tracking-widest">Clear</button>
@@ -161,6 +163,142 @@ const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity
         </div>
       </div>
 
+      {/* Mobile Floating Cart - Only visible on mobile */}
+      <div className="lg:hidden">
+        {/* Sticky Bottom Panel - Collapsed State */}
+        <div
+          onClick={() => setMobileCartExpanded(true)}
+          className="fixed bottom-0 left-0 right-0 bg-slate-950 text-white p-4 shadow-2xl border-t-4 border-indigo-500 z-40 safe-area-bottom"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Current Order</p>
+              <p className="text-xl font-black mt-0.5">Ksh {cartTotal.toLocaleString()}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="bg-indigo-500 px-3 py-1.5 rounded-full">
+                <span className="text-[10px] font-black">{cart.length} items</span>
+              </div>
+              <i className="fa-solid fa-chevron-up text-slate-400"></i>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              disabled={cart.length === 0}
+              onClick={(e) => { e.stopPropagation(); handleCheckout('Cash'); }}
+              className="py-4 bg-slate-800 rounded-xl font-black text-[11px] uppercase tracking-widest border border-slate-700 active:scale-95 disabled:opacity-50 transition-all"
+            >
+              <i className="fa-solid fa-money-bills mr-2"></i>Cash
+            </button>
+            <button
+              disabled={cart.length === 0}
+              onClick={(e) => { e.stopPropagation(); handleCheckout('Mpesa'); }}
+              className="py-4 bg-emerald-600 rounded-xl font-black text-[11px] uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all"
+            >
+              <i className="fa-solid fa-mobile-screen mr-2"></i>M-Pesa
+            </button>
+          </div>
+        </div>
+
+        {/* Expanded State - Full Screen Bottom Sheet */}
+        {mobileCartExpanded && (
+          <div
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 animate-fade-in"
+            onClick={() => setMobileCartExpanded(false)}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[2rem] shadow-2xl max-h-[85vh] flex flex-col animate-slide-up-mobile"
+            >
+              <div className="p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
+                <h2 className="text-xl font-black text-slate-800 tracking-tighter uppercase">Order Details</h2>
+                <button
+                  onClick={() => setMobileCartExpanded(false)}
+                  className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center active:scale-95"
+                >
+                  <i className="fa-solid fa-xmark text-slate-600"></i>
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-auto p-4 space-y-3">
+                {cart.map(item => (
+                  <div key={item.id} className="flex gap-3 p-3 bg-slate-50 rounded-2xl border border-transparent active:border-indigo-100 transition-all">
+                    <img src={item.imageUrl} className="w-14 h-14 rounded-xl object-cover shadow-md" alt="" />
+                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                      <h4 className="font-black text-[12px] text-slate-800 truncate uppercase tracking-tight">{item.name}</h4>
+                      <p className="text-[11px] font-bold text-indigo-500 mt-0.5">Ksh {item.price}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <button onClick={() => removeFromCart(item.id)} className="text-slate-300 active:text-rose-500 p-1">
+                        <i className="fa-solid fa-circle-xmark text-lg"></i>
+                      </button>
+                      <div className="flex items-center gap-2 bg-white px-2 py-1.5 rounded-xl shadow-sm border border-slate-100">
+                        <button onClick={() => updateCartQuantity(item.id, -1)} className="text-slate-400 active:text-indigo-600 p-1">
+                          <i className="fa-solid fa-minus text-[11px]"></i>
+                        </button>
+                        <span className="text-sm font-black w-6 text-center">{item.quantity}</span>
+                        <button onClick={() => updateCartQuantity(item.id, 1)} className="text-slate-400 active:text-indigo-600 p-1">
+                          <i className="fa-solid fa-plus text-[11px]"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {cart.length === 0 && (
+                  <div className="text-center py-12">
+                    <i className="fa-solid fa-cart-shopping text-5xl text-slate-200 mb-4"></i>
+                    <p className="text-slate-400 font-bold text-sm">Cart is empty</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-5 bg-slate-950 text-white rounded-t-[2rem] space-y-4 shrink-0 safe-area-bottom">
+                <div className="space-y-2">
+                  <div className="relative">
+                    <i className="fa-brands fa-whatsapp absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500"></i>
+                    <input
+                      type="text"
+                      placeholder="Customer Phone (for WhatsApp)"
+                      className="w-full pl-11 pr-4 py-3.5 bg-slate-900 border border-slate-800 rounded-xl text-sm focus:outline-none focus:border-emerald-500 transition-all"
+                      value={custPhone}
+                      onChange={e => setCustPhone(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-slate-400 font-bold text-xs uppercase tracking-widest">Total Pay</span>
+                    <span className="text-3xl font-black tracking-tighter">Ksh {cartTotal.toLocaleString()}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    disabled={cart.length === 0}
+                    onClick={() => { handleCheckout('Cash'); setMobileCartExpanded(false); }}
+                    className="py-4 bg-slate-800 rounded-xl font-black text-[11px] uppercase tracking-widest border border-slate-700 active:scale-95 disabled:opacity-50 transition-all"
+                  >
+                    <i className="fa-solid fa-money-bills mr-2"></i>Cash
+                  </button>
+                  <button
+                    disabled={cart.length === 0}
+                    onClick={() => { handleCheckout('Mpesa'); setMobileCartExpanded(false); }}
+                    className="py-4 bg-emerald-600 rounded-xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-emerald-900/40 active:scale-95 disabled:opacity-50 transition-all"
+                  >
+                    <i className="fa-solid fa-mobile-screen mr-2"></i>M-Pesa
+                  </button>
+                </div>
+                {cart.length > 0 && (
+                  <button
+                    onClick={() => { cart.forEach(i => removeFromCart(i.id)); setMobileCartExpanded(false); }}
+                    className="w-full py-3 bg-slate-900 text-rose-400 border border-slate-800 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95"
+                  >
+                    <i className="fa-solid fa-trash mr-2"></i>Clear Cart
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {showReceipt && lastSale && (
         <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
           <div className="bg-white rounded-[3rem] w-full max-w-sm p-8 shadow-2xl relative overflow-hidden">
@@ -202,6 +340,20 @@ const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity
           </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes slide-up-mobile {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .animate-slide-up-mobile { animation: slide-up-mobile 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .animate-fade-in { animation: fade-in 0.2s ease-out; }
+        .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+      `}</style>
     </div>
   );
 };

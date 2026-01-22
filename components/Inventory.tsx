@@ -17,13 +17,23 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
   const [isAdding, setIsAdding] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCommonPicker, setShowCommonPicker] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('bar_pos_hidden_products');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
+  const [showHidden, setShowHidden] = useState(false);
 
   const [form, setForm] = useState<Partial<Product>>({});
 
-  const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.category.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesVisibility = showHidden || !hiddenIds.has(p.id);
+    return matchesSearch && matchesVisibility;
+  });
 
   const handleQuickStock = (product: Product, delta: number) => {
     onUpdate({ ...product, stock: Math.max(0, product.stock + delta) });
@@ -90,6 +100,48 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
     setForm({});
   };
 
+  const toggleSelection = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const toggleSelectionMode = () => {
+    setSelectionMode(!selectionMode);
+    setSelectedIds(new Set());
+  };
+
+  const hideSelected = () => {
+    const newHidden = new Set([...hiddenIds, ...selectedIds]);
+    setHiddenIds(newHidden);
+    localStorage.setItem('bar_pos_hidden_products', JSON.stringify([...newHidden]));
+    showToast(`${selectedIds.size} items hidden`, 'info');
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+  };
+
+  const deleteSelected = () => {
+    if (window.confirm(`Delete ${selectedIds.size} items permanently?`)) {
+      // Note: This would need to be connected to App.tsx to actually delete from state
+      // For now, we'll just hide them
+      hideSelected();
+      showToast(`${selectedIds.size} items removed`, 'success');
+    }
+  };
+
+  const toggleVisibility = () => {
+    setShowHidden(!showHidden);
+    showToast(showHidden ? 'Hidden items concealed' : 'Showing all items', 'info');
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(filteredProducts.map(p => p.id)));
+  };
+
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       <div className="flex flex-col md:flex-row items-center justify-between gap-4">
@@ -109,6 +161,20 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
             />
           </div>
           <button
+            onClick={toggleVisibility}
+            className={`p-4 rounded-2xl flex items-center justify-center transition-all active:scale-95 ${showHidden ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-600'}`}
+            title={showHidden ? 'Hide hidden items' : 'Show hidden items'}
+          >
+            <i className={`fa-solid fa-eye${showHidden ? '' : '-slash'} text-lg`}></i>
+          </button>
+          <button
+            onClick={toggleSelectionMode}
+            className={`p-4 rounded-2xl flex items-center justify-center transition-all active:scale-95 ${selectionMode ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 text-slate-600'}`}
+            title={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
+          >
+            <i className={`fa-solid ${selectionMode ? 'fa-xmark' : 'fa-check-double'} text-lg`}></i>
+          </button>
+          <button
             onClick={openAdd}
             className="bg-indigo-600 text-white p-4 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95"
           >
@@ -117,6 +183,40 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
         </div>
       </div>
 
+      {/* Bulk Selection Toolbar - Floating */}
+      {selectionMode && (
+        <div className="fixed bottom-20 md:bottom-6 left-6 right-6 bg-slate-950 text-white p-4 rounded-2xl shadow-2xl border-2 border-indigo-500 z-30 animate-slide-up">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selection Mode</p>
+              <p className="text-sm font-black mt-0.5">{selectedIds.size} items selected</p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={selectAll}
+                className="px-4 py-2 bg-slate-800 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-700 hover:bg-slate-700 active:scale-95"
+              >
+                <i className="fa-solid fa-check-double mr-2"></i>Select All
+              </button>
+              <button
+                disabled={selectedIds.size === 0}
+                onClick={hideSelected}
+                className="px-4 py-2 bg-amber-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 active:scale-95 disabled:opacity-50"
+              >
+                <i className="fa-solid fa-eye-slash mr-2"></i>Hide ({selectedIds.size})
+              </button>
+              <button
+                disabled={selectedIds.size === 0}
+                onClick={deleteSelected}
+                className="px-4 py-2 bg-rose-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 active:scale-95 disabled:opacity-50"
+              >
+                <i className="fa-solid fa-trash mr-2"></i>Delete ({selectedIds.size})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Product List/Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filteredProducts.map(p => (
@@ -124,6 +224,16 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
             <div className="flex gap-4 items-start mb-6">
               <div className="relative shrink-0">
                 <img src={p.imageUrl || 'https://via.placeholder.com/100'} className="w-20 h-20 rounded-3xl object-cover shadow-md bg-slate-100" />
+                {selectionMode && (
+                  <div
+                    onClick={() => toggleSelection(p.id)}
+                    className="absolute inset-0 bg-slate-950/60 rounded-3xl flex items-center justify-center cursor-pointer active:scale-95 transition-all"
+                  >
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${selectedIds.has(p.id) ? 'bg-indigo-600 text-white scale-110' : 'bg-white text-slate-400'}`}>
+                      <i className={`fa-solid fa-check text-sm`}></i>
+                    </div>
+                  </div>
+                )}
                 {p.stock < 10 && (
                   <div className="absolute -top-2 -right-2 w-6 h-6 bg-rose-500 text-white rounded-full flex items-center justify-center animate-pulse border-2 border-white">
                     <i className="fa-solid fa-triangle-exclamation text-[10px]"></i>

@@ -97,8 +97,11 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(503).json({ error: "Database Connection Timeout. Check MongoDB Atlas IP whitelisting." });
     }
 
-    const { businessName, username, password } = req.body;
-    console.log(`[Auth] Login attempt: Business=${businessName}, User=${username}`);
+    const businessName = (req.body.businessName || "").trim();
+    const username = (req.body.username || "").trim();
+    const password = (req.body.password || "").trim();
+
+    console.log(`[Auth] ATTEMPT: Business="${businessName}" User="${username}"`);
 
     const usersColl = database.collection('users');
     const bizColl = database.collection('businesses');
@@ -109,17 +112,21 @@ app.post('/api/auth/login', async (req, res) => {
     let business = null;
 
     if (isPlatformLogin) {
+      console.log(`[Auth] Checking PLATFORM login for ${username}`);
       user = await usersColl.findOne({
         name: { $regex: new RegExp(`^${username}$`, 'i') },
         role: 'SUPER_ADMIN'
       });
     } else {
+      console.log(`[Auth] Checking ORGANIZATION login for ${businessName} -> ${username}`);
       business = await bizColl.findOne({ name: { $regex: new RegExp(`^${businessName}$`, 'i') } });
+
       if (!business) {
-        console.warn(`[Auth] Business not found: ${businessName}`);
+        console.warn(`[Auth] FAILURE: Business not found: "${businessName}"`);
         return res.status(404).json({ error: 'Business not found' });
       }
 
+      console.log(`[Auth] Found BusinessID: ${business.id}. Searching for user "${username}" under this ID...`);
       user = await usersColl.findOne({
         businessId: business.id,
         name: { $regex: new RegExp(`^${username}$`, 'i') }
@@ -127,16 +134,17 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     if (!user) {
-      console.warn(`[Auth] User not found: ${username} in business ${businessName}`);
+      console.warn(`[Auth] FAILURE: User "${username}" not found in organization "${businessName}"`);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    console.log(`[Auth] Found User record. Cmp Passwords...`);
     if (user.password !== password) {
-      console.warn(`[Auth] Password mismatch for user: ${username}`);
+      console.warn(`[Auth] FAILURE: Password mismatch for user: ${username}`);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    console.log(`[Auth] Successful login: ${username}`);
+    console.log(`[Auth] SUCCESS: Session authenticated for ${username}`);
 
     const syncColl = database.collection('sync_history');
     const snapshot = await syncColl.findOne({ businessId: isPlatformLogin ? 'admin_node' : business.id });

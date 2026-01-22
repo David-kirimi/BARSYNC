@@ -34,13 +34,21 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 6000);
 
+    const cleanBusiness = businessName.trim();
+    const cleanUsername = username.trim();
+    const cleanPassword = password.trim();
+
     try {
       const targetUrl = backendUrl ? `${backendUrl}/api/auth/login` : '/api/auth/login';
 
       const response = await fetch(targetUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ businessName, username, password }),
+        body: JSON.stringify({
+          businessName: cleanBusiness,
+          username: cleanUsername,
+          password: cleanPassword
+        }),
         signal: controller.signal
       }).catch(err => {
         if (err.name === 'AbortError') throw new Error("TIMEOUT");

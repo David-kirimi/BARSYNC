@@ -1,3 +1,4 @@
+
 import express from 'express';
 import { MongoClient, ServerApiVersion } from 'mongodb';
 import cors from 'cors';
@@ -8,12 +9,10 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CORS setup
+// CORS setup - allowing all for initial deployment troubleshooting
+// You can restrict this later to your specific frontend URL
 app.use(cors({
-  origin: [
-    'http://localhost:5173',       // dev frontend
-    'https://your-frontend.com'    // production frontend
-  ],
+  origin: '*', 
   methods: ['GET', 'POST'],
   credentials: true
 }));
@@ -29,37 +28,36 @@ if (!uri) {
   process.exit(1);
 }
 
+// Simplified client options - Atlas handles TLS/SSL automatically via the +srv URI
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
-  },
-  tls: true,                          // enforce TLS
-  tlsAllowInvalidCertificates: false, // validate certs
-  connectTimeoutMS: 10000,
-  socketTimeoutMS: 45000,
+  }
 });
 
 let db;
 
 async function startServer() {
   try {
-    console.log("Connecting to MongoDB...");
+    console.log("Attempting to connect to MongoDB Atlas...");
     await client.connect();
 
-    // Test connection
+    // Test connection with a ping
     await client.db("admin").command({ ping: 1 });
-    console.log("✅ Connected to MongoDB Atlas");
+    console.log("✅ SUCCESS: Connected to MongoDB Atlas");
 
-    db = client.db(DB_NAME); // explicit DB name
+    db = client.db(DB_NAME);
 
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 BarSync Backend Hub active on port ${PORT}`);
     });
   } catch (err) {
-    console.error("❌ FAILED to connect to MongoDB:", err);
-    setTimeout(startServer, 5000); // retry after 5s
+    console.error("❌ CONNECTION ERROR:", err.message);
+    console.log("TIP: Ensure IP 0.0.0.0/0 is whitelisted in MongoDB Atlas 'Network Access'");
+    // Retry logic
+    setTimeout(startServer, 10000); 
   }
 }
 
@@ -68,7 +66,8 @@ app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'active', 
     dbConnected: !!db,
-    timestamp: new Date().toISOString() 
+    timestamp: new Date().toISOString(),
+    nodeVersion: process.version
   });
 });
 

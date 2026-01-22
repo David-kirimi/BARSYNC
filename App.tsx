@@ -95,20 +95,25 @@ const App: React.FC = () => {
 
     setIsSyncing(true);
     try {
-      // Robust detection of the API key from Vercel environment variables
-      const API_URL = (window as any).process?.env?.API_KEY || (window as any).SYNC_API_URL;
+      // Priority: 1. Environment variable, 2. Hardcoded fallback for user's URL
+      const API_KEY_VAL = process.env.API_KEY || '';
+      const FALLBACK_URL = 'https://script.google.com/macros/s/AKfycbz6DWMCAA-vlNCFnpyGFRuBwlB-3DK_lJhgrbOkKRs1HQGKaTK6gog2p1icqPmHc-l-/exec';
       
-      if (!API_URL) {
-        alert("Configuration Missing: Please add 'API_KEY' to your Vercel Environment Variables with the Google Apps Script URL.");
-        setIsSyncing(false);
-        return;
-      }
+      // If the API_KEY looks like a URL, use it; otherwise use the fallback if key is empty or not a URL
+      const API_URL = API_KEY_VAL.startsWith('http') ? API_KEY_VAL : FALLBACK_URL;
 
       const payload = {
         type: 'SYNC_UP',
-        payload: { products, sales, users: allUsers, logs: auditLogs }
+        payload: { 
+          products, 
+          sales, 
+          users: allUsers, 
+          logs: auditLogs,
+          timestamp: new Date().toISOString()
+        }
       };
 
+      // Note: no-cors is used for Google Apps Script to prevent pre-flight failures
       await fetch(API_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -120,6 +125,7 @@ const App: React.FC = () => {
       setLastSync(now);
       localStorage.setItem('bar_pos_last_sync', now);
       addLog('CLOUD_SYNC', 'Successfully exported all local records to Google Sheets');
+      alert("Sync Request Sent! Check your Google Sheet in a few seconds.");
     } catch (error) {
       console.error("Cloud connection failure:", error);
       alert("Cloud Sync failed. Verify your Google Apps Script is deployed as 'Web App' and accessible to 'Anyone'.");

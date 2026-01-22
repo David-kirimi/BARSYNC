@@ -98,6 +98,8 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const { businessName, username, password } = req.body;
+    console.log(`[Auth] Login attempt: Business=${businessName}, User=${username}`);
+
     const usersColl = database.collection('users');
     const bizColl = database.collection('businesses');
 
@@ -113,7 +115,10 @@ app.post('/api/auth/login', async (req, res) => {
       });
     } else {
       business = await bizColl.findOne({ name: { $regex: new RegExp(`^${businessName}$`, 'i') } });
-      if (!business) return res.status(404).json({ error: 'Business not found' });
+      if (!business) {
+        console.warn(`[Auth] Business not found: ${businessName}`);
+        return res.status(404).json({ error: 'Business not found' });
+      }
 
       user = await usersColl.findOne({
         businessId: business.id,
@@ -121,9 +126,17 @@ app.post('/api/auth/login', async (req, res) => {
       });
     }
 
-    if (!user || user.password !== password) {
+    if (!user) {
+      console.warn(`[Auth] User not found: ${username} in business ${businessName}`);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+
+    if (user.password !== password) {
+      console.warn(`[Auth] Password mismatch for user: ${username}`);
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    console.log(`[Auth] Successful login: ${username}`);
 
     const syncColl = database.collection('sync_history');
     const snapshot = await syncColl.findOne({ businessId: isPlatformLogin ? 'admin_node' : business.id });
@@ -163,9 +176,13 @@ app.post('/api/sync', async (req, res) => {
     if (data.users && Array.isArray(data.users)) {
       const usersColl = database.collection('users');
       for (const u of data.users) {
+        const { password, ...otherData } = u;
+        const updateData = { ...otherData };
+        if (password) updateData.password = password; // Only update password if provided
+
         await usersColl.updateOne(
           { id: u.id },
-          { $set: u },
+          { $set: updateData },
           { upsert: true }
         );
       }

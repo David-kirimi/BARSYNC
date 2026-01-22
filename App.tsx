@@ -55,6 +55,7 @@ const App: React.FC = () => {
   const [backendAlive, setBackendAlive] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(localStorage.getItem('bar_pos_last_sync'));
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const isInitialLoad = useRef(true);
 
@@ -317,7 +318,7 @@ const App: React.FC = () => {
     <div className="flex h-screen bg-slate-50 overflow-hidden flex-col md:flex-row">
       <Sidebar
         currentView={currentView}
-        setView={setCurrentView}
+        setView={(view) => { setCurrentView(view); setMobileSidebarOpen(false); }}
         user={currentUser}
         onLogout={handleLogout}
         offline={!navigator.onLine}
@@ -327,10 +328,19 @@ const App: React.FC = () => {
         backendAlive={backendAlive}
         canInstall={!!deferredPrompt}
         onInstall={installPWA}
+        mobileOpen={mobileSidebarOpen}
+        onMobileClose={() => setMobileSidebarOpen(false)}
       />
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         <header className="h-16 md:h-20 border-b bg-white flex items-center justify-between px-4 md:px-10 shrink-0 shadow-sm z-10">
           <div className="flex items-center gap-3">
+            {/* Hamburger Menu - Mobile Only */}
+            <button
+              onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+              className="lg:hidden w-10 h-10 flex items-center justify-center text-slate-600 hover:bg-slate-100 rounded-xl active:scale-95 transition-all"
+            >
+              <i className={`fa-solid ${mobileSidebarOpen ? 'fa-xmark' : 'fa-bars'} text-xl`}></i>
+            </button>
             <h1 className="text-lg md:text-xl font-black text-slate-800 uppercase tracking-tight truncate">
               {currentBusiness?.name || 'Platform Hub'} • {currentView.replace('_', ' ')}
             </h1>

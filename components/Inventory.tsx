@@ -296,131 +296,138 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
       {/* Edit/Add Modal */}
       {(editingProduct || isAdding) && (
         <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-end md:items-center justify-center p-0 md:p-6 z-[100]">
-          <div className="bg-white w-full max-w-lg rounded-t-[3rem] md:rounded-[3.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden animate-slide-up md:animate-scale-in">
+          <div className="bg-white w-full max-w-lg rounded-t-[3rem] md:rounded-[3.5rem] shadow-2xl relative overflow-hidden animate-slide-up md:animate-scale-in flex flex-col max-h-[90vh]">
             <div className="absolute top-0 left-0 w-full h-2 bg-indigo-500"></div>
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">
-                  {isAdding ? 'New Inventory Item' : 'Modify Product'}
-                </h3>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Terminal Registry Update</p>
+            <div className="p-8 md:p-10 border-b border-slate-100 shrink-0">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">
+                    {isAdding ? 'New Inventory Item' : 'Modify Product'}
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Terminal Registry Update</p>
+                </div>
+                <button onClick={closeModals} className="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center hover:bg-slate-100 active:scale-95">
+                  <i className="fa-solid fa-xmark text-lg"></i>
+                </button>
               </div>
-              <button onClick={closeModals} className="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center hover:bg-slate-100">
-                <i className="fa-solid fa-xmark text-lg"></i>
-              </button>
             </div>
 
-            <div className="space-y-6">
-              {/* Common Items Quick Selector */}
-              <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
-                <button
-                  type="button"
-                  onClick={() => setShowCommonPicker(!showCommonPicker)}
-                  className="w-full flex items-center justify-between text-left"
-                >
-                  <div>
-                    <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Quick Fill</p>
-                    <p className="text-xs font-bold text-slate-600 mt-0.5">Select from common bar items</p>
+            <div className="flex-1 overflow-y-auto p-6 md:p-8">
+              <div className="space-y-5">
+                {/* Common Items Quick Selector */}
+                <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowCommonPicker(!showCommonPicker)}
+                    className="w-full flex items-center justify-between text-left"
+                  >
+                    <div>
+                      <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Quick Fill</p>
+                      <p className="text-xs font-bold text-slate-600 mt-0.5">Select from common bar items</p>
+                    </div>
+                    <i className={`fa-solid fa-chevron-${showCommonPicker ? 'up' : 'down'} text-indigo-600`}></i>
+                  </button>
+                  {showCommonPicker && (
+                    <div className="mt-3 max-h-48 overflow-y-auto space-y-2 pt-3 border-t border-indigo-100">
+                      {COMMON_PRODUCTS.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => selectCommonItem(item)}
+                          className="w-full flex items-center gap-3 p-3 bg-white hover:bg-indigo-100 rounded-xl transition-all text-left group"
+                        >
+                          <img src={item.imageUrl} className="w-10 h-10 rounded-lg object-cover" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-black text-slate-800 truncate">{item.name}</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase">{item.category} • Ksh {item.price}</p>
+                          </div>
+                          <i className="fa-solid fa-arrow-right text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Item Label</label>
+                  <input
+                    type="text"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+                    value={form.name}
+                    placeholder="e.g. Tusker Cider"
+                    onChange={e => setForm({ ...form, name: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Category</label>
+                    <select
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all appearance-none"
+                      value={form.category}
+                      onChange={e => setForm({ ...form, category: e.target.value })}
+                    >
+                      {CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
                   </div>
-                  <i className={`fa-solid fa-chevron-${showCommonPicker ? 'up' : 'down'} text-indigo-600`}></i>
-                </button>
-                {showCommonPicker && (
-                  <div className="mt-3 max-h-48 overflow-y-auto space-y-2 pt-3 border-t border-indigo-100">
-                    {COMMON_PRODUCTS.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => selectCommonItem(item)}
-                        className="w-full flex items-center gap-3 p-3 bg-white hover:bg-indigo-100 rounded-xl transition-all text-left group"
-                      >
-                        <img src={item.imageUrl} className="w-10 h-10 rounded-lg object-cover" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-black text-slate-800 truncate">{item.name}</p>
-                          <p className="text-[9px] font-bold text-slate-400 uppercase">{item.category} • Ksh {item.price}</p>
-                        </div>
-                        <i className="fa-solid fa-arrow-right text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity"></i>
-                      </button>
-                    ))}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Unit Price (Sale)</label>
+                    <input
+                      type="number"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+                      value={form.price}
+                      onChange={e => setForm({ ...form, price: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
+
+                {(userRole === Role.OWNER || userRole === Role.ADMIN) && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Unit Buying Price (Cost)</label>
+                    <input
+                      type="number"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-mono"
+                      value={form.buyingPrice}
+                      placeholder="Profit tracking cost..."
+                      onChange={e => setForm({ ...form, buyingPrice: Number(e.target.value) })}
+                    />
                   </div>
                 )}
-              </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Item Label</label>
-                <input
-                  type="text"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
-                  value={form.name}
-                  placeholder="e.g. Tusker Cider"
-                  onChange={e => setForm({ ...form, name: e.target.value })}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Category</label>
-                  <select
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all appearance-none"
-                    value={form.category}
-                    onChange={e => setForm({ ...form, category: e.target.value })}
-                  >
-                    {CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Unit Price (Sale)</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Current Count</label>
                   <input
                     type="number"
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
-                    value={form.price}
-                    onChange={e => setForm({ ...form, price: Number(e.target.value) })}
+                    value={form.stock}
+                    onChange={e => setForm({ ...form, stock: Number(e.target.value) })}
                   />
                 </div>
-              </div>
 
-              {(userRole === Role.OWNER || userRole === Role.ADMIN) && (
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Unit Buying Price (Cost)</label>
-                  <input
-                    type="number"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-mono"
-                    value={form.buyingPrice}
-                    placeholder="Profit tracking cost..."
-                    onChange={e => setForm({ ...form, buyingPrice: Number(e.target.value) })}
-                  />
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Current Count</label>
-                <input
-                  type="number"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
-                  value={form.stock}
-                  onChange={e => setForm({ ...form, stock: Number(e.target.value) })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Product Icon</label>
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
-                    placeholder="Resource URL (optional)"
-                    value={form.imageUrl}
-                    onChange={e => setForm({ ...form, imageUrl: e.target.value })}
-                  />
-                  <label className="shrink-0 bg-slate-100 hover:bg-slate-200 text-slate-600 h-14 w-14 rounded-2xl flex items-center justify-center cursor-pointer transition-all active:scale-95 border border-slate-200 border-dashed">
-                    <i className="fa-solid fa-cloud-arrow-up"></i>
-                    <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
-                  </label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Product Icon</label>
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+                      placeholder="Resource URL (optional)"
+                      value={form.imageUrl}
+                      onChange={e => setForm({ ...form, imageUrl: e.target.value })}
+                    />
+                    <label className="shrink-0 bg-slate-100 hover:bg-slate-200 text-slate-600 h-14 w-14 rounded-2xl flex items-center justify-center cursor-pointer transition-all active:scale-95 border border-slate-200 border-dashed">
+                      <i className="fa-solid fa-cloud-arrow-up"></i>
+                      <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                    </label>
+                  </div>
                 </div>
               </div>
+            </div>
 
+            {/* Sticky Footer */}
+            <div className="p-6 md:p-8 border-t border-slate-100 shrink-0 bg-white">
               <button
                 onClick={saveForm}
-                className="w-full py-5 bg-indigo-600 text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-3 mt-4"
+                className="w-full py-5 bg-indigo-600 text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-3"
               >
                 <i className="fa-solid fa-check-circle"></i>
                 {isAdding ? 'Register Product' : 'Apply Changes'}

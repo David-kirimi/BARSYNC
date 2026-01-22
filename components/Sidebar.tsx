@@ -11,9 +11,10 @@ interface SidebarProps {
   onSync: () => void;
   isSyncing: boolean;
   lastSync: string | null;
+  backendAlive: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout, offline, onSync, isSyncing, lastSync }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout, offline, onSync, isSyncing, lastSync, backendAlive }) => {
   const menuItems = [
     { id: 'SUPER_ADMIN_PORTAL' as View, label: 'Platform Hub', icon: 'fa-server', roles: [Role.SUPER_ADMIN] },
     { id: 'POS' as View, label: 'Terminal', icon: 'fa-cash-register', roles: [Role.ADMIN, Role.BARTENDER, Role.OWNER] },
@@ -30,7 +31,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
 
   return (
     <>
-      {/* Mobile Bottom Navigation */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-950 flex justify-around p-2 z-50 border-t border-slate-800">
         {visibleItems.slice(0, 5).map(item => (
           <button
@@ -50,7 +50,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
         </button>
       </div>
 
-      {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 bg-slate-950 flex-col shrink-0 border-r border-slate-800 overflow-y-auto no-scrollbar">
         <div className="p-8">
           <div className="flex items-center gap-3 mb-12">
@@ -59,7 +58,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
             </div>
             <div>
               <h2 className="text-white font-black text-lg tracking-tighter leading-none uppercase">BARSYNC</h2>
-              <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mt-1">Cloud Atlas</p>
+              <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mt-1">Full Stack Mode</p>
             </div>
           </div>
 
@@ -82,27 +81,28 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
         </div>
 
         <div className="mt-auto p-6 space-y-4">
-          {/* Cloud Sync Center - MongoDB Optimized */}
           <div className="bg-slate-900/80 rounded-3xl p-5 border border-slate-800 backdrop-blur-sm shadow-inner">
             <div className="flex items-center justify-between mb-4">
                <div className="flex flex-col">
-                 <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2">
-                   <i className="fa-solid fa-database text-[8px]"></i> Atlas Hub
+                 <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest flex items-center gap-2">
+                   <i className="fa-solid fa-server text-[8px]"></i> Backend API
                  </span>
-                 <span className="text-[7px] text-emerald-300/60 font-black uppercase tracking-[0.2em]">Auto-Sync On</span>
+                 <span className={`text-[7px] font-black uppercase tracking-[0.2em] ${backendAlive ? 'text-emerald-400' : 'text-rose-400 animate-pulse'}`}>
+                   {backendAlive ? 'Driver Ready' : 'Backend Down'}
+                 </span>
                </div>
                <button 
                 onClick={onSync}
-                disabled={isSyncing || offline}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isSyncing ? 'bg-emerald-500 text-white animate-spin' : 'bg-slate-800 text-slate-400 hover:text-emerald-400'}`}
-                title="Force Cloud Update"
+                disabled={isSyncing || !backendAlive}
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isSyncing ? 'bg-indigo-500 text-white animate-spin' : 'bg-slate-800 text-slate-400 hover:text-indigo-400'}`}
+                title="Force Cloud Sync"
                >
                  <i className="fa-solid fa-cloud-arrow-up text-xs"></i>
                </button>
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-[9px] text-slate-400 font-bold uppercase">Cloud State</p>
+                <p className="text-[9px] text-slate-400 font-bold uppercase">Network</p>
                 <div className="flex items-center gap-2">
                   <span className={`w-2 h-2 rounded-full ${offline ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`}></span>
                   <span className="text-[8px] font-black text-white uppercase tracking-widest">
@@ -111,8 +111,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <p className="text-[9px] text-slate-400 font-bold uppercase">Last Push</p>
-                <p className="text-[8px] font-black text-emerald-400 uppercase">
+                <p className="text-[9px] text-slate-400 font-bold uppercase">Last Mirror</p>
+                <p className="text-[8px] font-black text-indigo-400 uppercase">
                   {lastSync ? lastSync.split(',')[1] : 'Never'}
                 </p>
               </div>
@@ -124,7 +124,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
             className="w-full flex items-center justify-center gap-4 px-5 py-4 rounded-2xl text-[12px] font-black uppercase tracking-[0.2em] text-white bg-rose-600 hover:bg-rose-700 transition-all shadow-xl shadow-rose-950/20 active:scale-95"
           >
             <i className="fa-solid fa-power-off"></i>
-            Sign Out
+            Exit POS
           </button>
         </div>
       </aside>

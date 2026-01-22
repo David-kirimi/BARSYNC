@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Product, Role } from '../types';
-import { CATEGORIES } from '../constants';
+import { CATEGORIES, COMMON_PRODUCTS } from '../constants';
 import { useToast } from './Toast';
 
 interface InventoryProps {
@@ -16,6 +16,7 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showCommonPicker, setShowCommonPicker] = useState(false);
 
   const [form, setForm] = useState<Partial<Product>>({});
 
@@ -36,6 +37,7 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
 
   const openAdd = () => {
     setIsAdding(true);
+    setShowCommonPicker(false);
     setForm({
       name: '',
       category: 'Beer',
@@ -44,6 +46,19 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
       stock: 0,
       imageUrl: ''
     });
+  };
+
+  const selectCommonItem = (item: Product) => {
+    setForm({
+      name: item.name,
+      category: item.category,
+      price: item.price,
+      buyingPrice: item.buyingPrice || 0,
+      stock: 0,
+      imageUrl: item.imageUrl
+    });
+    setShowCommonPicker(false);
+    showToast(`${item.name} template loaded`, 'info');
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -186,6 +201,40 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
             </div>
 
             <div className="space-y-6">
+              {/* Common Items Quick Selector */}
+              <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
+                <button
+                  type="button"
+                  onClick={() => setShowCommonPicker(!showCommonPicker)}
+                  className="w-full flex items-center justify-between text-left"
+                >
+                  <div>
+                    <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Quick Fill</p>
+                    <p className="text-xs font-bold text-slate-600 mt-0.5">Select from common bar items</p>
+                  </div>
+                  <i className={`fa-solid fa-chevron-${showCommonPicker ? 'up' : 'down'} text-indigo-600`}></i>
+                </button>
+                {showCommonPicker && (
+                  <div className="mt-3 max-h-48 overflow-y-auto space-y-2 pt-3 border-t border-indigo-100">
+                    {COMMON_PRODUCTS.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => selectCommonItem(item)}
+                        className="w-full flex items-center gap-3 p-3 bg-white hover:bg-indigo-100 rounded-xl transition-all text-left group"
+                      >
+                        <img src={item.imageUrl} className="w-10 h-10 rounded-lg object-cover" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-black text-slate-800 truncate">{item.name}</p>
+                          <p className="text-[9px] font-bold text-slate-400 uppercase">{item.category} • Ksh {item.price}</p>
+                        </div>
+                        <i className="fa-solid fa-arrow-right text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Item Label</label>
                 <input

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { INITIAL_PRODUCTS } from './constants.tsx';
+import { COMMON_PRODUCTS } from './constants.tsx';
 import { Product, Sale, User, Role, View, CartItem, Business, AuditLog } from './types.ts';
 import { useToast } from './components/Toast.tsx';
 import Sidebar from './components/Sidebar.tsx';
@@ -28,11 +28,27 @@ const App: React.FC = () => {
     } catch { return null; }
   });
 
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
+    try {
+      const saved = localStorage.getItem('bar_pos_audit_logs');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
-  const [sales, setSales] = useState<Sale[]>([]);
+  const [products, setProducts] = useState<Product[]>(() => {
+    try {
+      const saved = localStorage.getItem('bar_pos_products');
+      // If we have saved products, use them, otherwise use defaults
+      return saved ? JSON.parse(saved) : COMMON_PRODUCTS;
+    } catch { return COMMON_PRODUCTS; }
+  });
+  const [sales, setSales] = useState<Sale[]>(() => {
+    try {
+      const saved = localStorage.getItem('bar_pos_sales');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [cart, setCart] = useState<CartItem[]>([]);
   const [currentView, setCurrentView] = useState<View>('POS');
   const [isSyncing, setIsSyncing] = useState(false);
@@ -132,6 +148,18 @@ const App: React.FC = () => {
   }, [currentUser]);
 
   useEffect(() => {
+    if (products.length > 0) localStorage.setItem('bar_pos_products', JSON.stringify(products));
+  }, [products]);
+
+  useEffect(() => {
+    localStorage.setItem('bar_pos_sales', JSON.stringify(sales));
+  }, [sales]);
+
+  useEffect(() => {
+    localStorage.setItem('bar_pos_audit_logs', JSON.stringify(auditLogs));
+  }, [auditLogs]);
+
+  useEffect(() => {
     const checkBackend = async () => {
       try {
         const res = await fetch(`${GLOBAL_BACKEND}/health`);
@@ -199,7 +227,10 @@ const App: React.FC = () => {
     setCart([]);
     setSales([]);
     setAllUsers([]);
-    setProducts(INITIAL_PRODUCTS);
+    setProducts(COMMON_PRODUCTS);
+    localStorage.removeItem('bar_pos_products');
+    localStorage.removeItem('bar_pos_sales');
+    localStorage.removeItem('bar_pos_audit_logs');
     isInitialLoad.current = true;
   };
 

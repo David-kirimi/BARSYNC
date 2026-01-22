@@ -1,7 +1,5 @@
-const CACHE_NAME = 'barsync-v1';
+const CACHE_NAME = 'barsync-v2';
 const ASSETS_TO_CACHE = [
-    '/',
-    '/index.html',
     '/manifest.json',
     '/icon-512.png'
 ];
@@ -12,9 +10,28 @@ self.addEventListener('install', (event) => {
             return cache.addAll(ASSETS_TO_CACHE);
         })
     );
+    self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+    event.waitUntil(
+        caches.keys().then((keys) => {
+            return Promise.all(
+                keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+            );
+        })
+    );
 });
 
 self.addEventListener('fetch', (event) => {
+    // Network first for index.html and root
+    if (event.request.mode === 'navigate') {
+        event.respondWith(
+            fetch(event.request).catch(() => caches.match('/index.html'))
+        );
+        return;
+    }
+
     event.respondWith(
         caches.match(event.request).then((response) => {
             return response || fetch(event.request);

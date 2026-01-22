@@ -14,6 +14,8 @@ import Reports from './components/Reports.tsx';
 import Profile from './components/Profile.tsx';
 import AuditLogs from './components/AuditLogs.tsx';
 
+const GLOBAL_BACKEND = 'https://barsync-backend.onrender.com';
+
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
@@ -22,60 +24,11 @@ const App: React.FC = () => {
     } catch { return null; }
   });
 
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
-    try {
-      const saved = localStorage.getItem('bar_pos_audit_logs');
-      return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
-  });
-
-  const [businesses, setBusinesses] = useState<Business[]>(() => {
-    try {
-      const saved = localStorage.getItem('bar_pos_businesses');
-      return saved ? JSON.parse(saved) : [
-        { 
-          id: 'bus_1', 
-          name: 'The Junction Bar', 
-          ownerName: 'Jeniffer', 
-          mongoDatabase: 'barsync_prod', 
-          mongoCollection: 'junction_records', 
-          mongoConnectionString: 'https://barsync-backend.onrender.com', // Example Production URL
-          subscriptionStatus: 'Active', 
-          createdAt: new Date().toISOString() 
-        }
-      ];
-    } catch { return []; }
-  });
-
-  const [allUsers, setAllUsers] = useState<User[]>(() => {
-    try {
-      const saved = localStorage.getItem('bar_pos_all_users');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed.map((u: User) => ({
-          ...u,
-          password: u.password || (u.role === Role.SUPER_ADMIN ? 'admin' : '123')
-        }));
-      }
-    } catch (e) { console.error("Cache load fail", e); }
-    
-    return [
-      { id: '1', name: 'Jeniffer', role: Role.BARTENDER, avatar: 'https://picsum.photos/seed/jen/100/100', businessId: 'bus_1', status: 'Active', password: '123' },
-      { id: '2', name: 'Winnie Admin', role: Role.ADMIN, avatar: 'https://picsum.photos/seed/win/100/100', businessId: 'bus_1', status: 'Active', password: '123' },
-      { id: 'super_1', name: 'Platform Owner', role: Role.SUPER_ADMIN, avatar: 'https://picsum.photos/seed/owner/100/100', status: 'Active', password: 'admin' },
-    ];
-  });
-
-  const [products, setProducts] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('bar_pos_products');
-    return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
-  });
-
-  const [sales, setSales] = useState<Sale[]>(() => {
-    const saved = localStorage.getItem('bar_pos_sales');
-    return saved ? JSON.parse(saved) : [];
-  });
-
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [sales, setSales] = useState<Sale[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [currentView, setCurrentView] = useState<View>('POS');
   const [isSyncing, setIsSyncing] = useState(false);
@@ -99,10 +52,10 @@ const App: React.FC = () => {
 
   const syncWithCloud = useCallback(async (isSilent = false) => {
     const currentBiz = businesses.find(b => b.id === currentUser?.businessId);
-    const backendUrl = currentBiz?.mongoConnectionString || 'https://barsync-backend.onrender.com';
+    const backendUrl = currentBiz?.mongoConnectionString || GLOBAL_BACKEND;
 
     if (!navigator.onLine) {
-      if (!isSilent) alert("Device is offline. Data saved locally.");
+      if (!isSilent) alert("Device is offline.");
       return;
     }
 
@@ -115,78 +68,71 @@ const App: React.FC = () => {
         body: JSON.stringify({
           businessId: currentBiz?.id || 'admin_node',
           businessName: currentBiz?.name || 'Platform Hub',
-          data: { sales, products, auditLogs, timestamp: new Date().toISOString() }
+          data: { sales, products, auditLogs }
         })
       });
 
-      if (!response.ok) {
-        throw new Error(`Cloud Rejection: ${response.status}`);
+      if (response.ok) {
+        const now = new Date().toLocaleString();
+        setLastSync(now);
+        localStorage.setItem('bar_pos_last_sync', now);
+        if (!isSilent) alert("Cloud Sync Success.");
       }
-
-      const now = new Date().toLocaleString();
-      setLastSync(now);
-      localStorage.setItem('bar_pos_last_sync', now);
-      addLog('BACKEND_SYNC', `Cloud handshake successful for ${currentBiz?.name || 'Admin'}`);
-      if (!isSilent) alert("Cloud Node Synchronized Successfully.");
     } catch (error) {
-      console.error("Backend Connection Failure:", error);
-      if (!isSilent) alert("Cloud Sync Failed. The backend might be starting up (Render free tier) or URL is incorrect.");
+      console.error("Sync Failure:", error);
     } finally {
       if (!isSilent) setIsSyncing(false);
     }
-  }, [businesses, currentUser, products, sales, auditLogs, addLog]);
+  }, [businesses, currentUser, products, sales, auditLogs]);
+
+  // Fetch all businesses if Super Admin
+  useEffect(() => {
+    if (currentUser?.role === Role.SUPER_ADMIN) {
+      fetch(`${GLOBAL_BACKEND}/api/admin/businesses`)
+        .then(res => res.json())
+        .then(data => setBusinesses(data))
+        .catch(err => console.error("Business fetch fail", err));
+    }
+  }, [currentUser]);
 
   // Backend Health Check
   useEffect(() => {
     const checkBackend = async () => {
-      const currentBiz = businesses.find(b => b.id === currentUser?.businessId);
-      const url = currentBiz?.mongoConnectionString || 'https://barsync-backend.onrender.com';
       try {
-        const res = await fetch(`${url}/health`, { method: 'GET' });
+        const res = await fetch(`${GLOBAL_BACKEND}/health`);
         setBackendAlive(res.ok);
-      } catch {
-        setBackendAlive(false);
-      }
+      } catch { setBackendAlive(false); }
     };
-
     checkBackend();
-    const interval = setInterval(checkBackend, 30000); // Check every 30s
+    const interval = setInterval(checkBackend, 30000);
     return () => clearInterval(interval);
-  }, [businesses, currentUser]);
+  }, []);
 
-  const [offline, setOffline] = useState(!navigator.onLine);
-  useEffect(() => {
-    const handleOnline = () => { 
-      setOffline(false); 
-      syncWithCloud(true); 
-    };
-    const handleOffline = () => setOffline(true);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [syncWithCloud]);
-
-  useEffect(() => {
-    localStorage.setItem('bar_pos_products', JSON.stringify(products));
-    localStorage.setItem('bar_pos_sales', JSON.stringify(sales));
-    localStorage.setItem('bar_pos_businesses', JSON.stringify(businesses));
-    localStorage.setItem('bar_pos_all_users', JSON.stringify(allUsers));
-    localStorage.setItem('bar_pos_audit_logs', JSON.stringify(auditLogs));
-    if (currentUser) localStorage.setItem('bar_pos_user', JSON.stringify(currentUser));
-  }, [products, sales, currentUser, businesses, allUsers, auditLogs]);
-
-  const handleLogin = (user: User) => {
+  const handleLogin = (user: User, business?: Business, initialState?: any) => {
     setCurrentUser(user);
-    addLog('LOGIN', 'Session started');
+    if (business) {
+      setBusinesses(prev => {
+        const exists = prev.find(b => b.id === business.id);
+        return exists ? prev : [...prev, business];
+      });
+    }
+
+    if (initialState) {
+      if (initialState.products) setProducts(initialState.products);
+      if (initialState.sales) setSales(initialState.sales);
+      if (initialState.auditLogs) setAuditLogs(initialState.auditLogs);
+    }
+
+    addLog('LOGIN', 'Session authenticated via MongoDB', user);
   };
 
   const handleLogout = () => {
     addLog('LOGOUT', 'Session ended');
     setCurrentUser(null);
+    localStorage.removeItem('bar_pos_user');
     setCart([]);
+    setSales([]);
+    setProducts(INITIAL_PRODUCTS);
   };
 
   const addToCart = useCallback((product: Product) => {
@@ -203,7 +149,6 @@ const App: React.FC = () => {
     setCart(prev => prev.map(item => {
       if (item.id === productId) {
         const newQty = Math.max(1, item.quantity + delta);
-        // Only allow increment if stock is available
         if (delta > 0) {
           const product = products.find(p => p.id === productId);
           if (product && product.stock <= 0) return item;
@@ -239,27 +184,38 @@ const App: React.FC = () => {
     addLog('SALE', `Order ${newSale.id} (Ksh ${newSale.totalAmount})`);
     setCart([]);
 
-    // Trigger silent cloud backup
     if (navigator.onLine && backendAlive) {
       setTimeout(() => syncWithCloud(true), 500);
     }
-
     return newSale;
   }, [cart, currentUser, addLog, syncWithCloud, backendAlive]);
 
-  const handleAddBusiness = (biz: Omit<Business, 'id' | 'createdAt'>, initialUser: Omit<User, 'id' | 'businessId' | 'status'>) => {
+  const handleAddBusiness = async (biz: Omit<Business, 'id' | 'createdAt'>, initialOwner: Omit<User, 'id' | 'businessId' | 'status'>) => {
     const newBusinessId = `bus_${Math.random().toString(36).substr(2, 5)}`;
     const newBizWithMeta: Business = { ...biz, id: newBusinessId, createdAt: new Date().toISOString() };
-    setBusinesses(prev => [...prev, newBizWithMeta]);
-    const newUser: User = { ...initialUser, id: Math.random().toString(36).substr(2, 9), businessId: newBusinessId, status: 'Active' };
-    setAllUsers(prev => [...prev, newUser]);
+    const newUser: User = { ...initialOwner, id: Math.random().toString(36).substr(2, 9), businessId: newBusinessId, status: 'Active' };
+
+    try {
+      const response = await fetch(`${GLOBAL_BACKEND}/api/admin/businesses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ business: newBizWithMeta, owner: newUser })
+      });
+      if (response.ok) {
+        setBusinesses(prev => [...prev, newBizWithMeta]);
+        setAllUsers(prev => [...prev, newUser]);
+        alert("Business Provisioned in MongoDB.");
+      }
+    } catch (err) {
+      alert("Failed to save to MongoDB.");
+    }
   };
 
   const updateBusiness = (updatedBiz: Business) => {
     setBusinesses(prev => prev.map(b => b.id === updatedBiz.id ? updatedBiz : b));
   };
 
-  if (!currentUser) return <Login onLogin={handleLogin} businesses={businesses} allUsers={allUsers} />;
+  if (!currentUser) return <Login onLogin={handleLogin} backendUrl={GLOBAL_BACKEND} />;
 
   const currentBusiness = businesses.find(b => b.id === currentUser.businessId);
 
@@ -270,18 +226,13 @@ const App: React.FC = () => {
         setView={setCurrentView} 
         user={currentUser} 
         onLogout={handleLogout}
-        offline={offline}
+        offline={!navigator.onLine}
         onSync={() => syncWithCloud()}
         isSyncing={isSyncing}
         lastSync={lastSync}
         backendAlive={backendAlive}
       />
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        {offline && (
-          <div className="bg-amber-500 text-white px-4 py-2 text-center text-[10px] font-black uppercase tracking-[0.2em] animate-pulse shrink-0 z-50">
-            Local Mode • Database Sync Paused
-          </div>
-        )}
         <header className="h-16 md:h-20 border-b bg-white flex items-center justify-between px-4 md:px-10 shrink-0 shadow-sm z-10">
           <div className="flex items-center gap-3">
             <h1 className="text-lg md:text-xl font-black text-slate-800 uppercase tracking-tight truncate">
@@ -298,18 +249,8 @@ const App: React.FC = () => {
         </header>
 
         <div className="flex-1 overflow-auto p-4 md:p-10 no-scrollbar relative">
-          {isSyncing && (
-            <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-50 flex items-center justify-center">
-              <div className="bg-slate-900 text-white p-10 rounded-[3rem] shadow-2xl text-center space-y-6 animate-pulse">
-                <div className="w-20 h-20 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                <h3 className="text-xl font-black uppercase tracking-tight">Pushing to Cloud Node</h3>
-                <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-[0.2em]">Hosted Driver Active</p>
-              </div>
-            </div>
-          )}
-
           {currentView === 'POS' && <POS products={products} addToCart={addToCart} cart={cart} updateCartQuantity={updateCartQuantity} removeFromCart={removeFromCart} onCheckout={checkout} businessName={currentBusiness?.name || 'BarSync'} />}
-          {currentView === 'INVENTORY' && <Inventory products={products} onUpdate={(p) => { setProducts(prev => prev.map(item => item.id === p.id ? p : item)); addLog('STOCK_UPDATE', p.name); }} onAdd={(p) => { setProducts(prev => [...prev, { ...p, id: Date.now().toString() } as Product]); }} userRole={currentUser.role} />}
+          {currentView === 'INVENTORY' && <Inventory products={products} onUpdate={(p) => { setProducts(prev => prev.map(item => item.id === p.id ? p : item)); addLog('STOCK_UPDATE', p.name); }} onAdd={(p) => setProducts(prev => [...prev, { ...p, id: Date.now().toString() } as Product])} userRole={currentUser.role} />}
           {currentView === 'SUPER_ADMIN_PORTAL' && currentUser.role === Role.SUPER_ADMIN && <SuperAdminPortal businesses={businesses} onAdd={handleAddBusiness} onUpdate={updateBusiness} sales={sales} />}
           {currentView === 'USER_MANAGEMENT' && <UserManagement users={allUsers.filter(u => u.businessId === currentUser.businessId)} onAdd={(u) => setAllUsers(prev => [...prev, { ...u, id: Date.now().toString(), businessId: currentUser.businessId!, status: 'Active' }])} onUpdate={(u) => setAllUsers(prev => prev.map(item => item.id === u.id ? u : item))} onDelete={(id) => setAllUsers(prev => prev.filter(u => u.id !== id))} />}
           {currentView === 'REPORTS' && <Reports sales={sales.filter(s => s.businessId === currentUser.businessId)} businessName={currentBusiness?.name || 'BarSync'} />}

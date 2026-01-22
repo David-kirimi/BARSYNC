@@ -30,18 +30,29 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
   const totalRevenue = sales.reduce((sum, s) => sum + s.totalAmount, 0);
 
   const handleAddPartner = () => {
+    // Check for required fields based on the UI inputs
     if (!newBiz.name || !newBiz.ownerName || !initialOwner.password) {
-      alert("Please fill in all details.");
+      alert("Missing details! Please ensure Establishment Name, Owner Name, and Access Password are filled.");
       return;
     }
+    
     onAdd(newBiz, {
       name: initialOwner.name || newBiz.ownerName,
       role: Role.OWNER,
-      avatar: `https://picsum.photos/seed/${newBiz.name}/100/100`,
+      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${newBiz.ownerName}`,
       password: initialOwner.password
     });
+
+    // Reset states
     setShowAdd(false);
-    setNewBiz({ name: '', ownerName: '', mongoDatabase: 'barsync_prod', mongoCollection: 'sync_history', mongoConnectionString: 'https://barsync-backend.onrender.com', subscriptionStatus: 'Trial' });
+    setNewBiz({ 
+      name: '', 
+      ownerName: '', 
+      mongoDatabase: 'barsync_prod', 
+      mongoCollection: 'sync_history', 
+      mongoConnectionString: 'https://barsync-backend.onrender.com', 
+      subscriptionStatus: 'Trial' 
+    });
     setInitialOwner({ name: '', password: '' });
   };
 
@@ -134,12 +145,34 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
             </h3>
             
             <div className="space-y-8">
-              <section className="space-y-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Establishment Name</label>
-                <input className="w-full border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none font-bold" 
-                  placeholder="e.g. Skyline Bar"
-                  value={showAdd ? newBiz.name : editingBiz?.name} 
-                  onChange={e => showAdd ? setNewBiz({...newBiz, name: e.target.value}) : setEditingBiz({...editingBiz!, name: e.target.value})} />
+              <section className="space-y-6">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Establishment Name</label>
+                  <input className="w-full border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none font-bold" 
+                    placeholder="e.g. Skyline Bar"
+                    value={showAdd ? newBiz.name : editingBiz?.name} 
+                    onChange={e => showAdd ? setNewBiz({...newBiz, name: e.target.value}) : setEditingBiz({...editingBiz!, name: e.target.value})} />
+                </div>
+
+                {showAdd && (
+                  <>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Owner Name</label>
+                      <input className="w-full border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none font-bold" 
+                        placeholder="Owner's Name"
+                        value={newBiz.ownerName} 
+                        onChange={e => setNewBiz({...newBiz, ownerName: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Initial Access PIN / Password</label>
+                      <input className="w-full border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none font-bold tracking-widest" 
+                        type="password"
+                        placeholder="••••••"
+                        value={initialOwner.password} 
+                        onChange={e => setInitialOwner({...initialOwner, password: e.target.value})} />
+                    </div>
+                  </>
+                )}
               </section>
 
               <section className="space-y-4 bg-slate-50 p-6 rounded-[2rem] border border-slate-100">

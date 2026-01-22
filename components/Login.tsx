@@ -1,67 +1,43 @@
 
 import React, { useState } from 'react';
-import { User, Role, Business } from '../types';
+import { User, Business } from '../types';
 
 interface LoginProps {
-  onLogin: (user: User) => void;
-  businesses: Business[];
-  allUsers: User[];
+  onLogin: (user: User, business?: Business, initialState?: any) => void;
+  backendUrl: string;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin, businesses, allUsers }) => {
+const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
   const [businessName, setBusinessName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLoginAttempt = (e: React.FormEvent) => {
+  const handleLoginAttempt = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
 
-    // Brief delay to simulate server-side check and improve UX feel
-    setTimeout(() => {
-      let targetUser: User | undefined;
+    try {
+      const response = await fetch(`${backendUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessName, username, password })
+      });
 
-      const isPlatformAuth = !businessName || businessName.toLowerCase() === 'platform';
+      const result = await response.json();
 
-      if (isPlatformAuth) {
-        // Attempting to login as Super Admin
-        targetUser = allUsers.find(u => 
-          u.role === Role.SUPER_ADMIN && 
-          u.name.toLowerCase() === username.toLowerCase()
-        );
-      } else {
-        // Find business first
-        const biz = businesses.find(b => b.name.toLowerCase() === businessName.toLowerCase());
-        
-        if (!biz) {
-          setError('Business not found. Check the name and try again.');
-          setIsSubmitting(false);
-          return;
-        }
-
-        // Find user within that business
-        targetUser = allUsers.find(u => 
-          u.businessId === biz.id && 
-          u.name.toLowerCase() === username.toLowerCase()
-        );
+      if (!response.ok) {
+        throw new Error(result.error || 'Authentication failed');
       }
 
-      if (targetUser) {
-        const storedPassword = targetUser.password || (targetUser.role === Role.SUPER_ADMIN ? 'admin' : '123');
-        if (storedPassword === password) {
-          onLogin(targetUser);
-        } else {
-          setError('Invalid credentials. Access denied.');
-        }
-      } else {
-        setError('Account not recognized for this business.');
-      }
-      
+      onLogin(result.user, result.business, result.state);
+    } catch (err: any) {
+      setError(err.message || 'Connection to backend failed');
+    } finally {
       setIsSubmitting(false);
-    }, 600);
+    }
   };
 
   return (
@@ -72,26 +48,24 @@ const Login: React.FC<LoginProps> = ({ onLogin, businesses, allUsers }) => {
             <i className="fa-solid fa-beer-mug-empty"></i>
           </div>
           <h1 className="text-4xl font-black text-white mb-2 tracking-tighter">BARSYNC</h1>
-          <p className="text-indigo-400/80 font-medium uppercase tracking-[0.3em] text-[10px]">Terminal Gateway</p>
+          <p className="text-indigo-400/80 font-medium uppercase tracking-[0.3em] text-[10px]">Cloud Terminal Gateway</p>
         </div>
 
         <div className="bg-white/95 backdrop-blur rounded-[3rem] p-10 shadow-2xl space-y-8 border border-white/20">
           <div className="text-center">
             <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase">Sign In</h2>
-            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">Authorized access only</p>
+            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">MongoDB Secured Session</p>
           </div>
 
           <form onSubmit={handleLoginAttempt} className="space-y-6">
             <div className="space-y-4">
-              {/* Business Input */}
               <div className="relative">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Workplace</label>
                 <div className="relative">
                   <i className="fa-solid fa-building absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
                   <input 
                     type="text"
-                    required
-                    placeholder="e.g. The Junction"
+                    placeholder="e.g. The Junction (Leave blank for Platform)"
                     className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-slate-800 transition-all"
                     value={businessName}
                     onChange={e => setBusinessName(e.target.value)}
@@ -99,7 +73,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, businesses, allUsers }) => {
                 </div>
               </div>
 
-              {/* Username Input */}
               <div className="relative">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Profile Name</label>
                 <div className="relative">
@@ -115,7 +88,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, businesses, allUsers }) => {
                 </div>
               </div>
 
-              {/* Password Input */}
               <div className="relative">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Access PIN</label>
                 <div className="relative">
@@ -147,7 +119,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, businesses, allUsers }) => {
               {isSubmitting ? (
                 <>
                   <i className="fa-solid fa-circle-notch animate-spin"></i>
-                  Verifying...
+                  Checking MongoDB...
                 </>
               ) : (
                 <>
@@ -160,14 +132,10 @@ const Login: React.FC<LoginProps> = ({ onLogin, businesses, allUsers }) => {
 
           <div className="pt-6 border-t border-slate-50 text-center">
             <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest flex items-center justify-center gap-2">
-               <i className="fa-solid fa-shield-halved"></i> 256-Bit SSL Encryption
+               <i className="fa-solid fa-database"></i> Live Database Connection
             </p>
           </div>
         </div>
-        
-        <p className="text-center text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-8">
-          Need access? Contact your business owner
-        </p>
       </div>
 
       <style>{`

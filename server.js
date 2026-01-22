@@ -9,26 +9,22 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CORS setup - allowing all for initial deployment troubleshooting
-// You can restrict this later to your specific frontend URL
 app.use(cors({
   origin: '*', 
-  methods: ['GET', 'POST'],
+  methods: ['GET', 'POST', 'DELETE'],
   credentials: true
 }));
 
 app.use(express.json({ limit: '50mb' }));
 
-// MongoDB setup
 const uri = process.env.MONGODB_URI;
 const DB_NAME = process.env.DB_NAME || 'barsync';
 
 if (!uri) {
-  console.error("❌ ERROR: MONGODB_URI is missing. Set it in your Render environment variables.");
+  console.error("❌ ERROR: MONGODB_URI is missing.");
   process.exit(1);
 }
 
-// Simplified client options - Atlas handles TLS/SSL automatically via the +srv URI
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -39,60 +35,150 @@ const client = new MongoClient(uri, {
 
 let db;
 
+async function seedDatabase() {
+  const usersColl = db.collection('users');
+  const bizColl = db.collection('businesses');
+
+  // Ensure SLIEM (Master Admin) exists
+  const masterAdmin = await usersColl.findOne({ name: 'SLIEM', role: 'SUPER_ADMIN' });
+  if (!masterAdmin) {
+    console.log("🌱 Provisioning Master Admin: SLIEM...");
+    await usersColl.insertOne({ 
+      id: 'super_sliem', 
+      name: 'SLIEM', 
+      role: 'SUPER_ADMIN', 
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=SLIEM', 
+      status: 'Active', 
+      password: '@SLIEM2040' 
+    });
+  }
+
+  const bizCount = await bizColl.countDocuments();
+  if (bizCount === 0) {
+    console.log("🌱 Seeding initial demo business...");
+    
+    // 1. Create Default Business
+    const defaultBiz = {
+      id: 'bus_default',
+      name: 'The Junction Bar',
+      ownerName: 'Jeniffer',
+      mongoDatabase: 'barsync_prod',
+      mongoCollection: 'junction_records',
+      mongoConnectionString: 'https://barsync-backend.onrender.com',
+      subscriptionStatus: 'Active',
+      createdAt: new Date().toISOString()
+    };
+    await bizColl.insertOne(defaultBiz);
+
+    // 2. Create Initial Owner
+    await usersColl.insertOne({ 
+      id: '1', 
+      name: 'Jeniffer', 
+      role: 'OWNER', 
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jeniffer', 
+      businessId: 'bus_default', 
+      status: 'Active', 
+      password: '123' 
+    });
+    console.log("✅ Initial seeding complete.");
+  }
+}
+
 async function startServer() {
   try {
-    console.log("Attempting to connect to MongoDB Atlas...");
     await client.connect();
-
-    // Test connection with a ping
-    await client.db("admin").command({ ping: 1 });
-    console.log("✅ SUCCESS: Connected to MongoDB Atlas");
-
     db = client.db(DB_NAME);
+    console.log("✅ Connected to MongoDB Atlas");
+    
+    await seedDatabase();
 
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 BarSync Backend Hub active on port ${PORT}`);
+      console.log(`🚀 BarSync Backend active on port ${PORT}`);
     });
   } catch (err) {
-    console.error("❌ CONNECTION ERROR:", err.message);
-    console.log("TIP: Ensure IP 0.0.0.0/0 is whitelisted in MongoDB Atlas 'Network Access'");
-    // Retry logic
+    console.error("❌ Connection failed:", err.message);
     setTimeout(startServer, 10000); 
   }
 }
 
-// Health check
-app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'active', 
-    dbConnected: !!db,
-    timestamp: new Date().toISOString(),
-    nodeVersion: process.version
-  });
+// --- AUTHENTICATION ---
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { businessName, username, password } = req.body;
+    const usersColl = db.collection('users');
+    const bizColl = db.collection('businesses');
+
+    // Super Admin check (Doesn't need business name)
+    const isPlatformLogin = !businessName || businessName.toLowerCase() === 'platform';
+    
+    let user;
+    let business = null;
+
+    if (isPlatformLogin) {
+      user = await usersColl.findOne({ 
+        name: { $regex: new RegExp(`^${username}$`, 'i') }, 
+        role: 'SUPER_ADMIN' 
+      });
+    } else {
+      business = await bizColl.findOne({ name: { $regex: new RegExp(`^${businessName}$`, 'i') } });
+      if (!business) return res.status(404).json({ error: 'Business not found' });
+      
+      user = await usersColl.findOne({ 
+        businessId: business.id, 
+        name: { $regex: new RegExp(`^${username}$`, 'i') } 
+      });
+    }
+
+    if (!user || user.password !== password) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Get current state snapshot for this business
+    const syncColl = db.collection('sync_history');
+    const snapshot = await syncColl.findOne({ businessId: isPlatformLogin ? 'admin_node' : business.id });
+
+    // Remove password from response
+    const { password: _, ...userSafe } = user;
+
+    res.status(200).json({ 
+      user: userSafe, 
+      business, 
+      state: snapshot ? snapshot : null 
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Login internal error' });
+  }
 });
 
-// POS sync endpoint
+// --- BUSINESS MANAGEMENT ---
+app.get('/api/admin/businesses', async (req, res) => {
+  try {
+    const biz = await db.collection('businesses').find().toArray();
+    res.json(biz);
+  } catch (err) {
+    res.status(500).json({ error: 'Fetch failed' });
+  }
+});
+
+app.post('/api/admin/businesses', async (req, res) => {
+  try {
+    const { business, owner } = req.body;
+    await db.collection('businesses').insertOne(business);
+    await db.collection('users').insertOne(owner);
+    res.status(201).json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Provisioning failed' });
+  }
+});
+
+// --- SYNC ---
 app.post('/api/sync', async (req, res) => {
   if (!db) return res.status(503).json({ error: "Database offline" });
-
   try {
     const { businessId, businessName, data } = req.body;
-    if (!businessId || !data) return res.status(400).json({ error: 'Invalid payload' });
-
     const collection = db.collection('sync_history');
-    const logsCollection = db.collection('audit_logs');
-
-    // Log the sync attempt
-    await logsCollection.insertOne({
-      businessId,
-      businessName,
-      type: 'CLOUD_SYNC_NATIVE',
-      timestamp: new Date(),
-      itemCount: data?.sales?.length || 0
-    });
-
-    // Upsert state snapshot
-    const result = await collection.updateOne(
+    
+    await collection.updateOne(
       { businessId },
       { 
         $set: { 
@@ -106,15 +192,14 @@ app.post('/api/sync', async (req, res) => {
       { upsert: true }
     );
 
-    res.status(200).json({ 
-      success: true, 
-      modified: result.modifiedCount, 
-      upserted: result.upsertedCount 
-    });
+    res.status(200).json({ success: true });
   } catch (err) {
-    console.error("Sync Error:", err);
-    res.status(500).json({ error: "Storage Error", details: err.message });
+    res.status(500).json({ error: "Sync error" });
   }
+});
+
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'active', db: !!db });
 });
 
 startServer();

@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
-  <!-- Critical: Define process before any modules load -->
+  <!-- Critical: Define process before any modules load to prevent ReferenceErrors -->
   <script>
     window.process = {
       env: {
@@ -19,10 +19,10 @@
   </script>
 
   <style>
-    body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; background-color: #f8fafc; }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    #root { height: 100vh; width: 100vw; }
+    #root { min-height: 100vh; width: 100vw; display: flex; flex-direction: column; }
   </style>
 
   <script type="importmap">
@@ -39,9 +39,9 @@
 }
 </script>
 </head>
-<body class="bg-slate-50 text-slate-900">
+<body class="text-slate-900">
   <div id="root"></div>
-  <!-- Use a loader to indicate initialization if script takes time -->
+  <!-- Entry point for the application -->
   <script type="module" src="index.tsx"></script>
 </body>
 </html>

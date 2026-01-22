@@ -12,8 +12,11 @@ export interface Business {
   ownerName: string;
   mongoDatabase: string;
   mongoCollection: string;
-  mongoConnectionString?: string; // New: target specific cluster
-  subscriptionStatus: 'Active' | 'Trial' | 'Expired';
+  mongoConnectionString?: string;
+  subscriptionStatus: 'Active' | 'Trial' | 'Expired' | 'Pending Approval';
+  subscriptionPlan: 'Basic' | 'Pro' | 'Enterprise';
+  paymentStatus: 'Pending' | 'Verified' | 'Overdue';
+  verificationNote?: string; // For M-Pesa/Bank messages
   createdAt: string;
   logo?: string;
 }
@@ -66,4 +69,4 @@ export interface AuditLog {
   businessId?: string;
 }
 
-export type View = 'POS' | 'INVENTORY' | 'SALES' | 'ANALYTICS' | 'SETTINGS' | 'SUPER_ADMIN_PORTAL' | 'USER_MANAGEMENT' | 'REPORTS' | 'PROFILE' | 'AUDIT_LOGS';
+export type View = 'POS' | 'INVENTORY' | 'SALES' | 'ANALYTICS' | 'SETTINGS' | 'SUPER_ADMIN_PORTAL' | 'USER_MANAGEMENT' | 'REPORTS' | 'PROFILE' | 'AUDIT_LOGS' | 'SUBSCRIPTION';

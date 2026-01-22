@@ -120,15 +120,41 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
                     <code className="text-[10px] bg-slate-100 px-3 py-1 rounded-lg text-indigo-600 font-bold border border-indigo-100">{biz.mongoConnectionString}</code>
                   </td>
                   <td className="px-8 py-8">
-                    <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${biz.subscriptionStatus === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'
-                      }`}>
-                      {biz.subscriptionStatus}
-                    </span>
+                    <div className="flex flex-col gap-2">
+                      <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border w-fit ${biz.subscriptionStatus === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                          biz.subscriptionStatus === 'Pending Approval' ? 'bg-amber-50 text-amber-600 border-amber-100 animate-pulse' :
+                            'bg-rose-50 text-rose-600 border-rose-100'
+                        }`}>
+                        {biz.subscriptionStatus}
+                      </span>
+                      {biz.subscriptionStatus === 'Pending Approval' && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => onUpdate({ ...biz, subscriptionStatus: 'Active', paymentStatus: 'Verified' })}
+                            className="text-[9px] font-black text-emerald-600 hover:text-emerald-700 uppercase tracking-widest underline"
+                          >
+                            Approve
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="px-10 py-8 text-right">
-                    <button onClick={() => setEditingBiz(biz)} className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-indigo-600 transition-all">
-                      <i className="fa-solid fa-gear"></i>
-                    </button>
+                    <div className="flex justify-end gap-3">
+                      {biz.verificationNote && (
+                        <button
+                          onClick={() => {
+                            alert(`Payment Message:\n\n${biz.verificationNote}`);
+                          }}
+                          className="p-3 bg-white border border-slate-200 rounded-xl text-amber-500 hover:bg-amber-50 transition-all font-black text-[10px]"
+                        >
+                          MSG
+                        </button>
+                      )}
+                      <button onClick={() => setEditingBiz(biz)} className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-indigo-600 transition-all">
+                        <i className="fa-solid fa-gear"></i>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -177,7 +203,7 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
               </section>
 
               <section className="space-y-4 bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
-                <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em]">Deployment Details</h4>
+                <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em]">Deployment & Status</h4>
                 <div className="space-y-4">
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Hosted Hub URL (Render/Vercel)</label>
@@ -186,6 +212,35 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
                       value={showAdd ? newBiz.mongoConnectionString : editingBiz?.mongoConnectionString}
                       onChange={e => showAdd ? setNewBiz({ ...newBiz, mongoConnectionString: e.target.value }) : setEditingBiz({ ...editingBiz!, mongoConnectionString: e.target.value })} />
                   </div>
+                  {!showAdd && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Plan</label>
+                        <select
+                          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-[10px] font-bold"
+                          value={editingBiz?.subscriptionPlan}
+                          onChange={e => setEditingBiz({ ...editingBiz!, subscriptionPlan: e.target.value as any })}
+                        >
+                          <option value="Basic">Basic</option>
+                          <option value="Pro">Pro</option>
+                          <option value="Enterprise">Enterprise</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Status</label>
+                        <select
+                          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-[10px] font-bold"
+                          value={editingBiz?.subscriptionStatus}
+                          onChange={e => setEditingBiz({ ...editingBiz!, subscriptionStatus: e.target.value as any })}
+                        >
+                          <option value="Trial">Trial</option>
+                          <option value="Active">Active</option>
+                          <option value="Expired">Expired</option>
+                          <option value="Pending Approval">Pending Approval</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </section>
 

@@ -12,9 +12,11 @@ interface SidebarProps {
   isSyncing: boolean;
   lastSync: string | null;
   backendAlive: boolean;
+  canInstall?: boolean;
+  onInstall?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout, offline, onSync, isSyncing, lastSync, backendAlive }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout, offline, onSync, isSyncing, lastSync, backendAlive, canInstall, onInstall }) => {
   const menuItems = [
     { id: 'SUPER_ADMIN_PORTAL' as View, label: 'Platform Hub', icon: 'fa-server', roles: [Role.SUPER_ADMIN] },
     { id: 'POS' as View, label: 'Terminal', icon: 'fa-cash-register', roles: [Role.ADMIN, Role.BARTENDER, Role.OWNER] },
@@ -24,6 +26,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
     { id: 'REPORTS' as View, label: 'BI Reports', icon: 'fa-file-invoice-dollar', roles: [Role.ADMIN, Role.OWNER] },
     { id: 'SALES' as View, label: 'Sales Log', icon: 'fa-receipt', roles: [Role.ADMIN, Role.BARTENDER, Role.OWNER] },
     { id: 'ANALYTICS' as View, label: 'BI Stats', icon: 'fa-chart-line', roles: [Role.ADMIN, Role.OWNER] },
+    { id: 'SUBSCRIPTION' as View, label: 'Activation', icon: 'fa-credit-card', roles: [Role.ADMIN, Role.OWNER] },
     { id: 'PROFILE' as View, label: 'Account', icon: 'fa-circle-user', roles: [Role.SUPER_ADMIN, Role.ADMIN, Role.BARTENDER, Role.OWNER] },
   ];
 
@@ -36,9 +39,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
           <button
             key={item.id}
             onClick={() => setView(item.id)}
-            className={`flex flex-col items-center p-2 rounded-xl transition-all ${
-              currentView === item.id ? 'text-indigo-400' : 'text-slate-500'
-            }`}
+            className={`flex flex-col items-center p-2 rounded-xl transition-all ${currentView === item.id ? 'text-indigo-400' : 'text-slate-500'
+              }`}
           >
             <i className={`fa-solid ${item.icon} text-lg`}></i>
             <span className="text-[8px] font-black uppercase tracking-tighter mt-1">{item.label.split(' ')[0]}</span>
@@ -67,11 +69,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
               <button
                 key={item.id}
                 onClick={() => setView(item.id)}
-                className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 ${
-                  currentView === item.id 
-                    ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/30 scale-105' 
+                className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 ${currentView === item.id
+                    ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/30 scale-105'
                     : 'text-slate-500 hover:text-slate-200 hover:bg-slate-900'
-                }`}
+                  }`}
               >
                 <i className={`fa-solid ${item.icon} text-lg w-6`}></i>
                 {item.label}
@@ -83,22 +84,22 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
         <div className="mt-auto p-6 space-y-4">
           <div className="bg-slate-900/80 rounded-3xl p-5 border border-slate-800 backdrop-blur-sm shadow-inner">
             <div className="flex items-center justify-between mb-4">
-               <div className="flex flex-col">
-                 <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest flex items-center gap-2">
-                   <i className="fa-solid fa-server text-[8px]"></i> Backend API
-                 </span>
-                 <span className={`text-[7px] font-black uppercase tracking-[0.2em] ${backendAlive ? 'text-emerald-400' : 'text-rose-400 animate-pulse'}`}>
-                   {backendAlive ? 'Driver Ready' : 'Backend Down'}
-                 </span>
-               </div>
-               <button 
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest flex items-center gap-2">
+                  <i className="fa-solid fa-server text-[8px]"></i> Backend API
+                </span>
+                <span className={`text-[7px] font-black uppercase tracking-[0.2em] ${backendAlive ? 'text-emerald-400' : 'text-rose-400 animate-pulse'}`}>
+                  {backendAlive ? 'Driver Ready' : 'Backend Down'}
+                </span>
+              </div>
+              <button
                 onClick={onSync}
                 disabled={isSyncing || !backendAlive}
                 className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isSyncing ? 'bg-indigo-500 text-white animate-spin' : 'bg-slate-800 text-slate-400 hover:text-indigo-400'}`}
                 title="Force Cloud Sync"
-               >
-                 <i className="fa-solid fa-cloud-arrow-up text-xs"></i>
-               </button>
+              >
+                <i className="fa-solid fa-cloud-arrow-up text-xs"></i>
+              </button>
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -118,8 +119,18 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
               </div>
             </div>
           </div>
-          
-          <button 
+
+          {canInstall && (
+            <button
+              onClick={onInstall}
+              className="w-full flex items-center justify-center gap-4 px-5 py-4 rounded-2xl text-[12px] font-black uppercase tracking-[0.2em] text-white bg-indigo-600 hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-950/20 active:scale-95"
+            >
+              <i className="fa-solid fa-mobile-screen-button"></i>
+              Install App
+            </button>
+          )}
+
+          <button
             onClick={onLogout}
             className="w-full flex items-center justify-center gap-4 px-5 py-4 rounded-2xl text-[12px] font-black uppercase tracking-[0.2em] text-white bg-rose-600 hover:bg-rose-700 transition-all shadow-xl shadow-rose-950/20 active:scale-95"
           >

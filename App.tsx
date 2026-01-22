@@ -14,6 +14,7 @@ import UserManagement from './components/UserManagement.tsx';
 import Reports from './components/Reports.tsx';
 import Profile from './components/Profile.tsx';
 import AuditLogs from './components/AuditLogs.tsx';
+import SubscriptionTerminal from './components/SubscriptionTerminal.tsx';
 
 // Using empty string for relative paths in unified repo
 const GLOBAL_BACKEND = '';
@@ -37,6 +38,7 @@ const App: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [backendAlive, setBackendAlive] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(localStorage.getItem('bar_pos_last_sync'));
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   const isInitialLoad = useRef(true);
 
@@ -127,8 +129,25 @@ const App: React.FC = () => {
     };
     checkBackend();
     const interval = setInterval(checkBackend, 30000);
-    return () => clearInterval(interval);
+
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+    };
   }, []);
+
+  const installPWA = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') setDeferredPrompt(null);
+  };
 
   const handleLogin = (user: User, business?: Business, initialState?: any) => {
     setCurrentUser(user);
@@ -264,6 +283,8 @@ const App: React.FC = () => {
         isSyncing={isSyncing}
         lastSync={lastSync}
         backendAlive={backendAlive}
+        canInstall={!!deferredPrompt}
+        onInstall={installPWA}
       />
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         <header className="h-16 md:h-20 border-b bg-white flex items-center justify-between px-4 md:px-10 shrink-0 shadow-sm z-10">
@@ -305,6 +326,17 @@ const App: React.FC = () => {
             {currentView === 'SALES' && <SalesHistory sales={sales.filter(s => s.businessId === currentUser.businessId)} />}
             {currentView === 'ANALYTICS' && <Dashboard sales={sales.filter(s => s.businessId === currentUser.businessId)} products={products} />}
             {currentView === 'PROFILE' && <Profile user={currentUser} onUpdate={(u) => { setAllUsers(prev => prev.map(item => item.id === u.id ? u : item)); setCurrentUser(u); }} />}
+            {currentView === 'SUBSCRIPTION' && currentBusiness && (
+              <SubscriptionTerminal
+                business={currentBusiness}
+                onUpdateStatus={(status, note) => {
+                  const updated = { ...currentBusiness, subscriptionStatus: status, verificationNote: note };
+                  updateBusiness(updated);
+                  // Optionally sync immediately
+                  syncWithCloud(true);
+                }}
+              />
+            )}
           </div>
 
           <footer className="mt-12 pt-8 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest pb-10">

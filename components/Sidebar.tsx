@@ -8,9 +8,12 @@ interface SidebarProps {
   user: User;
   onLogout: () => void;
   offline: boolean;
+  onSync: () => void;
+  isSyncing: boolean;
+  lastSync: string | null;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout, offline }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout, offline, onSync, isSyncing, lastSync }) => {
   const menuItems = [
     { id: 'SUPER_ADMIN_PORTAL' as View, label: 'Platform Hub', icon: 'fa-server', roles: [Role.SUPER_ADMIN] },
     { id: 'POS' as View, label: 'Terminal', icon: 'fa-cash-register', roles: [Role.ADMIN, Role.BARTENDER, Role.OWNER] },
@@ -48,7 +51,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
       </div>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 bg-slate-950 flex-col shrink-0 border-r border-slate-800">
+      <aside className="hidden md:flex w-64 bg-slate-950 flex-col shrink-0 border-r border-slate-800 overflow-y-auto no-scrollbar">
         <div className="p-8">
           <div className="flex items-center gap-3 mb-12">
             <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg shadow-indigo-500/20 rotate-3 cursor-pointer" onClick={() => setView('POS')}>
@@ -79,14 +82,35 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
         </div>
 
         <div className="mt-auto p-6 space-y-4">
+          {/* Cloud Sync Center */}
           <div className="bg-slate-900/80 rounded-3xl p-5 border border-slate-800 backdrop-blur-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Network</span>
-              <span className={`w-2.5 h-2.5 rounded-full ${offline ? 'bg-amber-500' : 'bg-emerald-500'} shadow-[0_0_12px_rgba(16,185,129,0.3)]`}></span>
+            <div className="flex items-center justify-between mb-4">
+               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Cloud Hub</span>
+               <button 
+                onClick={onSync}
+                disabled={isSyncing || offline}
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isSyncing ? 'bg-indigo-500 text-white animate-spin' : 'bg-slate-800 text-slate-400 hover:text-indigo-400'}`}
+               >
+                 <i className="fa-solid fa-arrows-rotate text-xs"></i>
+               </button>
             </div>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
-              {offline ? 'Working Offline' : 'Live Sync Active'}
-            </p>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[9px] text-slate-400 font-bold uppercase">Status</p>
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${offline ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
+                  <span className="text-[8px] font-black text-white uppercase tracking-widest">
+                    {offline ? 'OFFLINE' : 'LIVE'}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-[9px] text-slate-400 font-bold uppercase">Last Sync</p>
+                <p className="text-[8px] font-black text-indigo-400 uppercase">
+                  {lastSync ? lastSync.split(',')[1] : 'Never'}
+                </p>
+              </div>
+            </div>
           </div>
           
           <button 

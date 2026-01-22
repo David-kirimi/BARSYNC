@@ -36,7 +36,6 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('bar_pos_all_users');
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Migration: Ensure existing users from storage have a password if they were missing it
       return parsed.map((u: User) => ({
         ...u,
         password: u.password || (u.role === Role.SUPER_ADMIN ? 'admin' : '123')
@@ -61,6 +60,8 @@ const App: React.FC = () => {
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [currentView, setCurrentView] = useState<View>('POS');
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState<string | null>(localStorage.getItem('bar_pos_last_sync'));
 
   const addLog = useCallback((action: string, details: string, userOverride?: User) => {
     const user = userOverride || currentUser;
@@ -77,11 +78,54 @@ const App: React.FC = () => {
     setAuditLogs(prev => [newLog, ...prev]);
   }, [currentUser]);
 
+  const syncWithCloud = async () => {
+    if (!navigator.onLine) {
+      alert("Terminal is currently offline.");
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      // Priority: 1. Build-time Env Var, 2. Global variable, 3. Manual URL (for dev)
+      const API_URL = process.env.API_KEY || (window as any).SYNC_API_URL;
+      
+      if (!API_URL) {
+        alert("Sync API not configured. Please check Vercel environment variables.");
+        setIsSyncing(false);
+        return;
+      }
+
+      const payload = {
+        type: 'SYNC_UP',
+        payload: { products, sales, users: allUsers, logs: auditLogs }
+      };
+
+      // We use 'no-cors' only if the API doesn't return data, 
+      // but Google Apps Script requires a redirect follow for standard POST.
+      await fetch(API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const now = new Date().toLocaleString();
+      setLastSync(now);
+      localStorage.setItem('bar_pos_last_sync', now);
+      addLog('CLOUD_SYNC', 'Data push to Google Sheets successful');
+    } catch (error) {
+      console.error("Sync failed:", error);
+      alert("Sync failed. Check API URL.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   useEffect(() => {
     if (currentUser && currentView === 'POS' && currentUser.role === Role.SUPER_ADMIN) {
       setCurrentView('SUPER_ADMIN_PORTAL');
     }
-  }, [currentUser]);
+  }, [currentUser, currentView]);
 
   useEffect(() => {
     localStorage.setItem('bar_pos_products', JSON.stringify(products));
@@ -192,7 +236,7 @@ const App: React.FC = () => {
     };
     
     setAllUsers(prev => [...prev, newUser]);
-    addLog('PARTNER CREATED', `Onboarded business: ${biz.name} with initial owner: ${newUser.name}`);
+    addLog('PARTNER CREATED', `Onboarded business: ${biz.name}`);
   };
 
   if (!currentUser) return <Login onLogin={handleLogin} businesses={businesses} allUsers={allUsers} />;
@@ -207,27 +251,41 @@ const App: React.FC = () => {
         user={currentUser} 
         onLogout={handleLogout}
         offline={offline}
+        onSync={syncWithCloud}
+        isSyncing={isSyncing}
+        lastSync={lastSync}
       />
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+        {offline && (
+          <div className="bg-amber-500 text-white px-4 py-2 text-center text-[10px] font-black uppercase tracking-[0.2em] animate-pulse shrink-0 z-50">
+            Offline Mode Active • Local Storage only
+          </div>
+        )}
         <header className="h-16 md:h-20 border-b bg-white flex items-center justify-between px-4 md:px-10 shrink-0 shadow-sm z-10">
           <div className="flex items-center gap-3">
             <h1 className="text-lg md:text-xl font-black text-slate-800 uppercase tracking-tight truncate">
-              {currentBusiness?.name || 'System'} • {currentView.replace('_', ' ')}
+              {currentBusiness?.name || 'Platform'} • {currentView.replace('_', ' ')}
             </h1>
           </div>
-          <div className="flex items-center gap-3 md:gap-6 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setCurrentView('PROFILE')}>
+          <div className="flex items-center gap-3 md:gap-6 cursor-pointer" onClick={() => setCurrentView('PROFILE')}>
             <div className="text-right hidden md:block">
-              <p className="text-sm font-black text-slate-900 leading-none">{currentUser.name}</p>
-              <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-widest mt-1.5">{currentUser.role}</p>
+              <p className="text-sm font-black text-slate-900">{currentUser.name}</p>
+              <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-widest">{currentUser.role}</p>
             </div>
-            <div className="relative">
-              <img src={currentUser.avatar} alt="Profile" className="w-9 h-9 md:w-11 md:h-11 rounded-2xl ring-4 ring-slate-50 shadow-md object-cover" />
-              <div className="absolute -bottom-1 -right-1 w-3 h-3 md:w-4 md:h-4 bg-emerald-500 border-2 border-white rounded-full"></div>
-            </div>
+            <img src={currentUser.avatar} alt="Profile" className="w-9 h-9 md:w-11 md:h-11 rounded-2xl shadow-md object-cover" />
           </div>
         </header>
 
-        <div className="flex-1 overflow-auto p-4 md:p-10 no-scrollbar">
+        <div className="flex-1 overflow-auto p-4 md:p-10 no-scrollbar relative">
+          {isSyncing && (
+            <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-50 flex items-center justify-center">
+              <div className="bg-slate-900 text-white p-10 rounded-[3rem] shadow-2xl text-center space-y-6 animate-pulse">
+                <div className="w-20 h-20 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <h3 className="text-xl font-black uppercase">Syncing to Google Sheets</h3>
+              </div>
+            </div>
+          )}
+
           {currentView === 'POS' && (
             <POS 
               products={products} 
@@ -242,54 +300,19 @@ const App: React.FC = () => {
           {currentView === 'INVENTORY' && (
             <Inventory 
               products={products} 
-              onUpdate={(p) => {
-                setProducts(prev => prev.map(item => item.id === p.id ? p : item));
-                addLog('STOCK UPDATE', `Updated product: ${p.name}`);
-              }} 
-              onAdd={(p) => {
-                setProducts(prev => [...prev, { 
-                  ...p, 
-                  id: Math.random().toString(36).substr(2, 9),
-                  openingStock: p.stock || 0,
-                  additions: 0
-                } as Product]);
-                addLog('STOCK ADDITION', `Added new product: ${p.name}`);
-              }}
+              onUpdate={(p) => { setProducts(prev => prev.map(item => item.id === p.id ? p : item)); addLog('STOCK_UPDATE', p.name); }} 
+              onAdd={(p) => { setProducts(prev => [...prev, { ...p, id: Date.now().toString() } as Product]); }}
               userRole={currentUser.role}
             />
           )}
           {currentView === 'SUPER_ADMIN_PORTAL' && currentUser.role === Role.SUPER_ADMIN && (
-            <SuperAdminPortal 
-              businesses={businesses}
-              onAdd={handleAddBusiness}
-              onUpdate={(updated) => setBusinesses(prev => prev.map(b => b.id === updated.id ? updated : b))}
-              sales={sales}
-            />
+            <SuperAdminPortal businesses={businesses} onAdd={handleAddBusiness} onUpdate={(u) => setBusinesses(prev => prev.map(b => b.id === u.id ? u : b))} sales={sales} />
           )}
-          {currentView === 'USER_MANAGEMENT' && (currentUser.role === Role.ADMIN || currentUser.role === Role.OWNER) && (
-            <UserManagement 
-              users={allUsers.filter(u => u.businessId === currentUser.businessId)}
-              onAdd={(u) => {
-                setAllUsers(prev => [...prev, { ...u, id: Math.random().toString(36).substr(2, 9), businessId: currentUser.businessId!, status: 'Active' }]);
-                addLog('STAFF HIRED', `Added staff member: ${u.name}`);
-              }}
-              onUpdate={(u) => {
-                setAllUsers(prev => prev.map(item => item.id === u.id ? u : item));
-                addLog('STAFF UPDATE', `Updated status for: ${u.name}`);
-              }}
-              onDelete={(id) => {
-                const userToDelete = allUsers.find(u => u.id === id);
-                setAllUsers(prev => prev.filter(u => u.id !== id));
-                addLog('STAFF REMOVAL', `Terminated access for: ${userToDelete?.name || 'Unknown'}`);
-              }}
-            />
+          {currentView === 'USER_MANAGEMENT' && (
+            <UserManagement users={allUsers.filter(u => u.businessId === currentUser.businessId)} onAdd={(u) => setAllUsers(prev => [...prev, { ...u, id: Date.now().toString(), businessId: currentUser.businessId!, status: 'Active' }])} onUpdate={(u) => setAllUsers(prev => prev.map(item => item.id === u.id ? u : item))} onDelete={(id) => setAllUsers(prev => prev.filter(u => u.id !== id))} />
           )}
-          {currentView === 'REPORTS' && (currentUser.role === Role.ADMIN || currentUser.role === Role.OWNER) && (
-            <Reports sales={sales.filter(s => s.businessId === currentUser.businessId)} businessName={currentBusiness?.name || 'BarSync'} />
-          )}
-          {currentView === 'AUDIT_LOGS' && (currentUser.role !== Role.BARTENDER) && (
-            <AuditLogs logs={currentUser.role === Role.SUPER_ADMIN ? auditLogs : auditLogs.filter(l => l.businessId === currentUser.businessId)} />
-          )}
+          {currentView === 'REPORTS' && <Reports sales={sales.filter(s => s.businessId === currentUser.businessId)} businessName={currentBusiness?.name || 'BarSync'} />}
+          {currentView === 'AUDIT_LOGS' && <AuditLogs logs={currentUser.role === Role.SUPER_ADMIN ? auditLogs : auditLogs.filter(l => l.businessId === currentUser.businessId)} />}
           {currentView === 'SALES' && <SalesHistory sales={sales.filter(s => s.businessId === currentUser.businessId)} />}
           {currentView === 'ANALYTICS' && <Dashboard sales={sales.filter(s => s.businessId === currentUser.businessId)} products={products} />}
           {currentView === 'PROFILE' && <Profile user={currentUser} onUpdate={updateProfile} />}

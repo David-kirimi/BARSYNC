@@ -1,4 +1,3 @@
-
 export enum Role {
   SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN = 'ADMIN',
@@ -13,11 +12,14 @@ export interface Business {
   mongoDatabase: string;
   mongoCollection: string;
   mongoConnectionString?: string;
+
   subscriptionStatus: 'Active' | 'Trial' | 'Expired' | 'Pending Approval';
   subscriptionPlan: 'Basic' | 'Pro' | 'Enterprise';
   paymentStatus: 'Pending' | 'Verified' | 'Overdue';
-  verificationNote?: string; // For M-Pesa/Bank messages
+  verificationNote?: string;
+
   createdAt: string;
+  updatedAt: string;          // ✅ ADD
   logo?: string;
 }
 
@@ -30,6 +32,8 @@ export interface User {
   phone?: string;
   status: 'Active' | 'Inactive';
   password?: string;
+
+  updatedAt: string;          // ✅ ADD
 }
 
 export interface Product {
@@ -38,10 +42,14 @@ export interface Product {
   category: string;
   price: number;
   buyingPrice?: number;
+
   stock: number;
   openingStock: number;
   additions: number;
+
   imageUrl?: string;
+
+  updatedAt: string;          // ✅ ADD (CRITICAL)
 }
 
 export interface CartItem extends Product {
@@ -57,6 +65,9 @@ export interface Sale {
   paymentMethod: 'Cash' | 'Mpesa';
   salesPerson: string;
   customerPhone?: string;
+
+  // ❌ NO updatedAt ON PURPOSE
+  // Sales are append-only
 }
 
 export interface AuditLog {
@@ -69,4 +80,15 @@ export interface AuditLog {
   businessId?: string;
 }
 
-export type View = 'POS' | 'INVENTORY' | 'SALES' | 'ANALYTICS' | 'SETTINGS' | 'SUPER_ADMIN_PORTAL' | 'USER_MANAGEMENT' | 'REPORTS' | 'PROFILE' | 'AUDIT_LOGS' | 'SUBSCRIPTION';
+export type View =
+  | 'POS'
+  | 'INVENTORY'
+  | 'SALES'
+  | 'ANALYTICS'
+  | 'SETTINGS'
+  | 'SUPER_ADMIN_PORTAL'
+  | 'USER_MANAGEMENT'
+  | 'REPORTS'
+  | 'PROFILE'
+  | 'AUDIT_LOGS'
+  | 'SUBSCRIPTION';

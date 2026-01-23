@@ -1,64 +1,110 @@
+/**
+ * constants.tsx
+ *
+ * IMPORTANT RULES:
+ * - This file contains ONLY product templates (catalog)
+ * - NO stock
+ * - NO openingStock
+ * - NO additions
+ * - NO updatedAt
+ * - NO Product type import
+ *
+ * These values are used ONLY when creating a product for the first time.
+ * After that, ALL edits come from storage / cloud.
+ */
 
-import { Product } from './types';
+export interface ProductTemplate {
+  id: string;
+  name: string;
+  category: string;
+  defaultPrice: number;
+  imageUrl?: string;
+}
 
-export const COMMON_PRODUCTS: Product[] = [
-  { id: 'c1', name: 'Tusker', category: 'Beer', price: 250, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1618885472179-5e474019f2a9?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c2', name: 'GUINESS', category: 'Beer', price: 250, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1594608661623-aa0bd3a69d98?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c3', name: 'WHITECUP', category: 'Beer', price: 250, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1550341914-8d17ca390a78?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c4', name: 'Tusker Can', category: 'Beer', price: 250, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1618885472179-5e474019f2a9?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c5', name: 'T. Cinder', category: 'Beer', price: 300, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1618885472179-5e474019f2a9?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c6', name: 'T. Cinder Can', category: 'Beer', price: 300, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1618885472179-5e474019f2a9?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c7', name: 'W. Cap', category: 'Beer', price: 300, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1550341914-8d17ca390a78?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c8', name: 'Balozi', category: 'Beer', price: 250, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1618885472179-5e474019f2a9?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c9', name: 'Balozi can', category: 'Beer', price: 300, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1618885472179-5e474019f2a9?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c10', name: 'Guarana', category: 'Beer', price: 250, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1618885472179-5e474019f2a9?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c11', name: 'Red Bull', category: 'Beer', price: 250, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1618885472179-5e474019f2a9?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c12', name: 'Smirnoff 750Ml', category: 'Spirit', price: 1800, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1550985543-565656719853?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c13', name: 'Smirnoff 250Ml', category: 'Spirit', price: 600, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1550985543-565656719853?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c14', name: 'ALVARO', category: 'Spirit', price: 200, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c15', name: 'Richot 750Ml', category: 'Brandy', price: 1800, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c16', name: 'Richot 250Ml', category: 'Brandy', price: 600, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c17', name: 'Viceroy 350Ml', category: 'Brandy', price: 900, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c18', name: 'Q.B', category: 'Spirit', price: 250, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c19', name: 'V&A 750Ml', category: 'Spirit', price: 1000, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c20', name: 'Black & White 750Ml', category: 'Whisky', price: 1200, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1527281400828-ac737aef5ad4?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c21', name: 'VAT 69 750Ml', category: 'Whisky', price: 1800, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1527281400828-ac737aef5ad4?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c22', name: 'Captain Morgan 750Ml', category: 'Whisky', price: 1300, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1527281400828-ac737aef5ad4?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c23', name: 'County 3/4', category: 'Spirit', price: 900, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c24', name: 'KEG', category: 'Beer', price: 7200, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1618885472179-5e474019f2a9?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c25', name: 'Sports Man', category: 'Others', price: 25, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1621506289937-4c40aa2cc94c?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c26', name: 'Safari', category: 'Others', price: 20, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1621506289937-4c40aa2cc94c?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c27', name: 'Matchbox', category: 'Others', price: 10, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1621506289937-4c40aa2cc94c?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c28', name: 'KIBAO', category: 'Vodca', price: 1000, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1550985543-565656719853?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c29', name: 'KONYAGI 1/2', category: 'Vodca', price: 600, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1550985543-565656719853?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c30', name: 'KONYAGI3/4', category: 'Vodca', price: 1200, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1550985543-565656719853?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c31', name: 'H.CHOICE', category: 'Spirit', price: 1300, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c32', name: 'B.CAN', category: 'Beer', price: 300, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1618885472179-5e474019f2a9?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c33', name: 'G.CAN', category: 'Beer', price: 300, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1594608661623-aa0bd3a69d98?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c34', name: 'BEST WHISKY', category: 'Whisky', price: 1500, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1527281400828-ac737aef5ad4?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c35', name: 'BESTCREAM', category: 'Spirit', price: 1500, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c36', name: 'PET 500ML', category: 'Soda', price: 100, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1621506289937-4c40aa2cc94c?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c37', name: 'PET 1.5 L', category: 'Soda', price: 150, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1621506289937-4c40aa2cc94c?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c38', name: 'PET 300 ML', category: 'Soda', price: 60, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1621506289937-4c40aa2cc94c?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c39', name: 'WATER 1L', category: 'Water', price: 100, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c40', name: '1/2 WATER', category: 'Water', price: 60, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c41', name: 'DELMONTE', category: 'Soda', price: 100, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1621506289937-4c40aa2cc94c?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c42', name: 'AFIA', category: 'Soda', price: 300, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1621506289937-4c40aa2cc94c?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c43', name: 'CARIBIA 1/4', category: 'Spirit', price: 300, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c44', name: 'CARIBIA 3/4', category: 'Spirit', price: 100, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c45', name: 'TRUST', category: 'Others', price: 50, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1621506289937-4c40aa2cc94c?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c46', name: 'CASABUENA', category: 'Spirit', price: 1000, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c47', name: 'CAPRICE', category: 'Spirit', price: 1000, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c48', name: 'PENASOL', category: 'Others', price: 1000, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1621506289937-4c40aa2cc94c?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c49', name: 'SANGILIA  1.5 L', category: 'Spirit', price: 2000, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c50', name: 'FAXE', category: 'Beer', price: 350, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1618885472179-5e474019f2a9?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c51', name: 'LEMONADE', category: 'Soda', price: 50, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1621506289937-4c40aa2cc94c?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c52', name: 'PREDITOR', category: 'Soda', price: 80, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1621506289937-4c40aa2cc94c?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c53', name: 'Soda Take Away', category: 'Soda', price: 50, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1621506289937-4c40aa2cc94c?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c54', name: 'Soda Kubwa', category: 'Soda', price: 100, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1621506289937-4c40aa2cc94c?auto=format&fit=crop&q=80&w=200' },
-  { id: 'c55', name: 'Soda Ndogo', category: 'Soda', price: 60, stock: 0, openingStock: 0, additions: 0, imageUrl: 'https://images.unsplash.com/photo-1621506289937-4c40aa2cc94c?auto=format&fit=crop&q=80&w=200' },
+export const PRODUCT_TEMPLATES: ProductTemplate[] = [
+  { id: 'c1', name: 'Tusker', category: 'Beer', defaultPrice: 250, imageUrl: 'https://images.unsplash.com/photo-1618885472179-5e474019f2a9' },
+  { id: 'c2', name: 'GUINESS', category: 'Beer', defaultPrice: 250, imageUrl: 'https://images.unsplash.com/photo-1594608661623-aa0bd3a69d98' },
+  { id: 'c3', name: 'WHITECUP', category: 'Beer', defaultPrice: 250, imageUrl: 'https://images.unsplash.com/photo-1550341914-8d17ca390a78' },
+  { id: 'c4', name: 'Tusker Can', category: 'Beer', defaultPrice: 250 },
+  { id: 'c5', name: 'T. Cinder', category: 'Beer', defaultPrice: 300 },
+  { id: 'c6', name: 'T. Cinder Can', category: 'Beer', defaultPrice: 300 },
+  { id: 'c7', name: 'W. Cap', category: 'Beer', defaultPrice: 300 },
+  { id: 'c8', name: 'Balozi', category: 'Beer', defaultPrice: 250 },
+  { id: 'c9', name: 'Balozi Can', category: 'Beer', defaultPrice: 300 },
+  { id: 'c10', name: 'Guarana', category: 'Beer', defaultPrice: 250 },
+  { id: 'c11', name: 'Red Bull', category: 'Beer', defaultPrice: 250 },
+
+  { id: 'c12', name: 'Smirnoff 750ml', category: 'Spirit', defaultPrice: 1800 },
+  { id: 'c13', name: 'Smirnoff 250ml', category: 'Spirit', defaultPrice: 600 },
+  { id: 'c14', name: 'ALVARO', category: 'Spirit', defaultPrice: 200 },
+
+  { id: 'c15', name: 'Richot 750ml', category: 'Brandy', defaultPrice: 1800 },
+  { id: 'c16', name: 'Richot 250ml', category: 'Brandy', defaultPrice: 600 },
+  { id: 'c17', name: 'Viceroy 350ml', category: 'Brandy', defaultPrice: 900 },
+
+  { id: 'c18', name: 'Q.B', category: 'Spirit', defaultPrice: 250 },
+  { id: 'c19', name: 'V&A 750ml', category: 'Spirit', defaultPrice: 1000 },
+
+  { id: 'c20', name: 'Black & White 750ml', category: 'Whisky', defaultPrice: 1200 },
+  { id: 'c21', name: 'VAT 69 750ml', category: 'Whisky', defaultPrice: 1800 },
+  { id: 'c22', name: 'Captain Morgan 750ml', category: 'Whisky', defaultPrice: 1300 },
+  { id: 'c34', name: 'Best Whisky', category: 'Whisky', defaultPrice: 1500 },
+
+  { id: 'c23', name: 'County 3/4', category: 'Spirit', defaultPrice: 900 },
+  { id: 'c24', name: 'KEG', category: 'Beer', defaultPrice: 7200 },
+
+  { id: 'c25', name: 'Sports Man', category: 'Others', defaultPrice: 25 },
+  { id: 'c26', name: 'Safari', category: 'Others', defaultPrice: 20 },
+  { id: 'c27', name: 'Matchbox', category: 'Others', defaultPrice: 10 },
+
+  { id: 'c28', name: 'KIBAO', category: 'Vodca', defaultPrice: 1000 },
+  { id: 'c29', name: 'KONYAGI 1/2', category: 'Vodca', defaultPrice: 600 },
+  { id: 'c30', name: 'KONYAGI 3/4', category: 'Vodca', defaultPrice: 1200 },
+
+  { id: 'c31', name: 'H. CHOICE', category: 'Spirit', defaultPrice: 1300 },
+  { id: 'c32', name: 'B. CAN', category: 'Beer', defaultPrice: 300 },
+  { id: 'c33', name: 'G. CAN', category: 'Beer', defaultPrice: 300 },
+
+  { id: 'c35', name: 'Bestcream', category: 'Spirit', defaultPrice: 1500 },
+
+  { id: 'c36', name: 'PET 500ml', category: 'Soda', defaultPrice: 100 },
+  { id: 'c37', name: 'PET 1.5L', category: 'Soda', defaultPrice: 150 },
+  { id: 'c38', name: 'PET 300ml', category: 'Soda', defaultPrice: 60 },
+
+  { id: 'c39', name: 'Water 1L', category: 'Water', defaultPrice: 100 },
+  { id: 'c40', name: 'Water 1/2L', category: 'Water', defaultPrice: 60 },
+
+  { id: 'c41', name: 'Delmonte', category: 'Soda', defaultPrice: 100 },
+  { id: 'c42', name: 'Afia', category: 'Soda', defaultPrice: 300 },
+
+  { id: 'c43', name: 'Caribia 1/4', category: 'Spirit', defaultPrice: 300 },
+  { id: 'c44', name: 'Caribia 3/4', category: 'Spirit', defaultPrice: 1000 },
+
+  { id: 'c45', name: 'Trust', category: 'Others', defaultPrice: 50 },
+  { id: 'c46', name: 'Casabuena', category: 'Spirit', defaultPrice: 1000 },
+  { id: 'c47', name: 'Caprice', category: 'Spirit', defaultPrice: 1000 },
+
+  { id: 'c48', name: 'Penasol', category: 'Others', defaultPrice: 1000 },
+  { id: 'c49', name: 'Sangilia 1.5L', category: 'Spirit', defaultPrice: 2000 },
+
+  { id: 'c50', name: 'FAXE', category: 'Beer', defaultPrice: 350 },
+
+  { id: 'c51', name: 'Lemonade', category: 'Soda', defaultPrice: 50 },
+  { id: 'c52', name: 'Preditor', category: 'Soda', defaultPrice: 80 },
+  { id: 'c53', name: 'Soda Take Away', category: 'Soda', defaultPrice: 50 },
+  { id: 'c54', name: 'Soda Kubwa', category: 'Soda', defaultPrice: 100 },
+  { id: 'c55', name: 'Soda Ndogo', category: 'Soda', defaultPrice: 60 },
 ];
 
 export const CATEGORIES = [
-  'All', 'Beer', 'Spirit', 'Whisky', 'Vodca', 'Brandy', 'Gin', 'Soda', 'Water', 'Others'
+  'All',
+  'Beer',
+  'Spirit',
+  'Whisky',
+  'Vodca',
+  'Brandy',
+  'Gin',
+  'Soda',
+  'Water',
+  'Others',
 ];

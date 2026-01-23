@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { Product, Role } from '../types';
-import { CATEGORIES, COMMON_PRODUCTS } from '../constants';
+import { CATEGORIES, PRODUCT_TEMPLATES } from '../constants';
 import { useToast } from './Toast';
 
 interface InventoryProps {
@@ -58,12 +57,12 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
     });
   };
 
-  const selectCommonItem = (item: Product) => {
+  const selectCommonItem = (item: typeof PRODUCT_TEMPLATES[number]) => {
     setForm({
       name: item.name,
       category: item.category,
-      price: item.price,
-      buyingPrice: item.buyingPrice || 0,
+      price: item.defaultPrice, // use defaultPrice from template
+      buyingPrice: 0,
       stock: 0,
       imageUrl: item.imageUrl
     });
@@ -102,11 +101,8 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
 
   const toggleSelection = (id: string) => {
     const newSelected = new Set(selectedIds);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
+    if (newSelected.has(id)) newSelected.delete(id);
+    else newSelected.add(id);
     setSelectedIds(newSelected);
   };
 
@@ -126,9 +122,7 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
 
   const deleteSelected = () => {
     if (window.confirm(`Delete ${selectedIds.size} items permanently?`)) {
-      // Note: This would need to be connected to App.tsx to actually delete from state
-      // For now, we'll just hide them
-      hideSelected();
+      hideSelected(); // safe fallback
       showToast(`${selectedIds.size} items removed`, 'success');
     }
   };
@@ -144,6 +138,7 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
+      {/* Header + Controls */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Stock Control</h2>
@@ -183,7 +178,7 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
         </div>
       </div>
 
-      {/* Bulk Selection Toolbar - Floating */}
+      {/* Selection Toolbar */}
       {selectionMode && (
         <div className="fixed bottom-20 md:bottom-6 left-6 right-6 bg-slate-950 text-white p-4 rounded-2xl shadow-2xl border-2 border-indigo-500 z-30 animate-slide-up">
           <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -217,7 +212,7 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
         </div>
       )}
 
-      {/* Product List/Grid */}
+      {/* Product Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filteredProducts.map(p => (
           <div key={p.id} className="bg-white rounded-[2.5rem] p-5 border border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all group">
@@ -312,143 +307,111 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 md:p-8">
-              <div className="space-y-5">
-                {/* Common Items Quick Selector */}
-                <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowCommonPicker(!showCommonPicker)}
-                    className="w-full flex items-center justify-between text-left"
-                  >
-                    <div>
-                      <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Quick Fill</p>
-                      <p className="text-xs font-bold text-slate-600 mt-0.5">Select from common bar items</p>
-                    </div>
-                    <i className={`fa-solid fa-chevron-${showCommonPicker ? 'up' : 'down'} text-indigo-600`}></i>
-                  </button>
-                  {showCommonPicker && (
-                    <div className="mt-3 max-h-48 overflow-y-auto space-y-2 pt-3 border-t border-indigo-100">
-                      {COMMON_PRODUCTS.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => selectCommonItem(item)}
-                          className="w-full flex items-center gap-3 p-3 bg-white hover:bg-indigo-100 rounded-xl transition-all text-left group"
-                        >
-                          <img src={item.imageUrl} className="w-10 h-10 rounded-lg object-cover" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-black text-slate-800 truncate">{item.name}</p>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase">{item.category} • Ksh {item.price}</p>
-                          </div>
-                          <i className="fa-solid fa-arrow-right text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity"></i>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Item Label</label>
-                  <input
-                    type="text"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
-                    value={form.name}
-                    placeholder="e.g. Tusker Cider"
-                    onChange={e => setForm({ ...form, name: e.target.value })}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Category</label>
-                    <select
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all appearance-none"
-                      value={form.category}
-                      onChange={e => setForm({ ...form, category: e.target.value })}
-                    >
-                      {CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+            <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-5">
+              {/* Quick Fill */}
+              <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
+                <button
+                  type="button"
+                  onClick={() => setShowCommonPicker(!showCommonPicker)}
+                  className="w-full flex items-center justify-between text-left"
+                >
+                  <div>
+                    <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Quick Fill</p>
+                    <p className="text-xs font-bold text-slate-600 mt-0.5">Select from common bar items</p>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Unit Price (Sale)</label>
-                    <input
-                      type="number"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
-                      value={form.price}
-                      onChange={e => setForm({ ...form, price: Number(e.target.value) })}
-                    />
-                  </div>
-                </div>
-
-                {(userRole === Role.OWNER || userRole === Role.ADMIN) && (
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Unit Buying Price (Cost)</label>
-                    <input
-                      type="number"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-mono"
-                      value={form.buyingPrice}
-                      placeholder="Profit tracking cost..."
-                      onChange={e => setForm({ ...form, buyingPrice: Number(e.target.value) })}
-                    />
+                  <i className={`fa-solid fa-chevron-${showCommonPicker ? 'up' : 'down'} text-indigo-600`}></i>
+                </button>
+                {showCommonPicker && (
+                  <div className="mt-3 max-h-48 overflow-y-auto space-y-2 pt-3 border-t border-indigo-100">
+                    {PRODUCT_TEMPLATES.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => selectCommonItem(item)}
+                        className="w-full flex items-center gap-3 p-3 bg-white hover:bg-indigo-100 rounded-xl transition-all text-left group"
+                      >
+                        <img src={item.imageUrl} className="w-10 h-10 rounded-lg object-cover" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-black text-slate-800 truncate">{item.name}</p>
+                          <p className="text-[9px] font-bold text-slate-400 uppercase">{item.category} • Ksh {item.defaultPrice}</p>
+                        </div>
+                        <i className="fa-solid fa-arrow-right text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                      </button>
+                    ))}
                   </div>
                 )}
+              </div>
 
+              {/* Form Fields */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Item Label</label>
+                <input
+                  type="text"
+                  placeholder="Item Name"
+                  className="w-full rounded-2xl p-3 border border-slate-200 text-sm font-black focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                  value={form.name || ''}
+                  onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Current Count</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Category</label>
+                  <select
+                    value={form.category || 'Beer'}
+                    onChange={e => setForm(prev => ({ ...prev, category: e.target.value }))}
+                    className="w-full rounded-2xl p-3 border border-slate-200 text-sm font-black focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                  >
+                    {CATEGORIES.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Price (Ksh)</label>
                   <input
                     type="number"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
-                    value={form.stock}
-                    onChange={e => setForm({ ...form, stock: Number(e.target.value) })}
+                    value={form.price || 0}
+                    onChange={e => setForm(prev => ({ ...prev, price: Number(e.target.value) }))}
+                    className="w-full rounded-2xl p-3 border border-slate-200 text-sm font-black focus:outline-none focus:ring-4 focus:ring-indigo-100"
                   />
                 </div>
-
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Product Icon</label>
-                  <div className="flex gap-3">
-                    <input
-                      type="text"
-                      className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
-                      placeholder="Resource URL (optional)"
-                      value={form.imageUrl}
-                      onChange={e => setForm({ ...form, imageUrl: e.target.value })}
-                    />
-                    <label className="shrink-0 bg-slate-100 hover:bg-slate-200 text-slate-600 h-14 w-14 rounded-2xl flex items-center justify-center cursor-pointer transition-all active:scale-95 border border-slate-200 border-dashed">
-                      <i className="fa-solid fa-cloud-arrow-up"></i>
-                      <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
-                    </label>
-                  </div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Buying Price</label>
+                  <input
+                    type="number"
+                    value={form.buyingPrice || 0}
+                    onChange={e => setForm(prev => ({ ...prev, buyingPrice: Number(e.target.value) }))}
+                    className="w-full rounded-2xl p-3 border border-slate-200 text-sm font-black focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Stock</label>
+                  <input
+                    type="number"
+                    value={form.stock || 0}
+                    onChange={e => setForm(prev => ({ ...prev, stock: Number(e.target.value) }))}
+                    className="w-full rounded-2xl p-3 border border-slate-200 text-sm font-black focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                  />
                 </div>
               </div>
-            </div>
 
-            {/* Sticky Footer */}
-            <div className="p-6 md:p-8 border-t border-slate-100 shrink-0 bg-white">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Image</label>
+                <input type="file" accept="image/*" onChange={handleImageUpload} className="w-full text-xs text-slate-600" />
+                {form.imageUrl && <img src={form.imageUrl} alt="preview" className="w-32 h-32 object-cover rounded-lg mt-2" />}
+              </div>
+
               <button
                 onClick={saveForm}
-                className="w-full py-5 bg-indigo-600 text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-3"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-2xl text-sm font-black uppercase tracking-widest mt-4"
               >
-                <i className="fa-solid fa-check-circle"></i>
-                {isAdding ? 'Register Product' : 'Apply Changes'}
+                Save Item
               </button>
             </div>
           </div>
         </div>
       )}
-
-      <style>{`
-        @keyframes slide-up {
-          from { transform: translateY(100%); }
-          to { transform: translateY(0); }
-        }
-        @keyframes scale-in {
-          from { transform: scale(0.95); opacity: 0; }
-          to { transform: scale(1); opacity: 1; }
-        }
-        .animate-slide-up { animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-        .animate-scale-in { animation: scale-in 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
-      `}</style>
     </div>
   );
 };

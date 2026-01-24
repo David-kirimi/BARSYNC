@@ -125,6 +125,8 @@ const AppContent: React.FC = () => {
     initializeProducts()
   );
 
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
+
   const [sales, setSales] = useState<Sale[]>(() =>
     loadFromStorage<Sale[]>(STORAGE_KEYS.SALES, [])
   );
@@ -306,9 +308,17 @@ const AppContent: React.FC = () => {
   if (!currentUser) {
     return (
       <Login
+
         onLogin={(user, biz) => {
           setCurrentUser(user);
           if (biz) setBusiness(biz);
+          // If business ID matches demo or manual check, set offline. 
+          // Simpler: Check if we are "demo_user" which comes from offline mode
+          if (user.id === 'demo_user' || user.businessId === 'bus_demo') {
+            setIsOfflineMode(true);
+          } else {
+            setIsOfflineMode(false);
+          }
         }}
         backendUrl=""
       />
@@ -324,7 +334,7 @@ const AppContent: React.FC = () => {
           user={currentUser}
           business={business}
           onLogout={() => setCurrentUser(null)}
-          offline={false}
+          offline={isOfflineMode}
           onSync={handleSync}
           isSyncing={false}
           lastSync={now()} // Just to show recent

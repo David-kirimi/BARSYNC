@@ -160,7 +160,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
                 <div className="flex items-center gap-2">
                   <span className={`w-2 h-2 rounded-full ${offline ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`}></span>
                   <span className="text-[8px] font-black text-white uppercase tracking-widest">
-                    {offline ? 'OFFLINE' : 'ONLINE'}
+                    {offline ? 'MANUAL SYNC REQ.' : 'ONLINE'}
                   </span>
                 </div>
               </div>

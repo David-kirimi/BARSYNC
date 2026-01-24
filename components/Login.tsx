@@ -15,7 +15,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDemoOption, setShowDemoOption] = useState(false);
-  const [view, setView] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
+  const [view, setView] = useState<'LOGIN' | 'REGISTER' | 'OFFLINE_CONFIRM'>('LOGIN');
 
   // If it's taking too long, automatically show the demo option
   useEffect(() => {
@@ -187,7 +187,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
                   {(showDemoOption || !isSubmitting) && (
                     <button
                       type="button"
-                      onClick={enterDemoMode}
+                      onClick={() => setView('OFFLINE_CONFIRM')}
                       className="w-full py-4 bg-slate-100 text-slate-600 border border-slate-200 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-200 transition-all"
                     >
                       <i className="fa-solid fa-plug-circle-xmark mr-2"></i>
@@ -197,12 +197,51 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
                 </div>
               </form>
             </>
-          ) : (
+          ) : view === 'REGISTER' ? (
             <Register
               backendUrl={backendUrl}
               onBack={() => setView('LOGIN')}
               onSuccess={(user, biz) => onLogin(user, biz)}
             />
+          ) : null}
+
+          {/* Offline Mode Disclaimer Modal */}
+          {showDemoOption && view === 'OFFLINE_CONFIRM' && (
+            <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-6 z-[200]">
+              <div className="bg-white rounded-[3rem] w-full max-w-sm p-8 shadow-2xl relative overflow-hidden animate-scale-in">
+                <div className="absolute top-0 left-0 w-full h-2 bg-amber-500"></div>
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 animate-pulse">
+                    <i className="fa-solid fa-triangle-exclamation"></i>
+                  </div>
+                  <h3 className="text-2xl font-black text-slate-800 tracking-tighter uppercase">Offline Mode</h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Single Device Restriction</p>
+                </div>
+
+                <div className="bg-amber-50 rounded-2xl p-5 mb-6 border border-amber-100">
+                  <p className="text-xs font-bold text-amber-800 leading-relaxed text-center">
+                    Data created in Offline Mode stays on this device only.
+                    <br /><br />
+                    To prevent conflicts, <span className="underline decoration-2 decoration-amber-500/50">DO NOT</span> use other devices until you reconnect and sync this one.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <button
+                    onClick={enterDemoMode}
+                    className="w-full py-4 bg-amber-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-amber-700 transition-all shadow-xl shadow-amber-200 active:scale-95"
+                  >
+                    I Understand, Proceed
+                  </button>
+                  <button
+                    onClick={() => setView('LOGIN')}
+                    className="w-full py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
 
           <div className="pt-6 border-t border-slate-50 text-center space-y-4">

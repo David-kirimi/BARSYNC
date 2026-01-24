@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { Product, Sale, User, View, CartItem } from './types';
+import { Product, Sale, User, View, CartItem, Role } from './types';
 import { PRODUCT_TEMPLATES } from './constants';
 import POS from './components/POS';
 import Inventory from './components/Inventory';
 import SalesHistory from './components/SalesHistory';
 import Sidebar from './components/Sidebar';
-import { ToastProvider } from './components/Toast';
+import { ToastProvider, useToast } from './components/Toast';
 import Login from './components/Login';
 
 /* -------------------- STORAGE KEYS -------------------- */
 const STORAGE_KEYS = {
-  PRODUCTS: 'pos_products_v1',
+  PRODUCTS: 'pos_products_v2_safe', // Version bump to force fresh load logic if needed
   SALES: 'pos_sales_v1',
   USERS: 'pos_users_v1',
   VIEW: 'pos_current_view_v1',
@@ -32,15 +32,41 @@ function saveToStorage<T>(key: string, value: T) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+/**
+ * Merges two datasets based on ID and updatedAt timestamp.
+ * - If an item exists in both, the one with the NEWER updatedAt wins.
+ * - If an item exists in only one, it is kept.
+ */
+function mergeDatasets<T extends { id: string; updatedAt: string }>(local: T[], incoming: T[]): T[] {
+  const map = new Map<string, T>();
+
+  // 1. Load all local items first
+  local.forEach(item => map.set(item.id, item));
+
+  // 2. Merge incoming items
+  incoming.forEach(item => {
+    const existing = map.get(item.id);
+    if (!existing) {
+      map.set(item.id, item);
+    } else {
+      const localTime = new Date(existing.updatedAt).getTime();
+      const incomingTime = new Date(item.updatedAt).getTime();
+      if (incomingTime > localTime) {
+        map.set(item.id, item);
+      }
+    }
+  });
+
+  return Array.from(map.values());
+}
+
 /* -------------------- PRODUCT INIT -------------------- */
 function initializeProducts(): Product[] {
+  // 1. Try to load existing local data
   const stored = loadFromStorage<Product[]>(STORAGE_KEYS.PRODUCTS, []);
 
-  if (stored.length > 0) {
-    return stored;
-  }
-
-  const fresh: Product[] = PRODUCT_TEMPLATES.map(t => ({
+  // 2. Prepare Template Data (as if it came from "cloud" or "factory reset")
+  const templates: Product[] = PRODUCT_TEMPLATES.map(t => ({
     id: t.id,
     name: t.name,
     category: t.category,
@@ -49,11 +75,27 @@ function initializeProducts(): Product[] {
     openingStock: 0,
     additions: 0,
     imageUrl: t.imageUrl,
+    createdAt: now(), // New fields
     updatedAt: now(),
   }));
 
-  saveToStorage(STORAGE_KEYS.PRODUCTS, fresh);
-  return fresh;
+  // 3. If storage is empty, use templates. 
+  //    If storage exists, merge templates (in case we added new ones to constants.tsx) 
+  //    BUT existing local data with *same IDs* will likely be older than 'now()' so we must be careful.
+  //    Actually, for "first run" templates, we usually only want them if we have NOTHING.
+  //    
+  //    However, to be robust:
+  //    If we have NO stored data -> return Templates.
+  //    If we DO have stored data -> Return stored data. (Do NOT over-merge templates every reload, 
+  //    because templates have 'now()' which would overwrite user changes if we aren't careful about ID matching).
+
+  if (stored.length > 0) {
+    return stored;
+  }
+
+  // First time load
+  saveToStorage(STORAGE_KEYS.PRODUCTS, templates);
+  return templates;
 }
 
 /* -------------------- MAIN APP CONTENT -------------------- */
@@ -83,6 +125,9 @@ const AppContent: React.FC = () => {
   }, [view]);
 
   useEffect(() => {
+    // Determine if we need to save. 
+    // In a real app with cloud sync, here we would also trigger a 
+    // "pushToCloud" if the data changed.
     saveToStorage(STORAGE_KEYS.PRODUCTS, products);
   }, [products]);
 
@@ -127,7 +172,6 @@ const AppContent: React.FC = () => {
 
     const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-    // Fixed: Added businessId (required by Sale interface)
     const newSale: Sale = {
       id: Math.random().toString(36).substr(2, 9).toUpperCase(),
       businessId: currentUser?.businessId || 'offline_biz',
@@ -150,7 +194,7 @@ const AppContent: React.FC = () => {
         return {
           ...p,
           stock: Math.max(0, p.stock - item.quantity),
-          updatedAt: now(),
+          updatedAt: now(), // CRITAL: Update timestamp
         };
       })
     );
@@ -161,18 +205,21 @@ const AppContent: React.FC = () => {
   };
 
   const handleProductUpdate = (updated: Product) => {
+    // When manually updating, force new timestamp
+    const productWithTimestamp = { ...updated, updatedAt: now() };
+
     setProducts(prev =>
-      prev.map(p => p.id === updated.id ? { ...updated, updatedAt: now() } : p)
+      prev.map(p => p.id === updated.id ? productWithTimestamp : p)
     );
   };
 
-  // Fixed: Exclude updatedAt from input, as it's generated internally
-  const handleProductAdd = (newProductData: Omit<Product, 'id' | 'openingStock' | 'additions' | 'updatedAt'>) => {
+  const handleProductAdd = (newProductData: Omit<Product, 'id' | 'openingStock' | 'additions' | 'createdAt' | 'updatedAt'>) => {
     const newProduct: Product = {
       ...newProductData,
       id: Math.random().toString(36).substr(2, 9),
-      openingStock: newProductData.stock, // Initial stock is opening stock
+      openingStock: newProductData.stock,
       additions: 0,
+      createdAt: now(),
       updatedAt: now(),
     };
     setProducts(prev => [...prev, newProduct]);

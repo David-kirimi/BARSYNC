@@ -49,6 +49,7 @@ export interface Product {
 
   imageUrl?: string;
 
+  createdAt: string;
   updatedAt: string;          // ✅ ADD (CRITICAL)
 }
 

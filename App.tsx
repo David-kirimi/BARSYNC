@@ -124,6 +124,26 @@ const AppContent: React.FC = () => {
     loadFromStorage<User[]>(STORAGE_KEYS.USERS, [])
   );
 
+  // New State for Business and Audit Logs
+  const [business, setBusiness] = useState<any>(() =>
+    loadFromStorage<any>('pos_business_v1', {
+      id: 'local_biz',
+      name: 'My Bar',
+      ownerName: 'Admin',
+      mongoDatabase: '',
+      mongoCollection: '',
+      subscriptionStatus: 'Trial',
+      subscriptionPlan: 'Basic',
+      paymentStatus: 'Pending',
+      createdAt: now(),
+      updatedAt: now()
+    })
+  );
+
+  const [auditLogs, setAuditLogs] = useState<any[]>(() =>
+    loadFromStorage<any[]>('pos_audit_logs_v1', [])
+  );
+
   const [cart, setCart] = useState<CartItem[]>([]);
 
   /* -------------------- PERSISTENCE -------------------- */
@@ -145,6 +165,15 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     saveToStorage(STORAGE_KEYS.USERS, users);
   }, [users]);
+
+  // Persist new state
+  useEffect(() => {
+    saveToStorage('pos_business_v1', business);
+  }, [business]);
+
+  useEffect(() => {
+    saveToStorage('pos_audit_logs_v1', auditLogs);
+  }, [auditLogs]);
 
   /* -------------------- CART LOGIC -------------------- */
   const addToCart = (product: Product) => {
@@ -220,6 +249,17 @@ const AppContent: React.FC = () => {
     );
   };
 
+  const handleProductReorder = (newOrder: Product[]) => {
+    // We trust the new order, but we should make sure we're not losing any data.
+    // The newOrder comes from POS which filters out-of-stock items, but our handleDragEnd logic
+    // in POS.tsx was careful to append the filtered-out items.
+    // So we can safely update the state.
+    // We update 'updatedAt' for ALL items to ensure this new order syncs as the "latest" version to cloud?
+    // Or just save it locally. For now, local save is implicit via useEffect.
+    setProducts(newOrder);
+  };
+
+
   const handleProductAdd = (newProductData: Omit<Product, 'id' | 'openingStock' | 'additions' | 'createdAt' | 'updatedAt'>) => {
     const newProduct: Product = {
       ...newProductData,
@@ -233,7 +273,15 @@ const AppContent: React.FC = () => {
   };
 
   if (!currentUser) {
-    return <Login onLogin={setCurrentUser} backendUrl="" />;
+    return (
+      <Login
+        onLogin={(user, biz) => {
+          setCurrentUser(user);
+          if (biz) setBusiness(biz);
+        }}
+        backendUrl=""
+      />
+    );
   }
 
   return (
@@ -268,6 +316,7 @@ const AppContent: React.FC = () => {
                   removeFromCart={removeFromCart}
                   onCheckout={onCheckout}
                   businessName="BarSync POS"
+                  onReorder={handleProductReorder}
                 />
               )}
 
@@ -297,11 +346,21 @@ const AppContent: React.FC = () => {
               )}
 
               {view === 'AUDIT_LOGS' && (
-                <AuditLogs />
+                <AuditLogs logs={auditLogs} />
               )}
 
               {view === 'SUBSCRIPTION' && (
-                <SubscriptionTerminal />
+                <SubscriptionTerminal
+                  business={business}
+                  onUpdateStatus={(status, note) => {
+                    setBusiness((prev: any) => ({
+                      ...prev,
+                      subscriptionStatus: status,
+                      verificationNote: note,
+                      updatedAt: now()
+                    }));
+                  }}
+                />
               )}
 
               {view === 'SUPER_ADMIN_PORTAL' && (

@@ -2,6 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { Product, CartItem, Sale } from '../types';
 import { CATEGORIES } from '../constants';
 import { useToast } from './Toast';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, rectSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface POSProps {
   products: Product[];
@@ -11,9 +14,56 @@ interface POSProps {
   removeFromCart: (id: string) => void;
   onCheckout: (method: 'Cash' | 'Mpesa', customerPhone?: string) => Sale | undefined;
   businessName: string;
+  onReorder: (newOrder: Product[]) => void;
 }
 
-const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity, removeFromCart, onCheckout, businessName }) => {
+/* -------------------- SORTABLE ITEM COMPONENT -------------------- */
+const SortableProductCard = ({ product, addToCart }: { product: Product, addToCart: (p: Product) => void }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: product.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : 'auto',
+    opacity: isDragging ? 0.5 : 1,
+    position: 'relative' as 'relative',
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="group bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl transition-all h-full flex flex-col"
+    >
+      {/* Drag Handle (Invisible but active on long press or explicit grab area if needed) - here entire card is draggable, but we prioritize click for add */}
+
+      <div
+        className="h-32 lg:h-40 overflow-hidden relative cursor-grab active:cursor-grabbing"
+        {...attributes}
+        {...listeners}
+      >
+        <img src={product.imageUrl || 'https://via.placeholder.com/400?text=No+Image'} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 pointer-events-none" />
+        {product.stock < 10 && product.stock > 0 && (
+          <div className="absolute top-2 left-2 bg-rose-500 text-white px-2 py-0.5 rounded-lg text-[8px] font-black uppercase">
+            Low: {product.stock}
+          </div>
+        )}
+      </div>
+
+      <div className="p-4 flex flex-col flex-1" onClick={() => product.stock > 0 && addToCart(product)}> {/* Click logic here */}
+        <h3 className="font-black text-slate-800 mb-1 leading-tight h-8 line-clamp-2 uppercase text-[12px] tracking-tight">{product.name}</h3>
+        <div className="flex items-center justify-between mt-auto">
+          <span className="text-sm lg:text-md font-black text-indigo-600">Ksh {product.price}</span>
+          <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all cursor-pointer">
+            <i className="fa-solid fa-plus text-xs"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity, removeFromCart, onCheckout, businessName, onReorder }) => {
   const { showToast } = useToast();
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
@@ -22,15 +72,53 @@ const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity
   const [custPhone, setCustPhone] = useState('');
   const [mobileCartExpanded, setMobileCartExpanded] = useState(false);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px movement before drag starts, preventing accidental drags on clicks
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
       const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
       const matchesCategory = activeCategory === 'All' || p.category === activeCategory;
-      return matchesSearch && matchesCategory;
+      const hasStock = p.stock > 0; // AUTO-HIDE OUT OF STOCK
+      return matchesSearch && matchesCategory && hasStock;
     });
   }, [products, search, activeCategory]);
 
   const cartTotal = useMemo(() => cart.reduce((sum, item) => sum + (item.price * item.quantity), 0), [cart]);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      // We need to reorder the GLOBAL product list based on the change in the FILTERED list.
+      // 1. Find the old index and new index in the DISPLAYED list
+      const oldIndex = filteredProducts.findIndex((p) => p.id === active.id);
+      const newIndex = filteredProducts.findIndex((p) => p.id === over?.id);
+
+      // 2. Create the new order for the DISPLAYED subset
+      const newFilteredOrder = arrayMove(filteredProducts, oldIndex, newIndex);
+
+      // 3. Construct the full new list:
+      //    - Keep items NOT in the filtered view in their original relative positions (or just push them to end/start? No, keep them inplace-ish)
+      //    - Actually, for a simple "favorites" system, reordering usually implies a global rank.
+      //    - Strategy: Take the global list, remove the filtered items, then re-insert them in their new order at their original "first" index? 
+      //    - Simpler Strategy: Just replace the products in the master list.
+
+      const productIds = new Set(newFilteredOrder.map(p => p.id));
+      const remainingProducts = products.filter(p => !productIds.has(p.id));
+      const combined = [...newFilteredOrder, ...remainingProducts]; // This moves filtered items to top. Good for favorites.
+
+      onReorder(combined);
+    }
+  };
 
   const handleCheckout = (method: 'Cash' | 'Mpesa') => {
     const sale = onCheckout(method, custPhone);
@@ -80,34 +168,28 @@ const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity
         </div>
 
         <div className="flex-1 overflow-auto pr-2">
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredProducts.map(product => (
-              <div
-                key={product.id}
-                onClick={() => product.stock > 0 && addToCart(product)}
-                className={`group bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl transition-all cursor-pointer relative ${product.stock <= 0 ? 'opacity-60 grayscale' : ''
-                  }`}
-              >
-                <div className="h-32 lg:h-40 overflow-hidden relative">
-                  <img src={product.imageUrl || 'https://via.placeholder.com/400?text=No+Image'} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                  {product.stock < 10 && product.stock > 0 && (
-                    <div className="absolute top-2 left-2 bg-rose-500 text-white px-2 py-0.5 rounded-lg text-[8px] font-black uppercase">
-                      Low: {product.stock}
-                    </div>
-                  )}
-                </div>
-                <div className="p-4">
-                  <h3 className="font-black text-slate-800 mb-1 leading-tight h-8 line-clamp-2 uppercase text-[12px] tracking-tight">{product.name}</h3>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-sm lg:text-md font-black text-indigo-600">Ksh {product.price}</span>
-                    <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                      <i className="fa-solid fa-plus text-xs"></i>
-                    </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={filteredProducts.map(p => p.id)}
+              strategy={rectSortingStrategy}
+            >
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 pb-20">
+                {filteredProducts.map(product => (
+                  <SortableProductCard key={product.id} product={product} addToCart={addToCart} />
+                ))}
+                {filteredProducts.length === 0 && (
+                  <div className="col-span-full py-12 text-center text-slate-400">
+                    <p className="font-bold">No active items found.</p>
+                    <p className="text-xs">Out-of-stock items are hidden automatically.</p>
                   </div>
-                </div>
+                )}
               </div>
-            ))}
-          </div>
+            </SortableContext>
+          </DndContext>
         </div>
       </div>
 

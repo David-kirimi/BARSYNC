@@ -398,7 +398,17 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
 
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Image</label>
-                <input type="file" accept="image/*" onChange={handleImageUpload} className="w-full text-xs text-slate-600" />
+                <div className="flex flex-col gap-2">
+                  <input
+                    type="text"
+                    placeholder="Paste Image URL..."
+                    className="w-full rounded-2xl p-3 border border-slate-200 text-xs font-bold focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                    value={form.imageUrl || ''}
+                    onChange={e => setForm(prev => ({ ...prev, imageUrl: e.target.value }))}
+                  />
+                  <p className="text-[9px] text-center font-bold text-slate-300 uppercase">OR</p>
+                  <input type="file" accept="image/*" onChange={handleImageUpload} className="w-full text-xs text-slate-600" />
+                </div>
                 {form.imageUrl && <img src={form.imageUrl} alt="preview" className="w-32 h-32 object-cover rounded-lg mt-2" />}
               </div>
 

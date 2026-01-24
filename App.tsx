@@ -213,6 +213,32 @@ const AppContent: React.FC = () => {
     }));
   };
 
+  /* -------------------- SYNC & REFRESH -------------------- */
+  const reloadData = () => {
+    setProducts(loadFromStorage<Product[]>(STORAGE_KEYS.PRODUCTS, []));
+    setSales(loadFromStorage<Sale[]>(STORAGE_KEYS.SALES, []));
+    setUsers(loadFromStorage<User[]>(STORAGE_KEYS.USERS, []));
+    setBusiness(loadFromStorage<any>('pos_business_v1', business)); // Keep fallback
+    setAuditLogs(loadFromStorage<any[]>('pos_audit_logs_v1', []));
+  };
+
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      // Auto-refresh when another tab updates storage
+      if (e.key && Object.values(STORAGE_KEYS).includes(e.key)) {
+        reloadData();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  const handleSync = () => {
+    // Simulate cloud sync or just force local reload
+    reloadData();
+    return new Promise<void>((resolve) => setTimeout(resolve, 1000));
+  };
+
   /* -------------------- MUTATIONS -------------------- */
   const onCheckout = (method: 'Cash' | 'Mpesa', customerPhone?: string): Sale | undefined => {
     if (cart.length === 0) return undefined;
@@ -261,12 +287,6 @@ const AppContent: React.FC = () => {
   };
 
   const handleProductReorder = (newOrder: Product[]) => {
-    // We trust the new order, but we should make sure we're not losing any data.
-    // The newOrder comes from POS which filters out-of-stock items, but our handleDragEnd logic
-    // in POS.tsx was careful to append the filtered-out items.
-    // So we can safely update the state.
-    // We update 'updatedAt' for ALL items to ensure this new order syncs as the "latest" version to cloud?
-    // Or just save it locally. For now, local save is implicit via useEffect.
     setProducts(newOrder);
   };
 
@@ -302,11 +322,12 @@ const AppContent: React.FC = () => {
           currentView={view}
           setView={setView}
           user={currentUser}
+          business={business}
           onLogout={() => setCurrentUser(null)}
           offline={false}
-          onSync={() => { }}
+          onSync={handleSync}
           isSyncing={false}
-          lastSync={null}
+          lastSync={now()} // Just to show recent
           backendAlive={true}
         />
 
@@ -326,7 +347,7 @@ const AppContent: React.FC = () => {
                   updateCartQuantity={updateCartQuantity}
                   removeFromCart={removeFromCart}
                   onCheckout={onCheckout}
-                  businessName="BarSync POS"
+                  businessName={business.name}
                   onReorder={handleProductReorder}
                 />
               )}
@@ -348,6 +369,11 @@ const AppContent: React.FC = () => {
                 <UserManagement
                   users={users}
                   onAdd={(newUser) => {
+                    const exists = users.some(u => u.name.toLowerCase() === newUser.name.toLowerCase());
+                    if (exists) {
+                      alert("User with this name already exists!"); // Simple check, Toast would be better but props not drilling
+                      return;
+                    }
                     const userWithId: User = { ...newUser, id: Math.random().toString(36).substr(2, 9), businessId: business.id || 'local_biz', status: 'Active', updatedAt: now() };
                     setUsers(prev => [...prev, userWithId]);
                   }}

@@ -16,9 +16,10 @@ interface SidebarProps {
   onInstall?: () => void;
   mobileOpen?: boolean;
   onMobileClose?: () => void;
+  business: { name: string, logo?: string }; // Add Business Prop
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout, offline, onSync, isSyncing, lastSync, backendAlive, canInstall, onInstall, mobileOpen, onMobileClose }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout, offline, onSync, isSyncing, lastSync, backendAlive, canInstall, onInstall, mobileOpen, onMobileClose, business }) => {
   const menuItems = [
     { id: 'SUPER_ADMIN_PORTAL' as View, label: 'Platform Hub', icon: 'fa-server', roles: [Role.SUPER_ADMIN] },
     { id: 'POS' as View, label: 'Terminal', icon: 'fa-cash-register', roles: [Role.ADMIN, Role.BARTENDER, Role.OWNER] },

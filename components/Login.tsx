@@ -95,7 +95,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
       role: (username && username.toUpperCase() === 'SLIEM') ? Role.SUPER_ADMIN : (businessName ? Role.ADMIN : Role.BARTENDER),
       avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username || 'Demo'}`,
       businessId: 'bus_demo',
-      status: 'Active'
+      status: 'Active',
+      updatedAt: new Date().toISOString()
     };
     onLogin(mockUser);
   };

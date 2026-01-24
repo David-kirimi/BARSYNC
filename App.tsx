@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Product, Sale, User, View } from './types';
+import { Product, Sale, User, View, CartItem } from './types';
 import { PRODUCT_TEMPLATES } from './constants';
+import POS from './components/POS';
+import Inventory from './components/Inventory';
+import SalesHistory from './components/SalesHistory';
+import Sidebar from './components/Sidebar';
+import { ToastProvider } from './components/Toast';
+import Login from './components/Login';
 
 /* -------------------- STORAGE KEYS -------------------- */
 const STORAGE_KEYS = {
@@ -27,11 +33,6 @@ function saveToStorage<T>(key: string, value: T) {
 }
 
 /* -------------------- PRODUCT INIT -------------------- */
-/**
- * SAFE RULES:
- * - Templates are used ONLY when storage is empty
- * - Prices & stock are NEVER re-applied after first save
- */
 function initializeProducts(): Product[] {
   const stored = loadFromStorage<Product[]>(STORAGE_KEYS.PRODUCTS, []);
 
@@ -43,7 +44,7 @@ function initializeProducts(): Product[] {
     id: t.id,
     name: t.name,
     category: t.category,
-    price: t.defaultPrice,     // applied ONCE
+    price: t.defaultPrice,
     stock: 0,
     openingStock: 0,
     additions: 0,
@@ -55,8 +56,9 @@ function initializeProducts(): Product[] {
   return fresh;
 }
 
-/* -------------------- APP -------------------- */
-const App: React.FC = () => {
+/* -------------------- MAIN APP CONTENT -------------------- */
+const AppContent: React.FC = () => {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [view, setView] = useState<View>(() =>
     loadFromStorage<View>(STORAGE_KEYS.VIEW, 'POS')
   );
@@ -72,6 +74,8 @@ const App: React.FC = () => {
   const [users, setUsers] = useState<User[]>(() =>
     loadFromStorage<User[]>(STORAGE_KEYS.USERS, [])
   );
+
+  const [cart, setCart] = useState<CartItem[]>([]);
 
   /* -------------------- PERSISTENCE -------------------- */
   useEffect(() => {
@@ -90,26 +94,59 @@ const App: React.FC = () => {
     saveToStorage(STORAGE_KEYS.USERS, users);
   }, [users]);
 
-  /* -------------------- MUTATIONS -------------------- */
-
-  const updateProduct = (updated: Product) => {
-    setProducts(prev =>
-      prev.map(p =>
-        p.id === updated.id
-          ? { ...updated, updatedAt: now() }
-          : p
-      )
-    );
+  /* -------------------- CART LOGIC -------------------- */
+  const addToCart = (product: Product) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.id === product.id);
+      if (existing) {
+        return prev.map(item =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      }
+      return [...prev, { ...product, quantity: 1 }];
+    });
   };
 
-  const addSale = (sale: Sale) => {
-    setSales(prev => [...prev, sale]);
+  const removeFromCart = (id: string) => {
+    setCart(prev => prev.filter(item => item.id !== id));
+  };
 
+  const updateCartQuantity = (id: string, delta: number) => {
+    setCart(prev => prev.map(item => {
+      if (item.id !== id) return item;
+      const newQty = Math.max(1, item.quantity + delta);
+      return { ...item, quantity: newQty };
+    }));
+  };
+
+  /* -------------------- MUTATIONS -------------------- */
+  const onCheckout = (method: 'Cash' | 'Mpesa', customerPhone?: string): Sale | undefined => {
+    if (cart.length === 0) return undefined;
+
+    const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    // Fixed: Added businessId (required by Sale interface)
+    const newSale: Sale = {
+      id: Math.random().toString(36).substr(2, 9).toUpperCase(),
+      businessId: currentUser?.businessId || 'offline_biz',
+      date: now(),
+      items: cart,
+      totalAmount,
+      paymentMethod: method,
+      salesPerson: currentUser?.name || 'Unknown',
+      customerPhone,
+    };
+
+    // Update Sales
+    setSales(prev => [newSale, ...prev]);
+
+    // Update Stock
     setProducts(prev =>
       prev.map(p => {
-        const item = sale.items.find(i => i.id === p.id);
+        const item = cart.find(i => i.id === p.id);
         if (!item) return p;
-
         return {
           ...p,
           stock: Math.max(0, p.stock - item.quantity),
@@ -117,25 +154,89 @@ const App: React.FC = () => {
         };
       })
     );
+
+    // Clear Cart
+    setCart([]);
+    return newSale;
   };
 
-  /* -------------------- RENDER -------------------- */
+  const handleProductUpdate = (updated: Product) => {
+    setProducts(prev =>
+      prev.map(p => p.id === updated.id ? { ...updated, updatedAt: now() } : p)
+    );
+  };
+
+  // Fixed: Exclude updatedAt from input, as it's generated internally
+  const handleProductAdd = (newProductData: Omit<Product, 'id' | 'openingStock' | 'additions' | 'updatedAt'>) => {
+    const newProduct: Product = {
+      ...newProductData,
+      id: Math.random().toString(36).substr(2, 9),
+      openingStock: newProductData.stock, // Initial stock is opening stock
+      additions: 0,
+      updatedAt: now(),
+    };
+    setProducts(prev => [...prev, newProduct]);
+  };
+
+  if (!currentUser) {
+    return <Login onLogin={setCurrentUser} backendUrl="" />;
+  }
+
   return (
-    <div style={{ padding: 20 }}>
-      <h1>POS System</h1>
+    <div className="h-screen flex flex-col overflow-hidden bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900">
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar
+          currentView={view}
+          setView={setView}
+          user={currentUser}
+          onLogout={() => setCurrentUser(null)}
+          offline={false}
+          onSync={() => { }}
+          isSyncing={false}
+          lastSync={null}
+          backendAlive={true}
+        />
 
-      <p><b>View:</b> {view}</p>
+        <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-8 scroll-smooth" id="main-scroll">
+            <div className="max-w-[1600px] mx-auto h-full">
+              {view === 'POS' && (
+                <POS
+                  products={products}
+                  addToCart={addToCart}
+                  cart={cart}
+                  updateCartQuantity={updateCartQuantity}
+                  removeFromCart={removeFromCart}
+                  onCheckout={onCheckout}
+                  businessName="BarSync POS"
+                />
+              )}
 
-      <button onClick={() => setView('POS')}>POS</button>
-      <button onClick={() => setView('INVENTORY')}>Inventory</button>
-      <button onClick={() => setView('SALES')}>Sales</button>
+              {view === 'INVENTORY' && (
+                <Inventory
+                  products={products}
+                  onUpdate={handleProductUpdate}
+                  onAdd={handleProductAdd}
+                  userRole={currentUser.role}
+                />
+              )}
 
-      <hr />
-
-      <pre style={{ maxHeight: 300, overflow: 'auto' }}>
-        {JSON.stringify(products, null, 2)}
-      </pre>
+              {view === 'SALES' && (
+                <SalesHistory sales={sales} />
+              )}
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   );
 };
 

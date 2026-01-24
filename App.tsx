@@ -7,6 +7,13 @@ import SalesHistory from './components/SalesHistory';
 import Sidebar from './components/Sidebar';
 import { ToastProvider, useToast } from './components/Toast';
 import Login from './components/Login';
+import Dashboard from './components/Dashboard';
+import UserManagement from './components/UserManagement';
+import Reports from './components/Reports';
+import Profile from './components/Profile';
+import AuditLogs from './components/AuditLogs';
+import SubscriptionTerminal from './components/SubscriptionTerminal';
+import SuperAdminPortal from './components/SuperAdminPortal';
 
 /* -------------------- STORAGE KEYS -------------------- */
 const STORAGE_KEYS = {
@@ -247,6 +254,11 @@ const AppContent: React.FC = () => {
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
           <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-8 scroll-smooth" id="main-scroll">
             <div className="max-w-[1600px] mx-auto h-full">
+              {/* DASHBOARD / ANALYTICS */}
+              {(view === 'ANALYTICS' || view === 'POS' && false) && (
+                <Dashboard sales={sales} products={products} />
+              )}
+
               {view === 'POS' && (
                 <POS
                   products={products}
@@ -270,6 +282,30 @@ const AppContent: React.FC = () => {
 
               {view === 'SALES' && (
                 <SalesHistory sales={sales} />
+              )}
+
+              {view === 'USER_MANAGEMENT' && (
+                <UserManagement users={users} setUsers={setUsers} currentUser={currentUser} />
+              )}
+
+              {view === 'REPORTS' && (
+                <Reports sales={sales} />
+              )}
+
+              {view === 'PROFILE' && (
+                <Profile user={currentUser} onUpdate={(u) => setCurrentUser(u)} />
+              )}
+
+              {view === 'AUDIT_LOGS' && (
+                <AuditLogs />
+              )}
+
+              {view === 'SUBSCRIPTION' && (
+                <SubscriptionTerminal />
+              )}
+
+              {view === 'SUPER_ADMIN_PORTAL' && (
+                <SuperAdminPortal />
               )}
             </div>
           </div>

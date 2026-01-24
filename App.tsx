@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Product, Sale, User, View, CartItem, Role } from './types';
+import { View, Product, Sale, CartItem, User, Role, AuditLog, Business } from './types';
 import { PRODUCT_TEMPLATES } from './constants';
 import POS from './components/POS';
 import Inventory from './components/Inventory';
@@ -133,6 +133,10 @@ const AppContent: React.FC = () => {
 
   const [users, setUsers] = useState<User[]>(() =>
     loadFromStorage<User[]>(STORAGE_KEYS.USERS, [])
+  );
+
+  const [businesses, setBusinesses] = useState<Business[]>(() =>
+    loadFromStorage<Business[]>('pos_businesses_v1', [])
   );
 
   // New State for Business and Audit Logs
@@ -423,7 +427,21 @@ const AppContent: React.FC = () => {
               )}
 
               {view === 'SUPER_ADMIN_PORTAL' && (
-                <SuperAdminPortal />
+                <SuperAdminPortal
+                  businesses={businesses}
+                  sales={sales}
+                  onAdd={(newBiz, initialUser) => {
+                    const bizId = Math.random().toString(36).substr(2, 9);
+                    const createdBiz: Business = { ...newBiz, id: bizId, createdAt: now(), updatedAt: now(), paymentStatus: 'Pending', subscriptionPlan: 'Basic' };
+                    setBusinesses(prev => [...prev, createdBiz]);
+
+                    const createdUser: User = { ...initialUser, id: Math.random().toString(36).substr(2, 9), businessId: bizId, status: 'Active', updatedAt: now() };
+                    setUsers(prev => [...prev, createdUser]); // Add the new owner to the global user list
+                  }}
+                  onUpdate={(updatedBiz) => {
+                    setBusinesses(prev => prev.map(b => b.id === updatedBiz.id ? { ...updatedBiz, updatedAt: now() } : b));
+                  }}
+                />
               )}
             </div>
           </div>

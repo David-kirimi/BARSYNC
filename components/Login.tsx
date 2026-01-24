@@ -67,6 +67,10 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Authentication failed');
 
+      if (result.user.status !== 'Active') {
+        throw new Error("Access Revoked: Account Deactivated");
+      }
+
       onLogin(result.user, result.business, result.state);
     } catch (err: any) {
       clearTimeout(timeoutId);
@@ -98,6 +102,14 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
       status: 'Active',
       updatedAt: new Date().toISOString()
     };
+
+    // In a real local mirror, we would check the 'users' list from localStorage here
+    // But since this is a mock generator, we assume the demo user is Active.
+    // However, if we were authenticating against a local DB, we MUST check status.
+    if (mockUser.status !== 'Active') {
+      setError("Access Revoked");
+      return;
+    }
     onLogin(mockUser);
   };
 

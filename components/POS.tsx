@@ -18,7 +18,7 @@ interface POSProps {
 }
 
 /* -------------------- SORTABLE ITEM COMPONENT -------------------- */
-const SortableProductCard = ({ product, addToCart }: { product: Product, addToCart: (p: Product) => void }) => {
+const SortableProductCard: React.FC<{ product: Product, addToCart: (p: Product) => void }> = ({ product, addToCart }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: product.id });
 
   const style = {
@@ -53,8 +53,8 @@ const SortableProductCard = ({ product, addToCart }: { product: Product, addToCa
       <div className="p-4 flex flex-col flex-1" onClick={() => product.stock > 0 && addToCart(product)}> {/* Click logic here */}
         <h3 className="font-black text-slate-800 mb-1 leading-tight h-8 line-clamp-2 uppercase text-[12px] tracking-tight">{product.name}</h3>
         <div className="flex items-center justify-between mt-auto">
-          <span className="text-sm lg:text-md font-black text-indigo-600">Ksh {product.price}</span>
-          <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all cursor-pointer">
+          <span className="text-xs lg:text-md font-black text-indigo-600">Ksh {product.price}</span>
+          <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-lg lg:rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all cursor-pointer">
             <i className="fa-solid fa-plus text-xs"></i>
           </div>
         </div>
@@ -104,7 +104,7 @@ const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity
       const newIndex = filteredProducts.findIndex((p) => p.id === over?.id);
 
       // 2. Create the new order for the DISPLAYED subset
-      const newFilteredOrder = arrayMove(filteredProducts, oldIndex, newIndex);
+      const newFilteredOrder = arrayMove(filteredProducts, oldIndex, newIndex) as Product[];
 
       // 3. Construct the full new list:
       //    - Keep items NOT in the filtered view in their original relative positions (or just push them to end/start? No, keep them inplace-ish)
@@ -140,15 +140,15 @@ const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity
   };
 
   return (
-    <div className="flex h-full flex-col lg:flex-row gap-4 lg:gap-8 pb-32 lg:pb-0">
+    <div className="flex h-full flex-col lg:flex-row gap-2 lg:gap-8 pb-32 lg:pb-0">
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="mb-4 lg:mb-8 space-y-4">
+        <div className="mb-2 lg:mb-8 space-y-3 lg:space-y-4">
           <div className="relative group">
             <i className="fa-solid fa-magnifying-glass absolute left-4 lg:left-6 top-1/2 -translate-y-1/2 text-slate-400"></i>
             <input
               type="text"
               placeholder="Search..."
-              className="w-full pl-12 lg:pl-14 pr-4 lg:pr-6 py-4 lg:py-5 bg-white border border-slate-200 rounded-2xl lg:rounded-[2rem] focus:outline-none shadow-sm text-lg font-medium"
+              className="w-full pl-10 lg:pl-14 pr-4 lg:pr-6 py-3 lg:py-5 bg-white border border-slate-200 rounded-xl lg:rounded-[2rem] focus:outline-none shadow-sm text-sm lg:text-lg font-medium"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />

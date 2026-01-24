@@ -96,11 +96,20 @@ function initializeProducts(): Product[] {
   //    If we DO have stored data -> Return stored data. (Do NOT over-merge templates every reload, 
   //    because templates have 'now()' which would overwrite user changes if we aren't careful about ID matching).
 
-  if (stored.length > 0) {
+  if (stored && stored.length > 0) {
     return stored;
   }
 
+  // Double check: If localStorage key exists but is empty array, it might be intentional
+  // BUT if key "pos_products_v2_safe" is completely missing, then it's a fresh install.
+  const rawCheck = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
+  if (rawCheck) {
+    const parsed = JSON.parse(rawCheck);
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+  }
+
   // First time load
+  console.log('Initializing with default templates...');
   saveToStorage(STORAGE_KEYS.PRODUCTS, templates);
   return templates;
 }
@@ -155,7 +164,9 @@ const AppContent: React.FC = () => {
     // Determine if we need to save. 
     // In a real app with cloud sync, here we would also trigger a 
     // "pushToCloud" if the data changed.
-    saveToStorage(STORAGE_KEYS.PRODUCTS, products);
+    if (products.length > 0) {
+      saveToStorage(STORAGE_KEYS.PRODUCTS, products);
+    }
   }, [products]);
 
   useEffect(() => {
@@ -285,7 +296,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="h-[100dvh] flex flex-col overflow-hidden bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900">
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
           currentView={view}
@@ -334,7 +345,19 @@ const AppContent: React.FC = () => {
               )}
 
               {view === 'USER_MANAGEMENT' && (
-                <UserManagement users={users} setUsers={setUsers} currentUser={currentUser} />
+                <UserManagement
+                  users={users}
+                  onAdd={(newUser) => {
+                    const userWithId: User = { ...newUser, id: Math.random().toString(36).substr(2, 9), businessId: business.id || 'local_biz', status: 'Active', updatedAt: now() };
+                    setUsers(prev => [...prev, userWithId]);
+                  }}
+                  onUpdate={(updatedUser) => {
+                    setUsers(prev => prev.map(u => u.id === updatedUser.id ? { ...updatedUser, updatedAt: now() } : u));
+                  }}
+                  onDelete={(id) => {
+                    setUsers(prev => prev.filter(u => u.id !== id));
+                  }}
+                />
               )}
 
               {view === 'REPORTS' && (

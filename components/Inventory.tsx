@@ -141,8 +141,8 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
       {/* Header + Controls */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Stock Control</h2>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2">Global Inventory Management</p>
+          <h2 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight md:tracking-tighter uppercase leading-none">Stock Control</h2>
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider md:tracking-widest mt-2">Global Inventory Management</p>
         </div>
         <div className="flex w-full md:w-auto gap-3">
           <div className="relative flex-1 md:w-64">
@@ -237,7 +237,7 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-start">
-                  <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">{p.category}</span>
+                  <span className="text-[9px] font-black text-indigo-500 uppercase tracking-wider md:tracking-widest">{p.category}</span>
                   <button
                     onClick={() => openEdit(p)}
                     className="text-slate-300 hover:text-indigo-600 transition-colors p-1"

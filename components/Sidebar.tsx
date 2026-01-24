@@ -63,12 +63,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
                 key={item.id}
                 onClick={() => setView(item.id)}
                 className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all ${currentView === item.id
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-900'
                   }`}
               >
-                <i className={`fa-solid ${item.icon} text-lg w-5`}></i>
-                <span className="text-sm font-black uppercase tracking-tight">{item.label}</span>
+                <i className={`fa-solid ${item.icon} text-lg w-6`}></i>
+                <span className="text-sm font-black uppercase tracking-normal">{item.label}</span>
               </button>
             ))}
           </div>
@@ -94,8 +94,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
             className={`flex flex-col items-center p-2 rounded-xl transition-all ${currentView === item.id ? 'text-indigo-400' : 'text-slate-500'
               }`}
           >
-            <i className={`fa-solid ${item.icon} text-lg`}></i>
-            <span className="text-[8px] font-black uppercase tracking-tighter mt-1">{item.label.split(' ')[0]}</span>
+            <i className={`fa-solid ${item.icon} text-lg mb-1`}></i>
+            <span className="text-[9px] font-black uppercase tracking-tight">{item.label.split(' ')[0]}</span>
           </button>
         ))}
         <button onClick={onLogout} className="flex flex-col items-center p-2 text-rose-500">

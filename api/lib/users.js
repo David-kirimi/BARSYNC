@@ -29,9 +29,6 @@ export async function seedDatabase() {
 router.post('/login', async (req, res) => {
     try {
         const database = await connectToMongo();
-        if (!database) {
-            return res.status(503).json({ error: "Database Connection Timeout" });
-        }
 
         let businessName = (req.body.businessName || "").trim();
         const username = (req.body.username || "").trim();
@@ -95,8 +92,10 @@ router.post('/login', async (req, res) => {
         const { password: _, ...userSafe } = user;
         res.status(200).json({ user: userSafe, business, state: snapshot || null });
     } catch (err) {
-        console.error("Login Error:", err);
-        res.status(500).json({ error: 'Internal server error' });
+        console.error("Login Error:", err.message);
+        if (err.message === 'CONFIG_MISSING') return res.status(500).json({ error: "MONGODB_URI is not set in Vercel Environment Variables." });
+        if (err.message === 'IP_NOT_WHITELISTED') return res.status(403).json({ error: "Access Denied: Vercel IP not whitelisted in MongoDB Atlas." });
+        res.status(503).json({ error: `Database Connection Timeout: ${err.message}` });
     }
 });
 

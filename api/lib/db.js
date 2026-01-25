@@ -23,18 +23,35 @@ if (uri) {
 
 export async function connectToMongo() {
     if (db) return db;
-    if (!client) {
-        console.error("❌ MONGODB_URI not found in environment");
-        return null;
+    if (!uri) {
+        console.error("❌ CRITICAL: MONGODB_URI environment variable is missing!");
+        throw new Error("CONFIG_MISSING");
     }
+
+    if (!client) {
+        client = new MongoClient(uri, {
+            serverApi: {
+                version: ServerApiVersion.v1,
+                strict: true,
+                deprecationErrors: true,
+            },
+            serverSelectionTimeoutMS: 10000, // Increased to 10s for Vercel cold starts
+            connectTimeoutMS: 10000,
+        });
+    }
+
     try {
+        console.log("📡 Attempting MongoDB heartbeat...");
         await client.connect();
         db = client.db(DB_NAME);
-        console.log("✅ Connected to MongoDB Atlas");
+        console.log("✅ Database Link Established");
         return db;
     } catch (err) {
-        console.error("❌ MongoDB Connection failed:", err.message);
-        return null;
+        console.error("❌ MongoDB Connectivity Error:", err.message);
+        if (err.message.includes('IP') || err.message.includes('whitelist')) {
+            throw new Error("IP_NOT_WHITELISTED");
+        }
+        throw err;
     }
 }
 

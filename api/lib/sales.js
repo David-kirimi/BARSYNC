@@ -7,15 +7,14 @@ router.get('/', async (req, res) => {
     const { businessId } = req.query;
     if (!businessId) return res.status(400).json({ error: "Missing businessId" });
 
-    const database = await connectToMongo();
-    if (!database) return res.status(503).json({ error: "Database offline" });
-
     try {
+        const database = await connectToMongo();
         const syncColl = database.collection('sync_history');
         const state = await syncColl.findOne({ businessId });
         res.json(state?.sales || []);
     } catch (err) {
-        res.status(500).json({ error: "Fetch failed" });
+        console.error("Sales fetch Error:", err.message);
+        res.status(500).json({ error: `Fetch failed: ${err.message}` });
     }
 });
 
@@ -23,10 +22,8 @@ router.post('/', async (req, res) => {
     const { businessId, sale } = req.body;
     if (!businessId || !sale) return res.status(400).json({ error: "Missing data" });
 
-    const database = await connectToMongo();
-    if (!database) return res.status(503).json({ error: "Database offline" });
-
     try {
+        const database = await connectToMongo();
         const syncColl = database.collection('sync_history');
         // Append sale to sales array
         await syncColl.updateOne(
@@ -39,7 +36,8 @@ router.post('/', async (req, res) => {
         );
         res.json({ success: true });
     } catch (err) {
-        res.status(500).json({ error: "Sale record failed" });
+        console.error("Sales sync Error:", err.message);
+        res.status(500).json({ error: `Sale record failed: ${err.message}` });
     }
 });
 

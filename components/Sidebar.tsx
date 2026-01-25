@@ -53,7 +53,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
               <img src={user.avatar} className="w-12 h-12 rounded-2xl shadow-lg" alt="" />
               <div className="flex-1 min-w-0">
                 <p className="font-black text-white truncate">{user.name}</p>
-                <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest">{user.role}</p>
+                <p className="text-[10px] text-orange-400 font-bold uppercase tracking-widest">{user.role}</p>
               </div>
             </div>
           </div>
@@ -64,7 +64,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
                 key={item.id}
                 onClick={() => setView(item.id)}
                 className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all ${currentView === item.id
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50'
+                  ? 'bg-orange-600 text-white shadow-lg shadow-orange-900/50'
                   : 'text-slate-400 hover:text-white hover:bg-slate-900'
                   }`}
               >
@@ -92,7 +92,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
           <button
             key={item.id}
             onClick={() => setView(item.id)}
-            className={`flex flex-col items-center p-2 rounded-xl transition-all ${currentView === item.id ? 'text-indigo-400' : 'text-slate-500'
+            className={`flex flex-col items-center p-2 rounded-xl transition-all ${currentView === item.id ? 'text-orange-400' : 'text-slate-500'
               }`}
           >
             <i className={`fa-solid ${item.icon} text-lg mb-1`}></i>
@@ -108,12 +108,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
       <aside className="hidden md:flex w-64 bg-slate-950 flex-col shrink-0 border-r border-slate-800 overflow-y-auto no-scrollbar">
         <div className="p-8">
           <div className="flex items-center gap-3 mb-12">
-            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg shadow-indigo-500/20 rotate-3 cursor-pointer" onClick={() => setView('POS')}>
+            <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg shadow-orange-500/20 rotate-3 cursor-pointer" onClick={() => setView('POS')}>
               <i className="fa-solid fa-beer-mug-empty"></i>
             </div>
             <div>
               <h2 className="text-white font-black text-lg tracking-tighter leading-none uppercase">BARSYNC</h2>
-              <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mt-1">Full Stack Mode</p>
+              <p className="text-[10px] text-orange-400 font-bold uppercase tracking-widest mt-1">Pure Online Mode</p>
             </div>
           </div>
 
@@ -123,7 +123,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
                 key={item.id}
                 onClick={() => setView(item.id)}
                 className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 ${currentView === item.id
-                  ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/30 scale-105'
+                  ? 'bg-orange-600 text-white shadow-xl shadow-orange-600/30 scale-105'
                   : 'text-slate-500 hover:text-slate-200 hover:bg-slate-900'
                   }`}
               >
@@ -138,57 +138,41 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
           <div className="bg-slate-900/80 rounded-3xl p-5 border border-slate-800 backdrop-blur-sm shadow-inner">
             <div className="flex items-center justify-between mb-4">
               <div className="flex flex-col">
-                <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest flex items-center gap-2">
+                <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest flex items-center gap-2">
                   <i className="fa-solid fa-server text-[8px]"></i> Backend API
                 </span>
                 <span className={`text-[7px] font-black uppercase tracking-[0.2em] ${backendAlive ? 'text-emerald-400' : 'text-rose-400 animate-pulse'}`}>
-                  {backendAlive ? 'Driver Ready' : 'Backend Down'}
+                  {backendAlive ? 'Cloud Connected' : 'Backend Down'}
                 </span>
               </div>
               <button
                 onClick={onSync}
                 disabled={isSyncing || !backendAlive}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isSyncing ? 'bg-indigo-500 text-white animate-spin' : 'bg-slate-800 text-slate-400 hover:text-indigo-400'}`}
-                title="Force Cloud Sync"
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isSyncing ? 'bg-orange-500 text-white animate-spin' : 'bg-slate-800 text-slate-400 hover:text-orange-400'}`}
+                title="Refresh Cloud Data"
               >
-                <i className="fa-solid fa-cloud-arrow-up text-xs"></i>
+                <i className="fa-solid fa-rotate text-xs"></i>
               </button>
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-[9px] text-slate-400 font-bold uppercase">Network</p>
+                <p className="text-[9px] text-slate-400 font-bold uppercase">Status</p>
                 <div className="flex items-center gap-2">
                   <span className={`w-2 h-2 rounded-full ${offline ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`}></span>
                   <span className="text-[8px] font-black text-white uppercase tracking-widest">
-                    {offline ? 'MANUAL SYNC REQ.' : 'ONLINE'}
+                    {offline ? 'DEGRADED' : 'ONLINE'}
                   </span>
                 </div>
               </div>
-              <div className="flex items-center justify-between">
-                <p className="text-[9px] text-slate-400 font-bold uppercase">Last Mirror</p>
-                <p className="text-[8px] font-black text-indigo-400 uppercase">
-                  {lastSync ? lastSync.split(',')[1] : 'Never'}
-                </p>
-              </div>
             </div>
           </div>
-
-          {canInstall && (
-            <button
-              onClick={onInstall}
-              className="w-full flex items-center justify-center gap-4 px-5 py-4 rounded-2xl text-[12px] font-black uppercase tracking-[0.2em] text-white bg-indigo-600 hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-950/20 active:scale-95"
-            >
-              <i className="fa-solid fa-mobile-screen-button"></i>
-              Install App
-            </button>
-          )}
 
           <button
             onClick={onLogout}
             className="w-full flex items-center justify-center gap-4 px-5 py-4 rounded-2xl text-[12px] font-black uppercase tracking-[0.2em] text-white bg-rose-600 hover:bg-rose-700 transition-all shadow-xl shadow-rose-950/20 active:scale-95"
           >
             <i className="fa-solid fa-power-off"></i>
-            Exit POS
+            Exit Terminal
           </button>
         </div>
       </aside>

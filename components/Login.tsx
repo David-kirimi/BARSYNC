@@ -67,56 +67,56 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-indigo-900 via-slate-900 to-black">
+    <div className="min-h-screen bg-orange-50 flex items-center justify-center p-6 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-orange-400 via-white to-orange-50">
       <div className="max-w-md w-full">
         <div className="text-center mb-10">
-          <div className="w-20 h-20 bg-indigo-500 rounded-[2rem] flex items-center justify-center text-white text-4xl mx-auto mb-6 shadow-2xl shadow-indigo-500/40 rotate-12">
+          <div className="w-20 h-20 bg-orange-600 rounded-[2rem] flex items-center justify-center text-white text-4xl mx-auto mb-6 shadow-2xl shadow-orange-600/40 rotate-12">
             <i className="fa-solid fa-beer-mug-empty"></i>
           </div>
-          <h1 className="text-4xl font-black text-white mb-2 tracking-tighter uppercase">BARSYNC</h1>
-          <p className="text-indigo-400/80 font-medium uppercase tracking-[0.3em] text-[10px]">High Performance POS</p>
+          <h1 className="text-4xl font-black text-orange-900 mb-2 tracking-tighter uppercase">BARSYNC</h1>
+          <p className="text-orange-600/80 font-medium uppercase tracking-[0.3em] text-[10px]">High Performance POS</p>
         </div>
 
-        <div className="bg-white/95 backdrop-blur rounded-[3.5rem] p-10 shadow-2xl space-y-8 border border-white/20">
+        <div className="bg-white rounded-[3.5rem] p-10 shadow-2xl space-y-8 border border-orange-100">
           {view === 'LOGIN' ? (
             <>
               <div className="text-center">
                 <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase">Terminal Login</h2>
-                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">Unified Cloud Gateway</p>
+                <p className="text-orange-600 text-[10px] font-bold uppercase tracking-widest mt-1">Cloud Synchronization Active</p>
               </div>
 
               <form onSubmit={handleLoginAttempt} className="space-y-6">
                 <div className="space-y-4">
                   <div className="relative">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Workplace</label>
+                    <label className="text-[10px] font-black text-orange-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Workplace</label>
                     <input
                       type="text"
                       placeholder="Establishment Name"
-                      className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-slate-800 transition-all"
+                      className="w-full px-6 py-4 bg-orange-50 border border-orange-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 font-bold text-slate-800 transition-all"
                       value={businessName}
                       onChange={e => setBusinessName(e.target.value)}
                     />
                   </div>
 
                   <div className="relative">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Profile Name</label>
+                    <label className="text-[10px] font-black text-orange-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Profile Name</label>
                     <input
                       type="text"
                       required
                       placeholder="Username"
-                      className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-slate-800 transition-all"
+                      className="w-full px-6 py-4 bg-orange-50 border border-orange-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 font-bold text-slate-800 transition-all"
                       value={username}
                       onChange={e => setUsername(e.target.value)}
                     />
                   </div>
 
                   <div className="relative">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Access PIN</label>
+                    <label className="text-[10px] font-black text-orange-400 uppercase tracking-widest absolute -top-2 left-6 bg-white px-2 z-10">Access PIN</label>
                     <input
                       type="password"
                       required
                       placeholder="••••••"
-                      className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 font-bold text-slate-800 tracking-widest transition-all"
+                      className="w-full px-6 py-4 bg-orange-50 border border-orange-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 font-bold text-slate-800 tracking-widest transition-all"
                       value={password}
                       onChange={e => setPassword(e.target.value)}
                     />
@@ -134,12 +134,12 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
+                    className="w-full py-5 bg-orange-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-orange-200 hover:bg-orange-700 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
                   >
                     {isSubmitting ? (
                       <>
                         <i className="fa-solid fa-circle-notch animate-spin"></i>
-                        Syncing Cloud...
+                        Connecting...
                       </>
                     ) : (
                       <>
@@ -151,11 +151,11 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
                 </div>
               </form>
 
-              <div className="pt-6 border-t border-slate-50 text-center space-y-4">
+              <div className="pt-6 border-t border-orange-50 text-center space-y-4">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-loose">
-                  New Business? <button onClick={() => setView('REGISTER')} className="text-indigo-600 hover:text-indigo-700 underline px-2">Register Terminal</button>
+                  New Business? <button onClick={() => setView('REGISTER')} className="text-orange-600 hover:text-orange-700 underline px-2">Register Terminal</button>
                 </p>
-                <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest flex items-center justify-center gap-2">
+                <p className="text-[9px] font-black text-orange-300 uppercase tracking-widest flex items-center justify-center gap-2">
                   <i className="fa-solid fa-shield-check"></i> End-to-End Encryption Active
                 </p>
               </div>

@@ -3,11 +3,11 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { connectToMongo } from './db.js';
-import usersRouter, { seedDatabase } from './users.js';
-import productsRouter from './products.js';
-import salesRouter from './sales.js';
-import auditLogsRouter from './auditLogs.js';
+import { connectToMongo } from './lib/db.js';
+import usersRouter, { seedDatabase } from './lib/users.js';
+import productsRouter from './lib/products.js';
+import salesRouter from './lib/sales.js';
+import auditLogsRouter from './lib/auditLogs.js';
 
 dotenv.config();
 
@@ -25,12 +25,26 @@ app.use(cors({
 
 app.use(express.json({ limit: '50mb' }));
 
+// Logging Middleware
+app.use((req, res, next) => {
+    console.log(`[API] ${req.method} ${req.path}`);
+    next();
+});
+
 // Mount Modular Routers
+// We mount them both with and without /api prefix for robustness on different platforms
 app.use('/api/auth', usersRouter);
-app.use('/api/users', usersRouter); // Re-use for user management
+app.use('/api/users', usersRouter);
 app.use('/api/products', productsRouter);
 app.use('/api/sales', salesRouter);
 app.use('/api/auditLogs', auditLogsRouter);
+
+// Fallback for Vercel rewrites that might strip /api
+app.use('/auth', usersRouter);
+app.use('/users', usersRouter);
+app.use('/products', productsRouter);
+app.use('/sales', salesRouter);
+app.use('/auditLogs', auditLogsRouter);
 
 // Basic health check
 app.get('/health', async (req, res) => {

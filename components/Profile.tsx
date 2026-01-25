@@ -76,7 +76,7 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate, business, onUpdateBus
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-12 pb-20">
+    <div className="max-w-2xl mx-auto space-y-12 pt-16 md:pt-0 pb-20">
       <div className="text-center md:text-left">
         <h2 className="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Settings & Profile</h2>
         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2">Manage your personal and establishment details</p>

@@ -10,7 +10,7 @@ const AuditLogs: React.FC<AuditLogsProps> = ({ logs }) => {
   const [filter, setFilter] = useState('');
 
   const filteredLogs = useMemo(() => {
-    return logs.filter(log => 
+    return logs.filter(log =>
       log.userName.toLowerCase().includes(filter.toLowerCase()) ||
       log.action.toLowerCase().includes(filter.toLowerCase()) ||
       log.details.toLowerCase().includes(filter.toLowerCase())
@@ -27,7 +27,7 @@ const AuditLogs: React.FC<AuditLogsProps> = ({ logs }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-16 md:pt-0">
       <div className="flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Audit Trail</h2>
@@ -35,9 +35,9 @@ const AuditLogs: React.FC<AuditLogsProps> = ({ logs }) => {
         </div>
         <div className="relative w-full md:w-64">
           <i className="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"></i>
-          <input 
-            type="text" 
-            placeholder="Filter activities..." 
+          <input
+            type="text"
+            placeholder="Filter activities..."
             className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold focus:outline-none focus:ring-4 focus:ring-indigo-500/10"
             value={filter}
             onChange={e => setFilter(e.target.value)}

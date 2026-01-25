@@ -41,6 +41,7 @@ const AppContent: React.FC = () => {
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   /* -------------------- API SYNC -------------------- */
   const fetchState = async (bizId: string) => {
@@ -312,6 +313,7 @@ const AppContent: React.FC = () => {
           } else {
             setView('POS');
           }
+          setMobileSidebarOpen(false);
           fetchState(user.businessId || 'admin_node');
         }}
         backendUrl=""
@@ -320,11 +322,19 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="h-[100dvh] flex flex-col overflow-hidden bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="h-[100dvh] flex flex-col overflow-hidden bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 relative">
+      {/* Mobile Hamburger Trigger */}
+      <button
+        onClick={() => setMobileSidebarOpen(true)}
+        className="lg:hidden fixed top-6 left-6 z-40 w-12 h-12 bg-white rounded-2xl shadow-xl flex items-center justify-center text-slate-600 active:scale-95 border border-slate-100"
+      >
+        <i className="fa-solid fa-bars-staggered text-xl"></i>
+      </button>
+
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
           currentView={view}
-          setView={setView}
+          setView={(v) => { setView(v); setMobileSidebarOpen(false); }}
           user={currentUser}
           business={business}
           onLogout={onLogout}
@@ -333,6 +343,8 @@ const AppContent: React.FC = () => {
           isSyncing={isSyncing}
           lastSync={now()}
           backendAlive={true}
+          mobileOpen={mobileSidebarOpen}
+          onMobileClose={() => setMobileSidebarOpen(false)}
         />
 
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">

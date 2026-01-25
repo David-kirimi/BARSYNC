@@ -90,7 +90,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, products }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-16 md:pt-0">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Revenue</p>

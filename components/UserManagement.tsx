@@ -18,7 +18,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAdd, onUpdate,
   });
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 pt-16 md:pt-0">
       <div className="flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Business Staff</h2>

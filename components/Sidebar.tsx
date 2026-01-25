@@ -92,22 +92,22 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
         </div>
       </div>
 
-      {/* Mobile Bottom Nav (kept for quick access) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-950 flex justify-around p-2 z-50 border-t border-slate-800">
-        {visibleItems.slice(0, 5).map(item => (
-          <button
-            key={item.id}
-            onClick={() => setView(item.id)}
-            className={`flex flex-col items-center p-2 rounded-xl transition-all ${currentView === item.id ? 'text-orange-400' : 'text-slate-500'
-              }`}
-          >
-            <i className={`fa-solid ${item.icon} text-lg mb-1`}></i>
-            <span className="text-[9px] font-black uppercase tracking-tight">{item.label.split(' ')[0]}</span>
-          </button>
-        ))}
-        <button onClick={onLogout} className="flex flex-col items-center p-2 text-rose-500">
-          <i className="fa-solid fa-power-off text-lg"></i>
-          <span className="text-[8px] font-black uppercase tracking-tighter mt-1">Exit</span>
+      {/* Mobile Bottom Nav - Quick Access Only */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-950 flex justify-around items-center p-3 z-50 border-t border-slate-800 safe-area-bottom">
+        <button
+          onClick={() => setView('POS')}
+          className={`flex flex-col items-center gap-1 transition-all ${currentView === 'POS' ? 'text-orange-400' : 'text-slate-500'}`}
+        >
+          <i className="fa-solid fa-cash-register text-xl"></i>
+          <span className="text-[9px] font-black uppercase tracking-widest">Terminal</span>
+        </button>
+
+        <button
+          onClick={() => setView('INVENTORY')}
+          className={`flex flex-col items-center gap-1 transition-all ${currentView === 'INVENTORY' ? 'text-orange-400' : 'text-slate-500'}`}
+        >
+          <i className="fa-solid fa-boxes-stacked text-xl"></i>
+          <span className="text-[9px] font-black uppercase tracking-widest">Inventory</span>
         </button>
       </div>
 

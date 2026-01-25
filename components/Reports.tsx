@@ -64,7 +64,7 @@ const Reports: React.FC<ReportsProps> = ({ sales, businessName, logo }) => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pt-16 md:pt-0">
       {/* Filter Section */}
       <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm print:hidden">
         <div className="flex flex-col md:flex-row items-center gap-6">
@@ -170,7 +170,7 @@ const Reports: React.FC<ReportsProps> = ({ sales, businessName, logo }) => {
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Transaction Registry</h3>
             <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">{filteredSales.length} Logs</span>
           </div>
-          <div className="overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -193,6 +193,22 @@ const Reports: React.FC<ReportsProps> = ({ sales, businessName, logo }) => {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile View: High-Density Transaction Cards */}
+          <div className="md:hidden space-y-4">
+            {filteredSales.map(sale => (
+              <div key={sale.id} className="p-5 bg-slate-50 rounded-3xl border border-slate-100 flex flex-col gap-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest font-mono">#{sale.id}</span>
+                  <span className="text-sm font-black text-slate-900 tracking-tighter">Ksh {sale.totalAmount.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center text-[10px] font-bold text-slate-400">
+                  <span>{new Date(sale.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                  <span className="bg-white border px-2 py-0.5 rounded-lg uppercase tracking-widest text-[8px]">{sale.paymentMethod}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

@@ -140,7 +140,7 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
     <div className="space-y-6 pb-20 md:pb-0">
       {/* Header + Controls */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-        <div>
+        <div className="md:pt-0 pt-16">
           <h2 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight md:tracking-tighter uppercase leading-none">Stock Control</h2>
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider md:tracking-widest mt-2">Global Inventory Management</p>
         </div>
@@ -213,7 +213,35 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
       )}
 
       {/* Product Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      {/* Mobile-Specific List View (Visible on small screens only) */}
+      <div className="md:hidden space-y-3 pb-32">
+        {filteredProducts.map(p => (
+          <div key={p.id} className="bg-white rounded-3xl p-4 border border-slate-100 shadow-sm flex items-center gap-4 active:bg-slate-50 transition-all">
+            <div className="relative shrink-0">
+              <img src={p.imageUrl || 'https://via.placeholder.com/100'} className="w-16 h-16 rounded-2xl object-cover" />
+              {p.stock < 10 && (
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 rounded-full border-2 border-white"></div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0" onClick={() => openEdit(p)}>
+              <p className="text-[8px] font-black text-indigo-500 uppercase tracking-widest">{p.category}</p>
+              <h4 className="text-[13px] font-black text-slate-800 uppercase truncate mb-1">{p.name}</h4>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-black text-slate-900">Ksh {p.price}</p>
+                <p className={`text-[11px] font-black ${p.stock < 10 ? 'text-rose-500' : 'text-slate-400'}`}>{p.stock} PCS</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => handleQuickStock(p, 1)} className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center active:scale-90">
+                <i className="fa-solid fa-plus"></i>
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop Grid View (Hidden on Mobile) */}
+      <div className="hidden md:grid md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filteredProducts.map(p => (
           <div key={p.id} className="bg-white rounded-[2.5rem] p-5 border border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all group">
             <div className="flex gap-4 items-start mb-6">

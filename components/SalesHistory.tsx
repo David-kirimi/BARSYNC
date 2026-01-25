@@ -64,7 +64,7 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ sales }) => {
   };
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8 animate-fade-in pt-16 md:pt-0">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 print:hidden">
         <div className="bg-orange-950 p-8 rounded-[3rem] text-white shadow-2xl border border-orange-500/20">
           <p className="text-[10px] font-black opacity-50 uppercase tracking-[0.3em] mb-3">Total Revenue</p>

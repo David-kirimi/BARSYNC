@@ -44,7 +44,7 @@ const SubscriptionTerminal: React.FC<SubscriptionTerminalProps> = ({ business, o
     };
 
     return (
-        <div className="space-y-10 p-4 md:p-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
+        <div className="space-y-10 p-4 md:p-10 pt-20 md:pt-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
             <div className="text-center space-y-4">
                 <h1 className="text-4xl font-black text-slate-800 tracking-tighter uppercase">Subscription Hub</h1>
                 <p className="text-slate-500 font-medium max-w-md mx-auto">Scale your business with professional tools designed for efficiency.</p>
@@ -56,8 +56,8 @@ const SubscriptionTerminal: React.FC<SubscriptionTerminalProps> = ({ business, o
                         key={plan.id}
                         onClick={() => setSelectedPlan(plan.id as any)}
                         className={`cursor-pointer group relative p-8 rounded-[2.5rem] border-2 transition-all duration-300 ${selectedPlan === plan.id
-                                ? 'border-indigo-600 bg-white shadow-2xl scale-105 z-10'
-                                : 'border-slate-100 bg-slate-50/50 hover:border-slate-200 opacity-60'
+                            ? 'border-indigo-600 bg-white shadow-2xl scale-105 z-10'
+                            : 'border-slate-100 bg-slate-50/50 hover:border-slate-200 opacity-60'
                             }`}
                     >
                         {selectedPlan === plan.id && (
@@ -121,8 +121,8 @@ const SubscriptionTerminal: React.FC<SubscriptionTerminalProps> = ({ business, o
                             onClick={handlePaymentSubmit}
                             disabled={business.subscriptionStatus === 'Pending Approval'}
                             className={`w-full py-6 rounded-3xl font-black text-[11px] uppercase tracking-[0.2em] transition-all transform active:scale-95 shadow-xl ${business.subscriptionStatus === 'Pending Approval'
-                                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                                    : 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-indigo-500/20'
+                                ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                                : 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-indigo-500/20'
                                 }`}
                         >
                             {business.subscriptionStatus === 'Pending Approval' ? 'Wait for Approval' : 'Submit for Verification'}

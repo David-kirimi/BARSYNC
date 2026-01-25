@@ -19,7 +19,7 @@ const now = () => new Date().toISOString();
 
 /* -------------------- MAIN APP CONTENT -------------------- */
 const AppContent: React.FC = () => {
-  const { addToast } = useToast();
+  const { showToast: addToast } = useToast();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [view, setView] = useState<View>('POS');
   const [products, setProducts] = useState<Product[]>([]);

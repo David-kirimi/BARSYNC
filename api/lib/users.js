@@ -151,7 +151,26 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Admin management routes
+// Isolated business staff fetching
+router.get('/', async (req, res) => {
+    const { businessId } = req.query;
+    if (!businessId) return res.status(400).json({ error: "Missing businessId" });
+
+    const database = await connectToMongo();
+    if (!database) return res.status(503).json({ error: "Database offline" });
+
+    try {
+        const users = await database.collection('users').find({ businessId }).toArray();
+        const safeUsers = users.map(u => {
+            const { password, ...safe } = u;
+            return safe;
+        });
+        res.json(safeUsers);
+    } catch (err) {
+        res.status(500).json({ error: 'Fetch failed' });
+    }
+});
+
 router.get('/admin/businesses', async (req, res) => {
     const database = await connectToMongo();
     if (!database) return res.status(503).json({ error: "Database offline" });
@@ -188,6 +207,45 @@ router.post('/admin/businesses', async (req, res) => {
         res.status(201).json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Provisioning failed' });
+    }
+});
+
+router.put('/admin/businesses/:id', async (req, res) => {
+    const { id } = req.params;
+    const updateData = req.body;
+    const database = await connectToMongo();
+    if (!database) return res.status(503).json({ error: "Database offline" });
+    try {
+        await database.collection('businesses').updateOne({ id }, { $set: updateData });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Update failed' });
+    }
+});
+
+router.delete('/admin/businesses/:id', async (req, res) => {
+    const { id } = req.params;
+    const database = await connectToMongo();
+    if (!database) return res.status(503).json({ error: "Database offline" });
+    try {
+        await database.collection('businesses').deleteOne({ id });
+        // Optionally delete all users for this business too
+        await database.collection('users').deleteMany({ businessId: id });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Delete failed' });
+    }
+});
+
+router.post('/admin/users', async (req, res) => {
+    const database = await connectToMongo();
+    if (!database) return res.status(503).json({ error: "Database offline" });
+    try {
+        const user = req.body;
+        await database.collection('users').insertOne(user);
+        res.status(201).json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'User creation failed' });
     }
 });
 

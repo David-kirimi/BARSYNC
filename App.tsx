@@ -49,16 +49,26 @@ const AppContent: React.FC = () => {
       const [pRes, sRes, uRes, lRes] = await Promise.all([
         fetch(`/api/products?businessId=${bizId}`),
         fetch(`/api/sales?businessId=${bizId}`),
-        fetch(`/api/users/admin/businesses`), // Simplified for now
+        fetch(`/api/users?businessId=${bizId}`),
         fetch(`/api/auditLogs?businessId=${bizId}`)
       ]);
 
       if (pRes.ok) setProducts(await pRes.json());
       if (sRes.ok) setSales((await sRes.json()).reverse());
+      if (uRes.ok) setUsers(await uRes.json());
       if (lRes.ok) setAuditLogs((await lRes.json()).reverse());
+
+      // If Super Admin, fetch all businesses for the portal
+      if (currentUser?.role === Role.SUPER_ADMIN) {
+        const bRes = await fetch(`/api/users/admin/businesses`);
+        if (bRes.ok) setBusinesses(await bRes.json());
+
+        const allUsersRes = await fetch(`/api/auth/admin/users`);
+        if (allUsersRes.ok) setUsers(await allUsersRes.json());
+      }
     } catch (err) {
       console.error("Sync Error:", err);
-      addToast("Failed to fetch latest data from cloud", "error");
+      addToast("Failed to sync with cloud", "error");
     } finally {
       setIsSyncing(false);
     }
@@ -208,6 +218,15 @@ const AppContent: React.FC = () => {
             const cloudUsers = await usersRes.json();
             setUsers(cloudUsers);
           }
+          const bizRes = await fetch(`/api/auth/admin/businesses`);
+          if (bizRes.ok) {
+            setBusinesses(await bizRes.json());
+          }
+        } else {
+          const usersRes = await fetch(`/api/users?businessId=${bid}`);
+          if (usersRes.ok) {
+            setUsers(await usersRes.json());
+          }
         }
       } catch (err) {
         console.error('Sync Agent Error:', err);
@@ -250,6 +269,22 @@ const AppContent: React.FC = () => {
       }
     } catch (err) {
       addToast("Delete failed", "error");
+    }
+  };
+
+  const handleUpdateBusiness = async (updatedBiz: Business) => {
+    try {
+      const res = await fetch(`/api/auth/admin/businesses/${updatedBiz.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedBiz)
+      });
+      if (res.ok) {
+        setBusinesses(businesses.map(b => b.id === updatedBiz.id ? updatedBiz : b));
+        addToast("Business updated", "success");
+      }
+    } catch (err) {
+      addToast("Update failed", "error");
     }
   };
 
@@ -325,17 +360,23 @@ const AppContent: React.FC = () => {
                       return;
                     }
                     const userWithId: User = { ...newUser, id: Math.random().toString(36).substr(2, 9), businessId: business.id || 'local_biz', status: 'Active', updatedAt: now() };
-                    const newUsers = [...users, userWithId];
-                    setUsers(newUsers);
+
+                    try {
+                      const res = await fetch(`/api/auth/admin/users`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(userWithId)
+                      });
+                      if (res.ok) {
+                        setUsers([...users, userWithId]);
+                        addToast("Staff created successfully", "success");
+                      }
+                    } catch (err) {
+                      addToast("Failed to create staff", "error");
+                    }
                   }}
-                  onUpdate={(updatedUser) => {
-                    const newUsers = users.map(u => u.id === updatedUser.id ? { ...updatedUser, updatedAt: now() } : u);
-                    setUsers(newUsers);
-                  }}
-                  onDelete={(id) => {
-                    const newUsers = users.filter(u => u.id !== id);
-                    setUsers(newUsers);
-                  }}
+                  onUpdate={handleUpdateUser}
+                  onDelete={handleDeleteUser}
                 />
               )}
 
@@ -372,17 +413,30 @@ const AppContent: React.FC = () => {
                   allUsers={users}
                   onUpdateUser={handleUpdateUser}
                   onDeleteUser={handleDeleteUser}
-                  onAdd={(newBiz, initialUser) => {
+                  onAdd={async (newBiz, initialUser) => {
                     const bizId = Math.random().toString(36).substr(2, 9);
                     const createdBiz: Business = { ...newBiz, id: bizId, createdAt: now(), updatedAt: now(), paymentStatus: 'Pending', subscriptionPlan: 'Basic' };
-                    setBusinesses(prev => [...prev, createdBiz]);
-
                     const createdUser: User = { ...initialUser, id: Math.random().toString(36).substr(2, 9), businessId: bizId, status: 'Active', updatedAt: now() };
-                    setUsers(prev => [...prev, createdUser]);
+
+                    try {
+                      const res = await fetch(`/api/auth/admin/businesses`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ business: createdBiz, owner: createdUser })
+                      });
+                      if (res.ok) {
+                        setBusinesses(prev => [...prev, createdBiz]);
+                        // Only add to users list OR refetch
+                        addToast("Business & Owner provisioned on cloud", "success");
+                        // Trigger a refetch of all users to stay in sync
+                        const usersRes = await fetch(`/api/auth/admin/users`);
+                        if (usersRes.ok) setUsers(await usersRes.json());
+                      }
+                    } catch (err) {
+                      addToast("Provisioning failed", "error");
+                    }
                   }}
-                  onUpdate={(updatedBiz) => {
-                    setBusinesses(prev => prev.map(b => b.id === updatedBiz.id ? { ...updatedBiz, updatedAt: now() } : b));
-                  }}
+                  onUpdate={handleUpdateBusiness}
                 />
               )}
             </div>

@@ -32,49 +32,82 @@ app.use((req, res, next) => {
 });
 
 // Mount Modular Routers
-// We mount them both with and without /api prefix for robustness on different platforms
 app.use('/api/auth', usersRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/products', productsRouter);
 app.use('/api/sales', salesRouter);
 app.use('/api/auditLogs', auditLogsRouter);
 
-// Fallback for Vercel rewrites that might strip /api
+// Duplicate mounts for robustness
 app.use('/auth', usersRouter);
 app.use('/users', usersRouter);
 app.use('/products', productsRouter);
 app.use('/sales', salesRouter);
 app.use('/auditLogs', auditLogsRouter);
 
-// Basic health check
-app.get('/health', async (req, res) => {
-    const isConnected = await connectToMongo();
-    res.status(200).json({
-        status: 'active',
-        db: !!isConnected,
-        timestamp: new Date().toISOString()
+// Test Routes
+app.get('/api/test', (req, res) => res.json({ message: 'API /api/test is reachable' }));
+app.get('/test', (req, res) => res.json({ message: 'API /test is reachable' }));
+app.get('/api/auth/test', (req, res) => res.json({ message: 'API /api/auth/test is reachable' }));
+
+// Diagnostic Route
+app.get('/api/diag', (req, res) => {
+    res.json({
+        url: req.url,
+        path: req.path,
+        method: req.method,
+        baseUrl: req.baseUrl,
+        originalUrl: req.originalUrl,
+        params: req.params,
+        query: req.query,
+        vercel: !!process.env.VERCEL
     });
 });
 
-// Serve static assets from Vite build
-const distPath = path.join(__dirname, '..', 'dist');
-app.use(express.static(distPath));
-
-app.get('*', (req, res) => {
-    if (req.path.startsWith('/api/')) {
-        return res.status(404).json({ error: 'API route not found' });
+app.get('/health', async (req, res) => {
+    try {
+        const isConnected = await connectToMongo();
+        res.status(200).json({
+            status: 'active',
+            db: !!isConnected,
+            timestamp: new Date().toISOString()
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Health check failed' });
     }
-    res.sendFile(path.join(distPath, 'index.html'));
 });
 
-// Start server
-if (process.env.NODE_ENV !== 'test') {
+// API Diagnostic Catch-all for /api/*
+app.all('/api/*', (req, res) => {
+    console.log(`[API 404] No match for ${req.method} ${req.path}`);
+    res.status(404).json({
+        error: 'API route not found',
+        method: req.method,
+        path: req.path,
+        url: req.url,
+        suggestion: 'Check if the route is correctly mounted in api/index.js'
+    });
+});
+
+// For Vercel, we can also add a catch-all for anything else hitting this function
+app.all('*', (req, res) => {
+    res.status(404).json({
+        error: 'Backend endpoint not found',
+        path: req.path
+    });
+});
+
+// Start server locally
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
     app.listen(PORT, '0.0.0.0', () => {
-        console.log(`🚀 BarSync Node active on port ${PORT}`);
+        console.log(`🚀 BarSync Node local active on port ${PORT}`);
         connectToMongo().then(() => {
             seedDatabase();
         });
     });
 }
+
+// Ensure database connection is initialized for Vercel (side effect)
+connectToMongo().then(() => seedDatabase()).catch(console.error);
 
 export default app;

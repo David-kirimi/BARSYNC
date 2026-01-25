@@ -398,12 +398,14 @@ const AppContent: React.FC = () => {
                 />
               )}
 
-              {view === 'REPORTS' && (
-                <Reports sales={sales} businessName={business?.name || 'BarSync'} />
-              )}
-
-              {view === 'PROFILE' && (
-                <Profile user={currentUser} onUpdate={(u) => setCurrentUser(u)} />
+              {view === 'REPORTS' && <Reports sales={sales} businessName={business.name} logo={business.logo} />}
+              {view === 'PROFILE' && currentUser && (
+                <Profile
+                  user={currentUser}
+                  onUpdate={handleUpdateUser}
+                  business={business}
+                  onUpdateBusiness={handleUpdateBusiness}
+                />
               )}
 
               {view === 'AUDIT_LOGS' && (

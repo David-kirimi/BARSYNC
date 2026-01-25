@@ -5,9 +5,10 @@ import { Sale } from '../types';
 interface ReportsProps {
   sales: Sale[];
   businessName: string;
+  logo?: string;
 }
 
-const Reports: React.FC<ReportsProps> = ({ sales, businessName }) => {
+const Reports: React.FC<ReportsProps> = ({ sales, businessName, logo }) => {
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
@@ -36,7 +37,6 @@ const Reports: React.FC<ReportsProps> = ({ sales, businessName }) => {
   }, [filteredSales]);
 
   const exportPDF = () => {
-    // Better print trigger for PDF saving
     window.print();
   };
 
@@ -110,9 +110,13 @@ const Reports: React.FC<ReportsProps> = ({ sales, businessName }) => {
         <div className="flex flex-col md:flex-row justify-between items-start border-b border-slate-100 pb-10 mb-10">
           <div>
             <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white text-2xl">
-                <i className="fa-solid fa-beer-mug-empty"></i>
-              </div>
+              {logo ? (
+                <img src={logo} className="w-16 h-16 rounded-2xl object-cover shadow-lg border border-slate-100" alt="Logo" />
+              ) : (
+                <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center text-white text-3xl">
+                  <i className="fa-solid fa-beer-mug-empty"></i>
+                </div>
+              )}
               <h1 className="text-4xl font-black text-slate-800 tracking-tighter uppercase">{businessName}</h1>
             </div>
             <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-widest">Business Intelligence Report</p>

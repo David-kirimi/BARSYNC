@@ -20,6 +20,12 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout, offline, onSync, isSyncing, lastSync, backendAlive, canInstall, onInstall, mobileOpen, onMobileClose, business }) => {
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    return "Good evening";
+  };
   const menuItems = [
     { id: 'SUPER_ADMIN_PORTAL' as View, label: 'Platform Hub', icon: 'fa-server', roles: [Role.SUPER_ADMIN] },
     { id: 'POS' as View, label: 'Terminal', icon: 'fa-cash-register', roles: [Role.ADMIN, Role.BARTENDER, Role.OWNER] },
@@ -50,10 +56,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
         <div className="h-full flex flex-col overflow-hidden">
           <div className="p-6 border-b border-slate-800">
             <div className="flex items-center gap-3">
-              <img src={user.avatar} className="w-12 h-12 rounded-2xl shadow-lg" alt="" />
+              <img src={user.avatar} className="w-12 h-12 rounded-2xl shadow-lg border-2 border-orange-500/20" alt="" />
               <div className="flex-1 min-w-0">
-                <p className="font-black text-white truncate">{user.name}</p>
-                <p className="text-[10px] text-orange-400 font-bold uppercase tracking-widest">{user.role}</p>
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{getGreeting()},</p>
+                <p className="font-black text-white truncate text-lg tracking-tighter uppercase">{user.name.split(' ')[0]}</p>
               </div>
             </div>
           </div>
@@ -107,14 +113,23 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
 
       <aside className="hidden md:flex w-64 bg-slate-950 flex-col shrink-0 border-r border-slate-800 overflow-y-auto no-scrollbar">
         <div className="p-8">
-          <div className="flex items-center gap-3 mb-12">
-            <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg shadow-orange-500/20 rotate-3 cursor-pointer" onClick={() => setView('POS')}>
-              <i className="fa-solid fa-beer-mug-empty"></i>
+          <div className="flex items-center gap-3 mb-10 overflow-hidden">
+            {business.logo ? (
+              <img src={business.logo} className="w-12 h-12 rounded-xl object-cover shadow-lg cursor-pointer" onClick={() => setView('POS')} />
+            ) : (
+              <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg shadow-orange-500/20 rotate-3 cursor-pointer" onClick={() => setView('POS')}>
+                <i className="fa-solid fa-beer-mug-empty"></i>
+              </div>
+            )}
+            <div className="min-w-0 overflow-hidden">
+              <h2 className="text-white font-black text-lg tracking-tighter leading-tight uppercase truncate">{business.name || 'BARSYNC'}</h2>
+              <p className="text-[9px] text-orange-400 font-bold uppercase tracking-widest mt-0.5">Network Node</p>
             </div>
-            <div>
-              <h2 className="text-white font-black text-lg tracking-tighter leading-none uppercase">BARSYNC</h2>
-              <p className="text-[10px] text-orange-400 font-bold uppercase tracking-widest mt-1">Pure Online Mode</p>
-            </div>
+          </div>
+
+          <div className="mb-8 px-5">
+            <p className="text-[9px] text-slate-500 font-black uppercase tracking-[0.2em] mb-1">{getGreeting()},</p>
+            <p className="text-sm text-white font-black uppercase tracking-tight truncate">{user.name}</p>
           </div>
 
           <nav className="space-y-2">

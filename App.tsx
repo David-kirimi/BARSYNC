@@ -281,10 +281,23 @@ const AppContent: React.FC = () => {
       });
       if (res.ok) {
         setBusinesses(businesses.map(b => b.id === updatedBiz.id ? updatedBiz : b));
-        addToast("Business updated", "success");
+        addToast("Business configuration synced", "success");
       }
     } catch (err) {
       addToast("Update failed", "error");
+    }
+  };
+
+  const handleDeleteBusiness = async (id: string) => {
+    if (!confirm("CRITICAL: This will delete ALL data for this business and ALL associated staff accounts. Proceed?")) return;
+    try {
+      const res = await fetch(`/api/auth/admin/businesses/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setBusinesses(businesses.filter(b => b.id !== id));
+        addToast("Establishment and staff removed permanently", "success");
+      }
+    } catch (err) {
+      addToast("Delete failed", "error");
     }
   };
 
@@ -294,6 +307,11 @@ const AppContent: React.FC = () => {
         onLogin={(user, biz) => {
           setCurrentUser(user);
           if (biz) setBusiness(biz);
+          if (user.role === Role.SUPER_ADMIN) {
+            setView('SUPER_ADMIN_PORTAL');
+          } else {
+            setView('POS');
+          }
           fetchState(user.businessId || 'admin_node');
         }}
         backendUrl=""
@@ -437,6 +455,7 @@ const AppContent: React.FC = () => {
                     }
                   }}
                   onUpdate={handleUpdateBusiness}
+                  onDelete={handleDeleteBusiness}
                 />
               )}
             </div>

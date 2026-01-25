@@ -7,15 +7,16 @@ interface SuperAdminPortalProps {
   businesses: Business[];
   onAdd: (biz: Omit<Business, 'id' | 'createdAt'>, initialUser: Omit<User, 'id' | 'businessId' | 'status'>) => void;
   onUpdate: (biz: Business) => void;
+  onDelete?: (id: string) => void;
   onUpdateUser?: (user: User) => void;
   onDeleteUser?: (id: string) => void;
   sales: Sale[];
   allUsers?: User[];
 }
 
-const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, onUpdate, onUpdateUser, onDeleteUser, sales, allUsers = [] }) => {
+const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, onUpdate, onDelete, onUpdateUser, onDeleteUser, sales, allUsers = [] }) => {
   const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState<'NODES' | 'STAFF'>('NODES');
+  const [activeTab, setActiveTab] = useState<'NODES' | 'STAFF' | 'INBOX'>('NODES');
   const [showAdd, setShowAdd] = useState(false);
   const [editingBiz, setEditingBiz] = useState<Business | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -37,7 +38,8 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
 
   const totalRevenue = sales.reduce((sum, s) => sum + s.totalAmount, 0);
 
-  const filteredBusinesses = businesses.filter(b => b.name.toLowerCase().includes(search.toLowerCase()) || b.ownerName.toLowerCase().includes(search.toLowerCase()));
+  const filteredBusinesses = businesses.filter(b => (b.subscriptionStatus !== 'Pending Approval') && (b.name.toLowerCase().includes(search.toLowerCase()) || b.ownerName.toLowerCase().includes(search.toLowerCase())));
+  const pendingBusinesses = businesses.filter(b => b.subscriptionStatus === 'Pending Approval');
   const filteredUsers = allUsers.filter(u => u.name.toLowerCase().includes(search.toLowerCase()) || u.role.toLowerCase().includes(search.toLowerCase()));
 
   const handleAddPartner = () => {
@@ -50,7 +52,8 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
       name: initialOwner.name || newBiz.ownerName,
       role: Role.OWNER,
       avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${newBiz.ownerName}`,
-      password: initialOwner.password
+      password: initialOwner.password,
+      updatedAt: new Date().toISOString()
     });
 
     setShowAdd(false);
@@ -95,6 +98,15 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
         >
           Master Staff Directory
         </button>
+        <button
+          onClick={() => setActiveTab('INBOX')}
+          className={`relative px-8 py-3 text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'INBOX' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-slate-400 hover:text-slate-600'}`}
+        >
+          Partner Inbox
+          {pendingBusinesses.length > 0 && (
+            <span className="absolute top-0 right-0 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
+          )}
+        </button>
       </div>
 
       <div className="bg-white rounded-[3.5rem] border border-slate-200 overflow-hidden shadow-xl">
@@ -120,7 +132,7 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
           )}
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-[400px]">
           {activeTab === 'NODES' ? (
             <table className="w-full text-left">
               <thead>
@@ -144,31 +156,28 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
                     <td className="px-8 py-8">
                       <div className="flex flex-col gap-2">
                         <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border w-fit ${biz.subscriptionStatus === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                          biz.subscriptionStatus === 'Pending Approval' ? 'bg-amber-50 text-amber-600 border-amber-100 animate-pulse' :
+                          biz.subscriptionStatus === 'Trial' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
                             'bg-rose-50 text-rose-600 border-rose-100'
                           }`}>
                           {biz.subscriptionStatus}
                         </span>
-                        {biz.subscriptionStatus === 'Pending Approval' && (
-                          <button
-                            onClick={() => onUpdate({ ...biz, subscriptionStatus: 'Active', paymentStatus: 'Verified' })}
-                            className="text-[9px] font-black text-emerald-600 hover:text-emerald-700 uppercase tracking-widest underline text-left"
-                          >
-                            Approve Now
-                          </button>
-                        )}
                       </div>
                     </td>
                     <td className="px-10 py-8 text-right">
-                      <button onClick={() => setEditingBiz(biz)} className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-orange-600 transition-all">
-                        <i className="fa-solid fa-gear"></i>
-                      </button>
+                      <div className="flex justify-end gap-3">
+                        <button onClick={() => setEditingBiz(biz)} className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-orange-600 transition-all">
+                          <i className="fa-solid fa-gear"></i>
+                        </button>
+                        <button onClick={() => onDelete?.(biz.id)} className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-rose-600 transition-all">
+                          <i className="fa-solid fa-trash-can"></i>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          ) : (
+          ) : activeTab === 'STAFF' ? (
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
@@ -217,6 +226,46 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
                 ))}
               </tbody>
             </table>
+          ) : (
+            <div className="p-10 space-y-8">
+              {pendingBusinesses.length === 0 ? (
+                <div className="py-20 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">No pending partnership requests</div>
+              ) : (
+                <div className="grid grid-cols-1 gap-6">
+                  {pendingBusinesses.map(biz => (
+                    <div key={biz.id} className="bg-slate-50 border border-slate-100 rounded-[2.5rem] p-8 flex flex-col md:flex-row items-center justify-between gap-8 transition-all hover:shadow-lg">
+                      <div className="flex-1">
+                        <h4 className="text-xl font-black text-slate-800 uppercase tracking-tighter mb-2">{biz.name}</h4>
+                        <div className="flex gap-4 items-center">
+                          <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest bg-orange-50 px-3 py-1 rounded-lg border border-orange-100">Requesting {biz.subscriptionPlan}</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">By: {biz.ownerName}</span>
+                        </div>
+                        {biz.verificationNote && (
+                          <div className="mt-4 p-4 bg-white rounded-2xl border border-slate-200">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Transaction Message:</p>
+                            <p className="text-[11px] font-bold text-slate-600">{biz.verificationNote}</p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => onUpdate({ ...biz, subscriptionStatus: 'Active', paymentStatus: 'Verified' })}
+                          className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-100 active:scale-95 transition-all"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => onDelete?.(biz.id)}
+                          className="bg-rose-50 text-rose-600 px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest border border-rose-100 active:scale-95 transition-all"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

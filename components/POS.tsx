@@ -120,8 +120,8 @@ const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity
     }
   };
 
-  const handleCheckout = (method: 'Cash' | 'Mpesa') => {
-    const sale = onCheckout(method, custPhone);
+  const handleCheckout = async (method: 'Cash' | 'Mpesa') => {
+    const sale = await onCheckout(method, custPhone);
     if (sale) {
       setLastSale(sale);
       setShowReceipt(true);

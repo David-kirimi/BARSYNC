@@ -8,18 +8,23 @@ interface ReportsProps {
 }
 
 const Reports: React.FC<ReportsProps> = ({ sales, businessName }) => {
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().split('T')[0];
+  });
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
 
   const filteredSales = useMemo(() => {
     return sales.filter(s => {
+      if (!s.date) return false;
       const saleDate = s.date.split('T')[0];
       return saleDate >= startDate && saleDate <= endDate;
     });
   }, [sales, startDate, endDate]);
 
   const totalRevenue = useMemo(() => filteredSales.reduce((sum, s) => sum + s.totalAmount, 0), [filteredSales]);
-  
+
   const categorySales = useMemo(() => {
     const cats: Record<string, number> = {};
     filteredSales.forEach(s => {
@@ -44,11 +49,11 @@ const Reports: React.FC<ReportsProps> = ({ sales, businessName }) => {
       s.paymentMethod,
       s.salesPerson
     ]);
-    
-    let csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(",") + "\n" 
+
+    let csvContent = "data:text/csv;charset=utf-8,"
+      + headers.join(",") + "\n"
       + rows.map(e => e.join(",")).join("\n");
-    
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -65,8 +70,8 @@ const Reports: React.FC<ReportsProps> = ({ sales, businessName }) => {
         <div className="flex flex-col md:flex-row items-center gap-6">
           <div className="flex-1 w-full">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Start Date</label>
-            <input 
-              type="date" 
+            <input
+              type="date"
               className="w-full border border-slate-200 rounded-2xl px-5 py-3 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold"
               value={startDate}
               onChange={e => setStartDate(e.target.value)}
@@ -74,22 +79,22 @@ const Reports: React.FC<ReportsProps> = ({ sales, businessName }) => {
           </div>
           <div className="flex-1 w-full">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">End Date</label>
-            <input 
-              type="date" 
+            <input
+              type="date"
               className="w-full border border-slate-200 rounded-2xl px-5 py-3 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold"
               value={endDate}
               onChange={e => setEndDate(e.target.value)}
             />
           </div>
           <div className="pt-6 w-full md:w-auto flex gap-3">
-            <button 
+            <button
               onClick={exportCSV}
               className="px-6 py-3 bg-white border border-slate-200 text-slate-500 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"
             >
               <i className="fa-solid fa-file-csv"></i>
               CSV
             </button>
-            <button 
+            <button
               onClick={exportPDF}
               className="flex-1 md:flex-none px-8 py-3 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center justify-center gap-3 shadow-xl shadow-slate-200"
             >
@@ -133,7 +138,7 @@ const Reports: React.FC<ReportsProps> = ({ sales, businessName }) => {
                 </div>
                 <div className="flex-1 p-6 bg-slate-50 rounded-3xl border border-slate-100">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Avg Ticket</p>
-                  <p className="text-2xl font-black text-slate-800 tracking-tighter">Ksh {filteredSales.length ? Math.round(totalRevenue/filteredSales.length).toLocaleString() : 0}</p>
+                  <p className="text-2xl font-black text-slate-800 tracking-tighter">Ksh {filteredSales.length ? Math.round(totalRevenue / filteredSales.length).toLocaleString() : 0}</p>
                 </div>
               </div>
             </div>
@@ -175,7 +180,7 @@ const Reports: React.FC<ReportsProps> = ({ sales, businessName }) => {
                 {filteredSales.map(sale => (
                   <tr key={sale.id} className="hover:bg-slate-50 transition-colors">
                     <td className="py-5 px-4 font-mono text-[10px] font-bold text-indigo-500 uppercase tracking-wider">{sale.id}</td>
-                    <td className="py-5 px-4 text-xs font-medium text-slate-600">{new Date(sale.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short'})}</td>
+                    <td className="py-5 px-4 text-xs font-medium text-slate-600">{new Date(sale.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</td>
                     <td className="py-5 px-4">
                       <span className="text-[9px] font-black uppercase text-slate-400 tracking-[0.1em] border px-2 py-1 rounded-lg">{sale.paymentMethod}</span>
                     </td>
@@ -186,7 +191,7 @@ const Reports: React.FC<ReportsProps> = ({ sales, businessName }) => {
             </table>
           </div>
         </div>
-        
+
         <div className="mt-20 pt-10 border-t border-slate-100 flex justify-between items-center text-[8px] font-black text-slate-300 uppercase tracking-[0.4em]">
           <span>© BarSync System Generated</span>
           <span>Security Key: {Math.random().toString(36).substr(2, 10).toUpperCase()}</span>

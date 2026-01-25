@@ -220,9 +220,13 @@ const AppContent: React.FC = () => {
                   updateCartQuantity={updateCartQuantity}
                   removeFromCart={removeFromCart}
                   onCheckout={onCheckout}
-                  businessName={business.name}
-                  onReorder={() => { }} // Disabled reorder for pure online mode for now
+                  businessName={business?.name || 'BarSync'}
+                  onReorder={() => { }}
                 />
+              )}
+
+              {view === 'ANALYTICS' && (
+                <Dashboard sales={sales} products={products} />
               )}
 
               {view === 'INVENTORY' && (
@@ -250,7 +254,6 @@ const AppContent: React.FC = () => {
                     const userWithId: User = { ...newUser, id: Math.random().toString(36).substr(2, 9), businessId: business.id || 'local_biz', status: 'Active', updatedAt: now() };
                     const newUsers = [...users, userWithId];
                     setUsers(newUsers);
-                    // In a real app, we'd have a POST /api/users, but for now we use the sync pattern
                   }}
                   onUpdate={(updatedUser) => {
                     const newUsers = users.map(u => u.id === updatedUser.id ? { ...updatedUser, updatedAt: now() } : u);
@@ -264,7 +267,7 @@ const AppContent: React.FC = () => {
               )}
 
               {view === 'REPORTS' && (
-                <Reports sales={sales} />
+                <Reports sales={sales} businessName={business?.name || 'BarSync'} />
               )}
 
               {view === 'PROFILE' && (

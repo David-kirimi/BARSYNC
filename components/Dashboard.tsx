@@ -96,28 +96,28 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, products }) => {
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Revenue</p>
           <h4 className="text-2xl font-black text-slate-800 mt-1">Ksh {totalRev.toLocaleString()}</h4>
         </div>
-        <div className="bg-indigo-50 p-6 rounded-3xl border border-indigo-100 shadow-sm">
-          <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Gross Profit</p>
-          <h4 className="text-2xl font-black text-indigo-700 mt-1">Ksh {totalProfit.toLocaleString()}</h4>
+        <div className="bg-orange-50 p-6 rounded-3xl border border-orange-100 shadow-sm">
+          <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest">Gross Profit</p>
+          <h4 className="text-2xl font-black text-orange-700 mt-1">Ksh {totalProfit.toLocaleString()}</h4>
         </div>
       </div>
 
       {/* AI Insights Section */}
-      <div className="bg-gradient-to-br from-indigo-900 to-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden group border border-indigo-500/20">
+      <div className="bg-gradient-to-br from-orange-900 to-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden group border border-orange-500/20">
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-8 h-8 bg-indigo-500/30 rounded-lg flex items-center justify-center backdrop-blur-md border border-indigo-400/30">
-                <i className="fa-solid fa-wand-magic-sparkles text-indigo-300"></i>
+              <div className="w-8 h-8 bg-orange-500/30 rounded-lg flex items-center justify-center backdrop-blur-md border border-orange-400/30">
+                <i className="fa-solid fa-wand-magic-sparkles text-orange-300"></i>
               </div>
               <h3 className="font-black text-lg uppercase tracking-wider">Gemini Smart Insights</h3>
             </div>
             {insights ? (
-              <div className="mt-4 prose prose-invert max-w-none text-sm leading-relaxed text-indigo-100 font-medium">
+              <div className="mt-4 prose prose-invert max-w-none text-sm leading-relaxed text-orange-100 font-medium">
                 <div className="whitespace-pre-line">{insights}</div>
                 <button
                   onClick={() => setInsights(null)}
-                  className="mt-4 text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:text-white transition-colors"
+                  className="mt-4 text-[10px] font-black uppercase tracking-widest text-orange-400 hover:text-white transition-colors"
                 >
                   Clear Analysis
                 </button>
@@ -129,7 +129,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, products }) => {
           <button
             onClick={generateAIInsights}
             disabled={loadingInsights}
-            className="shrink-0 bg-indigo-500 hover:bg-indigo-400 text-white px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all shadow-xl shadow-indigo-500/20 active:scale-95 disabled:opacity-50 flex items-center gap-3"
+            className="shrink-0 bg-orange-500 hover:bg-orange-400 text-white px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all shadow-xl shadow-orange-500/20 active:scale-95 disabled:opacity-50 flex items-center gap-3"
           >
             {loadingInsights ? (
               <>
@@ -144,7 +144,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, products }) => {
             )}
           </button>
         </div>
-        <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px]"></div>
+        <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-orange-500/10 rounded-full blur-[80px]"></div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -159,8 +159,8 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, products }) => {
               <AreaChart data={hourlyData}>
                 <defs>
                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.1} />
+                    <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -170,7 +170,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, products }) => {
                   contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px' }}
                   labelStyle={{ fontWeight: 'bold', marginBottom: '4px' }}
                 />
-                <Area type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
+                <Area type="monotone" dataKey="revenue" stroke="#f97316" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -189,7 +189,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, products }) => {
                   cursor={{ fill: '#f8fafc' }}
                   contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                 />
-                <Bar dataKey="qty" fill="#6366f1" radius={[0, 8, 8, 0]} barSize={24} />
+                <Bar dataKey="qty" fill="#f97316" radius={[0, 8, 8, 0]} barSize={24} />
               </BarChart>
             </ResponsiveContainer>
           </div>

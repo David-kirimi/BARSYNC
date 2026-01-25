@@ -190,11 +190,11 @@ const Reports: React.FC<ReportsProps & { logo?: string }> = ({ sales, businessNa
                     </td>
                     <td className="py-5 px-4 text-xs font-medium text-slate-600">{new Date(sale.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</td>
                     <td className="py-5 px-4">
-                      <div className="flex flex-wrap gap-1 max-w-[200px]">
-                        {sale.items.map((i, idx) => (
-                          <span key={idx} className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded-md font-bold text-slate-500 truncate">
-                            {i.name} x{i.quantity}
-                          </span>
+                      <div className="flex flex-col gap-1">
+                        {sale.items?.map((i, idx) => (
+                          <div key={idx} className="text-[11px] font-bold text-slate-800 leading-none">
+                            {i.name} <span className="text-slate-400 font-medium">x{i.quantity}</span>
+                          </div>
                         ))}
                       </div>
                     </td>
@@ -218,7 +218,7 @@ const Reports: React.FC<ReportsProps & { logo?: string }> = ({ sales, businessNa
                 </div>
 
                 <div className="flex flex-wrap gap-1">
-                  {sale.items.map((i, idx) => (
+                  {sale.items?.map((i, idx) => (
                     <span key={idx} className="text-[10px] font-bold text-slate-500 bg-white border border-slate-100 px-2 py-0.5 rounded-lg">
                       {i.name} x{i.quantity}
                     </span>
@@ -242,9 +242,9 @@ const Reports: React.FC<ReportsProps & { logo?: string }> = ({ sales, businessNa
 
       {/* Digital Receipt Modal */}
       {selectedSale && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[3.5rem] w-full max-w-sm overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-300">
-            <div className="absolute top-0 left-0 w-full h-2 bg-indigo-500"></div>
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-[100] flex items-center justify-center p-4 print:p-0">
+          <div id="single-receipt" className="bg-white rounded-[3.5rem] w-full max-w-sm overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-300 print:shadow-none print:rounded-none">
+            <div className="absolute top-0 left-0 w-full h-2 bg-indigo-500 print:hidden"></div>
             <div className="p-10">
               <div className="text-center mb-8 border-b border-slate-50 pb-8">
                 {logo ? (
@@ -259,7 +259,7 @@ const Reports: React.FC<ReportsProps & { logo?: string }> = ({ sales, businessNa
               </div>
 
               <div className="space-y-4 mb-8">
-                {selectedSale.items.map((item, idx) => (
+                {selectedSale.items?.map((item, idx) => (
                   <div key={idx} className="flex justify-between items-center text-[12px] font-bold text-slate-700">
                     <span className="uppercase">{item.name} <span className="text-slate-400 lowercase italic">x{item.quantity}</span></span>
                     <span className="text-slate-900 tracking-tighter">Ksh {(item.price * item.quantity).toLocaleString()}</span>
@@ -278,10 +278,24 @@ const Reports: React.FC<ReportsProps & { logo?: string }> = ({ sales, businessNa
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => window.print()} className="py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95">Print</button>
+              <div className="grid grid-cols-2 gap-3 print:hidden">
+                <button
+                  onClick={() => {
+                    const originalTitle = document.title;
+                    document.title = `Receipt_${selectedSale.id}`;
+                    window.print();
+                    document.title = originalTitle;
+                  }}
+                  className="py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
+                >
+                  Print
+                </button>
                 <button onClick={() => setSelectedSale(null)} className="py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95">Close</button>
               </div>
+
+              <p className="hidden print:block text-center text-[8px] font-black text-slate-300 uppercase tracking-[0.4em] mt-10">
+                © BarSync Cloud Terminal
+              </p>
             </div>
           </div>
         </div>
@@ -292,23 +306,28 @@ const Reports: React.FC<ReportsProps & { logo?: string }> = ({ sales, businessNa
           body { background: white !important; }
           .print\\:hidden, aside, nav, header { display: none !important; }
           main { padding: 0 !important; margin: 0 !important; width: 100% !important; }
-          #printable-report { 
-            position: absolute; 
-            left: 0; 
-            top: 0; 
-            width: 100%; 
-            border: none; 
-            box-shadow: none; 
+          #printable-report, #single-receipt { 
+            position: absolute !important; 
+            left: 0 !important; 
+            top: 0 !important; 
+            width: 100% !important; 
+            border: none !important; 
+            box-shadow: none !important; 
             padding: 0 !important;
             margin: 0 !important;
+            background: white !important;
           }
           .printable-area { 
             display: block !important; 
             visibility: visible !important; 
           }
           .no-scrollbar { overflow: visible !important; }
+          
+          /* If single receipt is visible, hide the full report */
+          ${selectedSale ? '#printable-report { display: none !important; } #single-receipt { visibility: visible !important; }' : ''}
+          
           body * { visibility: hidden; }
-          #printable-report, #printable-report * { visibility: visible; }
+          #printable-report, #printable-report *, #single-receipt, #single-receipt * { visibility: visible !important; }
         }
         @page {
           size: auto;

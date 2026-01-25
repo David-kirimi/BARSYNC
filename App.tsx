@@ -180,6 +180,79 @@ const AppContent: React.FC = () => {
     }
   };
 
+  // Background Sync Agent
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const syncInterval = setInterval(async () => {
+      console.log('🔄 Background Sync Agent Active...');
+      try {
+        const bid = currentUser.businessId || business.id || 'admin_node';
+        if (bid !== 'local_biz') {
+          const res = await fetch(`/api/sales?businessId=${bid}`);
+          if (res.ok) {
+            const cloudSales = await res.json();
+            setSales(cloudSales);
+          }
+
+          const prodRes = await fetch(`/api/products?businessId=${bid}`);
+          if (prodRes.ok) {
+            const cloudProducts = await prodRes.json();
+            setProducts(cloudProducts);
+          }
+        }
+
+        if (currentUser.role === Role.SUPER_ADMIN) {
+          const usersRes = await fetch(`/api/auth/admin/users`);
+          if (usersRes.ok) {
+            const cloudUsers = await usersRes.json();
+            setUsers(cloudUsers);
+          }
+        }
+      } catch (err) {
+        console.error('Sync Agent Error:', err);
+      }
+    }, 15000); // Sync every 15 seconds
+
+    return () => clearInterval(syncInterval);
+  }, [currentUser, business.id]);
+
+  const onLogout = () => {
+    setCurrentUser(null);
+    setCart([]);
+    setView('LOGIN');
+    addToast("Logged out successfully", "success");
+  };
+
+  const handleUpdateUser = async (updatedUser: User) => {
+    try {
+      const res = await fetch(`/api/auth/admin/users/${updatedUser.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedUser)
+      });
+      if (res.ok) {
+        setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
+        addToast("User updated successfully", "success");
+      }
+    } catch (err) {
+      addToast("Update failed", "error");
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    if (!confirm("Are you sure? This action is permanent.")) return;
+    try {
+      const res = await fetch(`/api/auth/admin/users/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setUsers(users.filter(u => u.id !== id));
+        addToast("User removed", "success");
+      }
+    } catch (err) {
+      addToast("Delete failed", "error");
+    }
+  };
+
   if (!currentUser) {
     return (
       <Login
@@ -201,7 +274,7 @@ const AppContent: React.FC = () => {
           setView={setView}
           user={currentUser}
           business={business}
-          onLogout={() => setCurrentUser(null)}
+          onLogout={onLogout}
           offline={false}
           onSync={() => fetchState(currentUser.businessId || 'admin_node')}
           isSyncing={isSyncing}
@@ -296,6 +369,9 @@ const AppContent: React.FC = () => {
                 <SuperAdminPortal
                   businesses={businesses}
                   sales={sales}
+                  allUsers={users}
+                  onUpdateUser={handleUpdateUser}
+                  onDeleteUser={handleDeleteUser}
                   onAdd={(newBiz, initialUser) => {
                     const bizId = Math.random().toString(36).substr(2, 9);
                     const createdBiz: Business = { ...newBiz, id: bizId, createdAt: now(), updatedAt: now(), paymentStatus: 'Pending', subscriptionPlan: 'Basic' };

@@ -33,7 +33,7 @@ router.post('/login', async (req, res) => {
             return res.status(503).json({ error: "Database Connection Timeout" });
         }
 
-        const businessName = (req.body.businessName || "").trim();
+        let businessName = (req.body.businessName || "").trim();
         const username = (req.body.username || "").trim();
         const password = (req.body.password || "").trim();
 
@@ -46,10 +46,27 @@ router.post('/login', async (req, res) => {
         let business = null;
 
         if (isPlatformLogin) {
+            // Check for Super Admin first
             user = await usersColl.findOne({
                 name: { $regex: new RegExp(`^${username}$`, 'i') },
                 role: 'SUPER_ADMIN'
             });
+
+            // If not super admin, check if user is unique platform-wide (Unified Login)
+            if (!user) {
+                const userCandidates = await usersColl.find({
+                    name: { $regex: new RegExp(`^${username}$`, 'i') }
+                }).toArray();
+
+                if (userCandidates.length === 1) {
+                    user = userCandidates[0];
+                    if (user.businessId) {
+                        business = await bizColl.findOne({ id: user.businessId });
+                    }
+                } else if (userCandidates.length > 1) {
+                    return res.status(401).json({ error: 'Multiple accounts found. Please specify Workplace.' });
+                }
+            }
         } else {
             business = await bizColl.findOne({ name: { $regex: new RegExp(`^${businessName}$`, 'i') } });
 
@@ -73,7 +90,7 @@ router.post('/login', async (req, res) => {
 
         // Fetch snapshot state for online mode
         const syncColl = database.collection('sync_history');
-        const snapshot = await syncColl.findOne({ businessId: isPlatformLogin ? 'admin_node' : business.id });
+        const snapshot = await syncColl.findOne({ businessId: (user.role === 'SUPER_ADMIN') ? 'admin_node' : (business?.id || user.businessId) });
 
         const { password: _, ...userSafe } = user;
         res.status(200).json({ user: userSafe, business, state: snapshot || null });
@@ -147,6 +164,21 @@ router.get('/admin/businesses', async (req, res) => {
     }
 });
 
+router.get('/admin/users', async (req, res) => {
+    const database = await connectToMongo();
+    if (!database) return res.status(503).json({ error: "Database offline" });
+    try {
+        const users = await database.collection('users').find().toArray();
+        const safeUsers = users.map(u => {
+            const { password, ...safe } = u;
+            return safe;
+        });
+        res.json(safeUsers);
+    } catch (err) {
+        res.status(500).json({ error: 'Fetch failed' });
+    }
+});
+
 router.post('/admin/businesses', async (req, res) => {
     const database = await connectToMongo();
     if (!database) return res.status(503).json({ error: "Database offline" });
@@ -157,6 +189,31 @@ router.post('/admin/businesses', async (req, res) => {
         res.status(201).json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Provisioning failed' });
+    }
+});
+
+router.put('/admin/users/:id', async (req, res) => {
+    const { id } = req.params;
+    const updateData = req.body;
+    const database = await connectToMongo();
+    if (!database) return res.status(503).json({ error: "Database offline" });
+    try {
+        await database.collection('users').updateOne({ id }, { $set: updateData });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Update failed' });
+    }
+});
+
+router.delete('/admin/users/:id', async (req, res) => {
+    const { id } = req.params;
+    const database = await connectToMongo();
+    if (!database) return res.status(503).json({ error: "Database offline" });
+    try {
+        await database.collection('users').deleteOne({ id });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Delete failed' });
     }
 });
 

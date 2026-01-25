@@ -381,42 +381,67 @@ const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity
       </div>
 
       {showReceipt && lastSale && (
-        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
-          <div className="bg-white rounded-[3rem] w-full max-w-sm p-8 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-2 bg-emerald-500"></div>
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-4 z-[100] animate-fade-in">
+          <div className="bg-white rounded-[4rem] w-full max-w-md p-10 shadow-2xl relative overflow-hidden animate-slide-up-mobile">
+            {/* Design Accents */}
+            <div className="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-orange-400 to-amber-600"></div>
+            <div className="absolute -right-16 -top-16 w-40 h-40 bg-orange-50 rounded-full blur-3xl opacity-50"></div>
+
+            <div className="text-center mb-8 relative">
+              <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-[2rem] flex items-center justify-center text-4xl mx-auto mb-6 shadow-xl shadow-emerald-100 rotate-6">
                 <i className="fa-solid fa-circle-check"></i>
               </div>
-              <h3 className="text-2xl font-black text-slate-800 tracking-tighter uppercase">Success!</h3>
-              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Transaction Completed</p>
+              <h1 className="text-3xl font-black text-slate-800 tracking-tighter uppercase mb-2">Order Confirmed!</h1>
+              <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.3em]">{businessName} • Digital Receipt</p>
             </div>
 
-            <div className="bg-slate-50 rounded-3xl p-6 space-y-4 mb-8">
-              <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                <span>Total Amount</span>
-                <span>Ksh {lastSale.totalAmount.toLocaleString()}</span>
+            <div className="bg-slate-50/50 rounded-[2.5rem] p-8 space-y-6 border border-slate-100 mb-8 max-h-60 overflow-y-auto no-scrollbar">
+              <div className="space-y-4">
+                {lastSale.items.map((item, idx) => (
+                  <div key={idx} className="flex justify-between items-center text-xs font-bold text-slate-600">
+                    <span className="truncate pr-4 uppercase tracking-tight">{item.name} <span className="text-slate-400">x{item.quantity}</span></span>
+                    <span className="shrink-0 text-slate-900 tracking-tighter">Ksh {item.price * item.quantity}</span>
+                  </div>
+                ))}
               </div>
-              <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                <span>Payment</span>
-                <span className="text-emerald-600">{lastSale.paymentMethod}</span>
+
+              <div className="pt-6 border-t border-slate-200 border-dashed space-y-2">
+                <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  <span>Method</span>
+                  <span className="text-orange-600">{lastSale.paymentMethod}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-black text-slate-800 uppercase tracking-widest">Total Pay</span>
+                  <span className="text-2xl font-extrabold text-slate-900 tracking-tighter">Ksh {lastSale.totalAmount.toLocaleString()}</span>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               <button
                 onClick={shareReceiptWhatsApp}
-                className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-3 shadow-lg shadow-emerald-200"
+                className="w-full py-5 bg-orange-600 text-white rounded-[2rem] font-black text-[12px] uppercase tracking-[0.2em] hover:bg-orange-700 transition-all flex items-center justify-center gap-4 shadow-2xl shadow-orange-200 active:scale-95"
               >
-                <i className="fa-brands fa-whatsapp text-lg"></i>
-                Send to WhatsApp
+                <i className="fa-brands fa-whatsapp text-xl"></i>
+                Send to Customer
               </button>
-              <button
-                onClick={() => setShowReceipt(false)}
-                className="w-full py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-200 transition-all"
-              >
-                Done
-              </button>
+
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => window.print()}
+                  className="py-4 bg-white border-2 border-slate-100 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:border-orange-200 hover:text-orange-600 transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <i className="fa-solid fa-print"></i>
+                  Print
+                </button>
+                <button
+                  onClick={() => setShowReceipt(false)}
+                  className="py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-slate-200"
+                >
+                  <i className="fa-solid fa-arrow-right"></i>
+                  Next Order
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -15,182 +15,54 @@ import AuditLogs from './components/AuditLogs';
 import SubscriptionTerminal from './components/SubscriptionTerminal';
 import SuperAdminPortal from './components/SuperAdminPortal';
 
-/* -------------------- STORAGE KEYS -------------------- */
-const STORAGE_KEYS = {
-  PRODUCTS: 'pos_products_v2_safe', // Version bump to force fresh load logic if needed
-  SALES: 'pos_sales_v1',
-  USERS: 'pos_users_v1',
-  VIEW: 'pos_current_view_v1',
-};
-
-/* -------------------- HELPERS -------------------- */
 const now = () => new Date().toISOString();
-
-function loadFromStorage<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function saveToStorage<T>(key: string, value: T) {
-  localStorage.setItem(key, JSON.stringify(value));
-}
-
-/**
- * Merges two datasets based on ID and updatedAt timestamp.
- * - If an item exists in both, the one with the NEWER updatedAt wins.
- * - If an item exists in only one, it is kept.
- */
-function mergeDatasets<T extends { id: string; updatedAt: string }>(local: T[], incoming: T[]): T[] {
-  const map = new Map<string, T>();
-
-  // 1. Load all local items first
-  local.forEach(item => map.set(item.id, item));
-
-  // 2. Merge incoming items
-  incoming.forEach(item => {
-    const existing = map.get(item.id);
-    if (!existing) {
-      map.set(item.id, item);
-    } else {
-      const localTime = new Date(existing.updatedAt).getTime();
-      const incomingTime = new Date(item.updatedAt).getTime();
-      if (incomingTime > localTime) {
-        map.set(item.id, item);
-      }
-    }
-  });
-
-  return Array.from(map.values());
-}
-
-/* -------------------- PRODUCT INIT -------------------- */
-function initializeProducts(): Product[] {
-  // 1. Try to load existing local data
-  const stored = loadFromStorage<Product[]>(STORAGE_KEYS.PRODUCTS, []);
-
-  // 2. Prepare Template Data (as if it came from "cloud" or "factory reset")
-  const templates: Product[] = PRODUCT_TEMPLATES.map(t => ({
-    id: t.id,
-    name: t.name,
-    category: t.category,
-    price: t.defaultPrice,
-    stock: 0,
-    openingStock: 0,
-    additions: 0,
-    imageUrl: t.imageUrl,
-    createdAt: now(), // New fields
-    updatedAt: now(),
-  }));
-
-  // 3. If storage is empty, use templates. 
-  //    If storage exists, merge templates (in case we added new ones to constants.tsx) 
-  //    BUT existing local data with *same IDs* will likely be older than 'now()' so we must be careful.
-  //    Actually, for "first run" templates, we usually only want them if we have NOTHING.
-  //    
-  //    However, to be robust:
-  //    If we have NO stored data -> return Templates.
-  //    If we DO have stored data -> Return stored data. (Do NOT over-merge templates every reload, 
-  //    because templates have 'now()' which would overwrite user changes if we aren't careful about ID matching).
-
-  if (stored && stored.length > 0) {
-    return stored;
-  }
-
-  // Double check: If localStorage key exists but is empty array, it might be intentional
-  // BUT if key "pos_products_v2_safe" is completely missing, then it's a fresh install.
-  const rawCheck = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
-  if (rawCheck) {
-    const parsed = JSON.parse(rawCheck);
-    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-  }
-
-  // First time load
-  console.log('Initializing with default templates...');
-  saveToStorage(STORAGE_KEYS.PRODUCTS, templates);
-  return templates;
-}
 
 /* -------------------- MAIN APP CONTENT -------------------- */
 const AppContent: React.FC = () => {
+  const { addToast } = useToast();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [view, setView] = useState<View>(() =>
-    loadFromStorage<View>(STORAGE_KEYS.VIEW, 'POS')
-  );
-
-  const [products, setProducts] = useState<Product[]>(() =>
-    initializeProducts()
-  );
-
-  const [isOfflineMode, setIsOfflineMode] = useState(false);
-
-  const [sales, setSales] = useState<Sale[]>(() =>
-    loadFromStorage<Sale[]>(STORAGE_KEYS.SALES, [])
-  );
-
-  const [users, setUsers] = useState<User[]>(() =>
-    loadFromStorage<User[]>(STORAGE_KEYS.USERS, [])
-  );
-
-  const [businesses, setBusinesses] = useState<Business[]>(() =>
-    loadFromStorage<Business[]>('pos_businesses_v1', [])
-  );
-
-  // New State for Business and Audit Logs
-  const [business, setBusiness] = useState<any>(() =>
-    loadFromStorage<any>('pos_business_v1', {
-      id: 'local_biz',
-      name: 'My Bar',
-      ownerName: 'Admin',
-      mongoDatabase: '',
-      mongoCollection: '',
-      subscriptionStatus: 'Trial',
-      subscriptionPlan: 'Basic',
-      paymentStatus: 'Pending',
-      createdAt: now(),
-      updatedAt: now()
-    })
-  );
-
-  const [auditLogs, setAuditLogs] = useState<any[]>(() =>
-    loadFromStorage<any[]>('pos_audit_logs_v1', [])
-  );
-
+  const [view, setView] = useState<View>('POS');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [business, setBusiness] = useState<any>({
+    id: 'loading',
+    name: 'Loading...',
+    ownerName: 'Admin',
+    mongoDatabase: '',
+    mongoCollection: '',
+    subscriptionStatus: 'Trial',
+    subscriptionPlan: 'Basic',
+    paymentStatus: 'Pending',
+    createdAt: now(),
+    updatedAt: now()
+  });
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  /* -------------------- PERSISTENCE -------------------- */
-  useEffect(() => {
-    saveToStorage(STORAGE_KEYS.VIEW, view);
-  }, [view]);
+  /* -------------------- API SYNC -------------------- */
+  const fetchState = async (bizId: string) => {
+    setIsSyncing(true);
+    try {
+      const [pRes, sRes, uRes, lRes] = await Promise.all([
+        fetch(`/api/products?businessId=${bizId}`),
+        fetch(`/api/sales?businessId=${bizId}`),
+        fetch(`/api/users/admin/businesses`), // Simplified for now
+        fetch(`/api/auditLogs?businessId=${bizId}`)
+      ]);
 
-  useEffect(() => {
-    // Determine if we need to save. 
-    // In a real app with cloud sync, here we would also trigger a 
-    // "pushToCloud" if the data changed.
-    if (products.length > 0) {
-      saveToStorage(STORAGE_KEYS.PRODUCTS, products);
+      if (pRes.ok) setProducts(await pRes.json());
+      if (sRes.ok) setSales((await sRes.json()).reverse());
+      if (lRes.ok) setAuditLogs((await lRes.json()).reverse());
+    } catch (err) {
+      console.error("Sync Error:", err);
+      addToast("Failed to fetch latest data from cloud", "error");
+    } finally {
+      setIsSyncing(false);
     }
-  }, [products]);
-
-  useEffect(() => {
-    saveToStorage(STORAGE_KEYS.SALES, sales);
-  }, [sales]);
-
-  useEffect(() => {
-    saveToStorage(STORAGE_KEYS.USERS, users);
-  }, [users]);
-
-  // Persist new state
-  useEffect(() => {
-    saveToStorage('pos_business_v1', business);
-  }, [business]);
-
-  useEffect(() => {
-    saveToStorage('pos_audit_logs_v1', auditLogs);
-  }, [auditLogs]);
+  };
 
   /* -------------------- CART LOGIC -------------------- */
   const addToCart = (product: Product) => {
@@ -219,85 +91,72 @@ const AppContent: React.FC = () => {
     }));
   };
 
-  /* -------------------- SYNC & REFRESH -------------------- */
-  const reloadData = () => {
-    setProducts(loadFromStorage<Product[]>(STORAGE_KEYS.PRODUCTS, []));
-    setSales(loadFromStorage<Sale[]>(STORAGE_KEYS.SALES, []));
-    setUsers(loadFromStorage<User[]>(STORAGE_KEYS.USERS, []));
-    setBusiness(loadFromStorage<any>('pos_business_v1', business)); // Keep fallback
-    setAuditLogs(loadFromStorage<any[]>('pos_audit_logs_v1', []));
-  };
-
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      // Auto-refresh when another tab updates storage
-      if (e.key && Object.values(STORAGE_KEYS).includes(e.key)) {
-        reloadData();
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
-  const handleSync = () => {
-    // Simulate cloud sync or just force local reload
-    reloadData();
-    return new Promise<void>((resolve) => setTimeout(resolve, 1000));
-  };
-
   /* -------------------- MUTATIONS -------------------- */
-  const onCheckout = (method: 'Cash' | 'Mpesa', customerPhone?: string): Sale | undefined => {
-    if (cart.length === 0) return undefined;
+  const onCheckout = async (method: 'Cash' | 'Mpesa', customerPhone?: string): Promise<Sale | undefined> => {
+    if (cart.length === 0 || !currentUser) return undefined;
 
     const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
     const newSale: Sale = {
       id: Math.random().toString(36).substr(2, 9).toUpperCase(),
-      businessId: currentUser?.businessId || 'offline_biz',
+      businessId: currentUser.businessId,
       date: now(),
       items: cart,
       totalAmount,
       paymentMethod: method,
-      salesPerson: currentUser?.name || 'Unknown',
+      salesPerson: currentUser.name,
       customerPhone,
     };
 
-    // Update Sales
+    // Update Local State for UI responsiveness
     setSales(prev => [newSale, ...prev]);
-
-    // Update Stock
-    setProducts(prev =>
-      prev.map(p => {
-        const item = cart.find(i => i.id === p.id);
-        if (!item) return p;
-        return {
-          ...p,
-          stock: Math.max(0, p.stock - item.quantity),
-          updatedAt: now(), // CRITAL: Update timestamp
-        };
-      })
-    );
-
-    // Clear Cart
+    const updatedProducts = products.map(p => {
+      const item = cart.find(i => i.id === p.id);
+      if (!item) return p;
+      return { ...p, stock: Math.max(0, p.stock - item.quantity), updatedAt: now() };
+    });
+    setProducts(updatedProducts);
     setCart([]);
+
+    // Push to Cloud
+    try {
+      await Promise.all([
+        fetch('/api/sales', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessId: currentUser.businessId, sale: newSale })
+        }),
+        fetch('/api/products/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessId: currentUser.businessId, products: updatedProducts })
+        })
+      ]);
+      addToast("Sale recorded on cloud", "success");
+    } catch (err) {
+      addToast("Cloud sync failed. Data may be inconsistent.", "error");
+    }
+
     return newSale;
   };
 
-  const handleProductUpdate = (updated: Product) => {
-    // When manually updating, force new timestamp
+  const handleProductUpdate = async (updated: Product) => {
     const productWithTimestamp = { ...updated, updatedAt: now() };
+    const newProducts = products.map(p => p.id === updated.id ? productWithTimestamp : p);
+    setProducts(newProducts);
 
-    setProducts(prev =>
-      prev.map(p => p.id === updated.id ? productWithTimestamp : p)
-    );
+    try {
+      await fetch('/api/products/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId: currentUser?.businessId, products: newProducts })
+      });
+      addToast("Inventory updated on cloud", "success");
+    } catch (err) {
+      addToast("Cloud inventory update failed", "error");
+    }
   };
 
-  const handleProductReorder = (newOrder: Product[]) => {
-    setProducts(newOrder);
-  };
-
-
-  const handleProductAdd = (newProductData: Omit<Product, 'id' | 'openingStock' | 'additions' | 'createdAt' | 'updatedAt'>) => {
+  const handleProductAdd = async (newProductData: Omit<Product, 'id' | 'openingStock' | 'additions' | 'createdAt' | 'updatedAt'>) => {
     const newProduct: Product = {
       ...newProductData,
       id: Math.random().toString(36).substr(2, 9),
@@ -306,23 +165,28 @@ const AppContent: React.FC = () => {
       createdAt: now(),
       updatedAt: now(),
     };
-    setProducts(prev => [...prev, newProduct]);
+    const newProducts = [...products, newProduct];
+    setProducts(newProducts);
+
+    try {
+      await fetch('/api/products/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId: currentUser?.businessId, products: newProducts })
+      });
+      addToast("New product added to cloud", "success");
+    } catch (err) {
+      addToast("Cloud addition failed", "error");
+    }
   };
 
   if (!currentUser) {
     return (
       <Login
-
         onLogin={(user, biz) => {
           setCurrentUser(user);
           if (biz) setBusiness(biz);
-          // If business ID matches demo or manual check, set offline. 
-          // Simpler: Check if we are "demo_user" which comes from offline mode
-          if (user.id === 'demo_user' || user.businessId === 'bus_demo') {
-            setIsOfflineMode(true);
-          } else {
-            setIsOfflineMode(false);
-          }
+          fetchState(user.businessId || 'admin_node');
         }}
         backendUrl=""
       />
@@ -338,21 +202,16 @@ const AppContent: React.FC = () => {
           user={currentUser}
           business={business}
           onLogout={() => setCurrentUser(null)}
-          offline={isOfflineMode}
-          onSync={handleSync}
-          isSyncing={false}
-          lastSync={now()} // Just to show recent
+          offline={false}
+          onSync={() => fetchState(currentUser.businessId || 'admin_node')}
+          isSyncing={isSyncing}
+          lastSync={now()}
           backendAlive={true}
         />
 
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
           <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-8 scroll-smooth" id="main-scroll">
             <div className="max-w-[1600px] mx-auto h-full">
-              {/* DASHBOARD / ANALYTICS */}
-              {(view === 'ANALYTICS' || view === 'POS' && false) && (
-                <Dashboard sales={sales} products={products} />
-              )}
-
               {view === 'POS' && (
                 <POS
                   products={products}
@@ -362,7 +221,7 @@ const AppContent: React.FC = () => {
                   removeFromCart={removeFromCart}
                   onCheckout={onCheckout}
                   businessName={business.name}
-                  onReorder={handleProductReorder}
+                  onReorder={() => { }} // Disabled reorder for pure online mode for now
                 />
               )}
 
@@ -382,20 +241,24 @@ const AppContent: React.FC = () => {
               {view === 'USER_MANAGEMENT' && (
                 <UserManagement
                   users={users}
-                  onAdd={(newUser) => {
+                  onAdd={async (newUser) => {
                     const exists = users.some(u => u.name.toLowerCase() === newUser.name.toLowerCase());
                     if (exists) {
-                      alert("User with this name already exists!"); // Simple check, Toast would be better but props not drilling
+                      addToast("User with this name already exists!", "error");
                       return;
                     }
                     const userWithId: User = { ...newUser, id: Math.random().toString(36).substr(2, 9), businessId: business.id || 'local_biz', status: 'Active', updatedAt: now() };
-                    setUsers(prev => [...prev, userWithId]);
+                    const newUsers = [...users, userWithId];
+                    setUsers(newUsers);
+                    // In a real app, we'd have a POST /api/users, but for now we use the sync pattern
                   }}
                   onUpdate={(updatedUser) => {
-                    setUsers(prev => prev.map(u => u.id === updatedUser.id ? { ...updatedUser, updatedAt: now() } : u));
+                    const newUsers = users.map(u => u.id === updatedUser.id ? { ...updatedUser, updatedAt: now() } : u);
+                    setUsers(newUsers);
                   }}
                   onDelete={(id) => {
-                    setUsers(prev => prev.filter(u => u.id !== id));
+                    const newUsers = users.filter(u => u.id !== id);
+                    setUsers(newUsers);
                   }}
                 />
               )}
@@ -436,7 +299,7 @@ const AppContent: React.FC = () => {
                     setBusinesses(prev => [...prev, createdBiz]);
 
                     const createdUser: User = { ...initialUser, id: Math.random().toString(36).substr(2, 9), businessId: bizId, status: 'Active', updatedAt: now() };
-                    setUsers(prev => [...prev, createdUser]); // Add the new owner to the global user list
+                    setUsers(prev => [...prev, createdUser]);
                   }}
                   onUpdate={(updatedBiz) => {
                     setBusinesses(prev => prev.map(b => b.id === updatedBiz.id ? { ...updatedBiz, updatedAt: now() } : b));

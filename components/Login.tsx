@@ -14,19 +14,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showDemoOption, setShowDemoOption] = useState(false);
-  const [view, setView] = useState<'LOGIN' | 'REGISTER' | 'OFFLINE_CONFIRM'>('LOGIN');
-
-  // If it's taking too long, automatically show the demo option
-  useEffect(() => {
-    let timer: number;
-    if (isSubmitting) {
-      timer = window.setTimeout(() => {
-        setShowDemoOption(true);
-      }, 4000);
-    }
-    return () => clearTimeout(timer);
-  }, [isSubmitting]);
+  const [view, setView] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
 
   const handleLoginAttempt = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,10 +24,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-    const cleanBusiness = businessName.trim();
-    const cleanUsername = username.trim();
-    const cleanPassword = password.trim();
-
     try {
       const targetUrl = backendUrl ? `${backendUrl}/api/auth/login` : '/api/auth/login';
 
@@ -47,21 +31,18 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          businessName: cleanBusiness,
-          username: cleanUsername,
-          password: cleanPassword
+          businessName: businessName.trim(),
+          username: username.trim(),
+          password: password.trim()
         }),
         signal: controller.signal
-      }).catch(err => {
-        if (err.name === 'AbortError') throw new Error("TIMEOUT");
-        throw err; // Re-throw CORS or network errors
       });
 
       clearTimeout(timeoutId);
 
       const contentType = response.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("INVALID_RESPONSE");
+        throw new Error("Invalid server response");
       }
 
       const result = await response.json();
@@ -74,43 +55,15 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
       onLogin(result.user, result.business, result.state);
     } catch (err: any) {
       clearTimeout(timeoutId);
-      console.error("Login System Error:", err);
-
-      setShowDemoOption(true);
-
-      if (err.message === "TIMEOUT") {
+      console.error("Login Error:", err);
+      if (err.name === 'AbortError') {
         setError('Gateway timeout. Server may be sleeping.');
-      } else if (err.message === "INVALID_RESPONSE") {
-        setError('Cloud routing error. Using local mirror is recommended.');
-      } else if (err.name === 'TypeError') {
-        setError('CORS Blocked: Browser prevented connection to backend.');
       } else {
         setError(err.message || 'Authentication Service Unavailable');
       }
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const enterDemoMode = () => {
-    const mockUser: User = {
-      id: 'demo_user',
-      name: username || 'STAFF',
-      role: (username && username.toUpperCase() === 'SLIEM') ? Role.SUPER_ADMIN : (businessName ? Role.ADMIN : Role.BARTENDER),
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username || 'Demo'}`,
-      businessId: 'bus_demo',
-      status: 'Active',
-      updatedAt: new Date().toISOString()
-    };
-
-    // In a real local mirror, we would check the 'users' list from localStorage here
-    // But since this is a mock generator, we assume the demo user is Active.
-    // However, if we were authenticating against a local DB, we MUST check status.
-    if (mockUser.status !== 'Active') {
-      setError("Access Revoked");
-      return;
-    }
-    onLogin(mockUser);
   };
 
   return (
@@ -195,86 +148,30 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
                       </>
                     )}
                   </button>
-
-                  {(showDemoOption || !isSubmitting) && (
-                    <button
-                      type="button"
-                      onClick={() => setView('OFFLINE_CONFIRM')}
-                      className="w-full py-4 bg-slate-100 text-slate-600 border border-slate-200 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-200 transition-all"
-                    >
-                      <i className="fa-solid fa-plug-circle-xmark mr-2"></i>
-                      Local Mirror (Offline)
-                    </button>
-                  )}
                 </div>
               </form>
+
+              <div className="pt-6 border-t border-slate-50 text-center space-y-4">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-loose">
+                  New Business? <button onClick={() => setView('REGISTER')} className="text-indigo-600 hover:text-indigo-700 underline px-2">Register Terminal</button>
+                </p>
+                <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest flex items-center justify-center gap-2">
+                  <i className="fa-solid fa-shield-check"></i> End-to-End Encryption Active
+                </p>
+              </div>
             </>
-          ) : view === 'REGISTER' ? (
+          ) : (
             <Register
               backendUrl={backendUrl}
               onBack={() => setView('LOGIN')}
               onSuccess={(user, biz) => onLogin(user, biz)}
             />
-          ) : null}
-
-          {/* Offline Mode Disclaimer Modal */}
-          {showDemoOption && view === 'OFFLINE_CONFIRM' && (
-            <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-6 z-[200]">
-              <div className="bg-white rounded-[3rem] w-full max-w-sm p-8 shadow-2xl relative overflow-hidden animate-scale-in">
-                <div className="absolute top-0 left-0 w-full h-2 bg-amber-500"></div>
-                <div className="text-center mb-6">
-                  <div className="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 animate-pulse">
-                    <i className="fa-solid fa-triangle-exclamation"></i>
-                  </div>
-                  <h3 className="text-2xl font-black text-slate-800 tracking-tighter uppercase">Offline Mode</h3>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Single Device Restriction</p>
-                </div>
-
-                <div className="bg-amber-50 rounded-2xl p-5 mb-6 border border-amber-100">
-                  <p className="text-xs font-bold text-amber-800 leading-relaxed text-center">
-                    Data created in Offline Mode stays on this device only.
-                    <br /><br />
-                    To prevent conflicts, <span className="underline decoration-2 decoration-amber-500/50">DO NOT</span> use other devices until you reconnect and sync this one.
-                  </p>
-                </div>
-
-                <div className="space-y-3">
-                  <button
-                    onClick={enterDemoMode}
-                    className="w-full py-4 bg-amber-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-amber-700 transition-all shadow-xl shadow-amber-200 active:scale-95"
-                  >
-                    I Understand, Proceed
-                  </button>
-                  <button
-                    onClick={() => setView('LOGIN')}
-                    className="w-full py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
           )}
 
-          <div className="pt-6 border-t border-slate-50 text-center space-y-4">
-            {view === 'LOGIN' ? (
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-loose">
-                New Business? <button onClick={() => setView('REGISTER')} className="text-indigo-600 hover:text-indigo-700 underline px-2">Register Terminal</button>
-              </p>
-            ) : (
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-loose">
-                Already registered? <button onClick={() => setView('LOGIN')} className="text-indigo-600 hover:text-indigo-700 underline px-2">Login to Terminal</button>
-              </p>
-            )}
-            <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest flex items-center justify-center gap-2">
-              <i className="fa-solid fa-shield-check"></i> End-to-End Encryption Active
-            </p>
+          <div className="mt-12 text-center space-y-2">
+            <p className="text-[10px] font-black text-indigo-400/60 uppercase tracking-[0.3em]">System Developed by SLIEMTECH</p>
+            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">© {new Date().getFullYear()} BARSYNC • All Rights Reserved</p>
           </div>
-        </div>
-
-        <div className="mt-12 text-center space-y-2">
-          <p className="text-[10px] font-black text-indigo-400/60 uppercase tracking-[0.3em]">System Developed by SLIEMTECH</p>
-          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">© {new Date().getFullYear()} BARSYNC • All Rights Reserved</p>
         </div>
       </div>
 

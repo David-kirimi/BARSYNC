@@ -107,8 +107,17 @@ const AppContent: React.FC = () => {
     if (cart.length === 0 || !currentUser) return undefined;
 
     const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const formatDateId = () => {
+      const d = new Date();
+      const yy = d.getFullYear().toString().slice(-2);
+      const mm = (d.getMonth() + 1).toString().padStart(2, '0');
+      const dd = d.getDate().toString().padStart(2, '0');
+      const rand = Math.random().toString(36).substr(2, 4).toUpperCase();
+      return `${yy}${mm}${dd}-${rand}`;
+    };
+
     const newSale: Sale = {
-      id: Math.random().toString(36).substr(2, 9).toUpperCase(),
+      id: formatDateId(),
       businessId: currentUser.businessId,
       date: now(),
       items: cart,

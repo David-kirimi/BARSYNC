@@ -8,7 +8,8 @@ interface ReportsProps {
   logo?: string;
 }
 
-const Reports: React.FC<ReportsProps> = ({ sales, businessName, logo }) => {
+const Reports: React.FC<ReportsProps & { logo?: string }> = ({ sales, businessName, logo }) => {
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
@@ -176,6 +177,7 @@ const Reports: React.FC<ReportsProps> = ({ sales, businessName, logo }) => {
                 <tr className="border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                   <th className="py-5 px-4">Identifier</th>
                   <th className="py-5 px-4">Date & Time</th>
+                  <th className="py-5 px-4">Items / Qty</th>
                   <th className="py-5 px-4">Method</th>
                   <th className="py-5 px-4 text-right">Settlement (Ksh)</th>
                 </tr>
@@ -183,8 +185,19 @@ const Reports: React.FC<ReportsProps> = ({ sales, businessName, logo }) => {
               <tbody className="divide-y divide-slate-50">
                 {filteredSales.map(sale => (
                   <tr key={sale.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-5 px-4 font-mono text-[10px] font-bold text-indigo-500 uppercase tracking-wider">{sale.id}</td>
+                    <td className="py-5 px-4 font-mono text-[10px] font-bold text-indigo-500 uppercase tracking-wider">
+                      <button onClick={() => setSelectedSale(sale)} className="hover:underline">#{sale.id}</button>
+                    </td>
                     <td className="py-5 px-4 text-xs font-medium text-slate-600">{new Date(sale.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</td>
+                    <td className="py-5 px-4">
+                      <div className="flex flex-wrap gap-1 max-w-[200px]">
+                        {sale.items.map((i, idx) => (
+                          <span key={idx} className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded-md font-bold text-slate-500 truncate">
+                            {i.name} x{i.quantity}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
                     <td className="py-5 px-4">
                       <span className="text-[9px] font-black uppercase text-slate-400 tracking-[0.1em] border px-2 py-1 rounded-lg">{sale.paymentMethod}</span>
                     </td>
@@ -198,12 +211,21 @@ const Reports: React.FC<ReportsProps> = ({ sales, businessName, logo }) => {
           {/* Mobile View: High-Density Transaction Cards */}
           <div className="md:hidden space-y-4">
             {filteredSales.map(sale => (
-              <div key={sale.id} className="p-5 bg-slate-50 rounded-3xl border border-slate-100 flex flex-col gap-3">
+              <div key={sale.id} className="p-5 bg-slate-50 rounded-3xl border border-slate-100 flex flex-col gap-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest font-mono">#{sale.id}</span>
+                  <button onClick={() => setSelectedSale(sale)} className="text-[9px] font-black text-indigo-500 uppercase tracking-widest font-mono hover:underline">#{sale.id}</button>
                   <span className="text-sm font-black text-slate-900 tracking-tighter">Ksh {sale.totalAmount.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between items-center text-[10px] font-bold text-slate-400">
+
+                <div className="flex flex-wrap gap-1">
+                  {sale.items.map((i, idx) => (
+                    <span key={idx} className="text-[10px] font-bold text-slate-500 bg-white border border-slate-100 px-2 py-0.5 rounded-lg">
+                      {i.name} x{i.quantity}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 pt-2 border-t border-slate-100">
                   <span>{new Date(sale.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
                   <span className="bg-white border px-2 py-0.5 rounded-lg uppercase tracking-widest text-[8px]">{sale.paymentMethod}</span>
                 </div>
@@ -217,6 +239,53 @@ const Reports: React.FC<ReportsProps> = ({ sales, businessName, logo }) => {
           <span>Security Key: {Math.random().toString(36).substr(2, 10).toUpperCase()}</span>
         </div>
       </div>
+
+      {/* Digital Receipt Modal */}
+      {selectedSale && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[3.5rem] w-full max-w-sm overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-300">
+            <div className="absolute top-0 left-0 w-full h-2 bg-indigo-500"></div>
+            <div className="p-10">
+              <div className="text-center mb-8 border-b border-slate-50 pb-8">
+                {logo ? (
+                  <img src={logo} className="w-16 h-16 rounded-2xl object-cover mx-auto mb-4 border border-slate-100" alt="Logo" />
+                ) : (
+                  <div className="w-16 h-16 bg-slate-900 rounded-2xl mx-auto flex items-center justify-center text-white text-2xl mb-4">
+                    <i className="fa-solid fa-beer-mug-empty"></i>
+                  </div>
+                )}
+                <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">{businessName}</h3>
+                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mt-1">Transaction Receipt</p>
+              </div>
+
+              <div className="space-y-4 mb-8">
+                {selectedSale.items.map((item, idx) => (
+                  <div key={idx} className="flex justify-between items-center text-[12px] font-bold text-slate-700">
+                    <span className="uppercase">{item.name} <span className="text-slate-400 lowercase italic">x{item.quantity}</span></span>
+                    <span className="text-slate-900 tracking-tighter">Ksh {(item.price * item.quantity).toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t border-slate-100 pt-6 space-y-3 mb-10">
+                <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                  <span>ID: <span className="text-indigo-500 font-mono">#{selectedSale.id}</span></span>
+                  <span>{new Date(selectedSale.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-black text-slate-800 uppercase">Total</span>
+                  <span className="text-3xl font-black text-slate-900 tracking-tighter">Ksh {selectedSale.totalAmount.toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => window.print()} className="py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95">Print</button>
+                <button onClick={() => setSelectedSale(null)} className="py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @media print {

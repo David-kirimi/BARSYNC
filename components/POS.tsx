@@ -12,7 +12,7 @@ interface POSProps {
   cart: CartItem[];
   updateCartQuantity: (id: string, delta: number) => void;
   removeFromCart: (id: string) => void;
-  onCheckout: (method: 'Cash' | 'Mpesa', customerPhone?: string) => Sale | undefined;
+  onCheckout: (method: 'Cash' | 'Mpesa' | 'Card', customerPhone?: string) => Sale | undefined;
   businessName: string;
   onReorder: (newOrder: Product[]) => void;
 }
@@ -120,7 +120,7 @@ const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity
     }
   };
 
-  const handleCheckout = async (method: 'Cash' | 'Mpesa') => {
+  const handleCheckout = async (method: 'Cash' | 'Mpesa' | 'Card') => {
     const sale = await onCheckout(method, custPhone);
     if (sale) {
       setLastSale(sale);
@@ -237,9 +237,10 @@ const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity
               <span className="text-2xl lg:text-4xl font-black tracking-tighter">Ksh {cartTotal.toLocaleString()}</span>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3 lg:gap-4">
-            <button disabled={cart.length === 0} onClick={() => handleCheckout('Cash')} className="py-4 bg-slate-800 rounded-2xl font-black text-[10px] uppercase tracking-widest border border-slate-700 hover:bg-slate-700 transition-all active:scale-95 disabled:opacity-50">Cash</button>
-            <button disabled={cart.length === 0} onClick={() => handleCheckout('Mpesa')} className="py-4 bg-emerald-600 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-500 shadow-xl shadow-emerald-900/40 transition-all active:scale-95 disabled:opacity-50">M-Pesa</button>
+          <div className="grid grid-cols-3 gap-2 lg:gap-3">
+            <button disabled={cart.length === 0} onClick={() => handleCheckout('Cash')} className="py-4 bg-slate-800 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest border border-slate-700 hover:bg-slate-700 transition-all active:scale-95 disabled:opacity-50">Cash</button>
+            <button disabled={cart.length === 0} onClick={() => handleCheckout('Mpesa')} className="py-4 bg-emerald-600 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-emerald-500 shadow-xl shadow-emerald-900/40 transition-all active:scale-95 disabled:opacity-50">M-Pesa</button>
+            <button disabled={cart.length === 0} onClick={() => handleCheckout('Card')} className="py-4 bg-indigo-600 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-900/40 transition-all active:scale-95 disabled:opacity-50">Card</button>
           </div>
         </div>
       </div>
@@ -350,20 +351,27 @@ const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity
                     <span className="text-3xl font-black tracking-tighter">Ksh {cartTotal.toLocaleString()}</span>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     disabled={cart.length === 0}
                     onClick={() => { handleCheckout('Cash'); setMobileCartExpanded(false); }}
-                    className="py-4 bg-slate-800 rounded-xl font-black text-[11px] uppercase tracking-widest border border-slate-700 active:scale-95 disabled:opacity-50 transition-all"
+                    className="py-4 bg-slate-800 rounded-xl font-black text-[10px] uppercase tracking-widest border border-slate-700 active:scale-95 disabled:opacity-50 transition-all"
                   >
-                    <i className="fa-solid fa-money-bills mr-2"></i>Cash
+                    Cash
                   </button>
                   <button
                     disabled={cart.length === 0}
                     onClick={() => { handleCheckout('Mpesa'); setMobileCartExpanded(false); }}
-                    className="py-4 bg-emerald-600 rounded-xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-emerald-900/40 active:scale-95 disabled:opacity-50 transition-all"
+                    className="py-4 bg-emerald-600 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-900/40 active:scale-95 disabled:opacity-50 transition-all"
                   >
-                    <i className="fa-solid fa-mobile-screen mr-2"></i>M-Pesa
+                    M-Pesa
+                  </button>
+                  <button
+                    disabled={cart.length === 0}
+                    onClick={() => { handleCheckout('Card'); setMobileCartExpanded(false); }}
+                    className="py-4 bg-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-indigo-900/40 active:scale-95 disabled:opacity-50 transition-all"
+                  >
+                    Card
                   </button>
                 </div>
                 {cart.length > 0 && (
@@ -438,8 +446,8 @@ const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity
                   onClick={() => setShowReceipt(false)}
                   className="py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-slate-200"
                 >
-                  <i className="fa-solid fa-arrow-right"></i>
-                  Next Order
+                  <i className="fa-solid fa-check"></i>
+                  Done
                 </button>
               </div>
             </div>

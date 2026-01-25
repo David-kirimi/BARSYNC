@@ -102,7 +102,7 @@ const AppContent: React.FC = () => {
   };
 
   /* -------------------- MUTATIONS -------------------- */
-  const onCheckout = async (method: 'Cash' | 'Mpesa', customerPhone?: string): Promise<Sale | undefined> => {
+  const onCheckout = async (method: 'Cash' | 'Mpesa' | 'Card', customerPhone?: string): Promise<Sale | undefined> => {
     if (cart.length === 0 || !currentUser) return undefined;
 
     const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);

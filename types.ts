@@ -63,7 +63,7 @@ export interface Sale {
   date: string;
   items: CartItem[];
   totalAmount: number;
-  paymentMethod: 'Cash' | 'Mpesa';
+  paymentMethod: 'Cash' | 'Mpesa' | 'Card';
   salesPerson: string;
   customerPhone?: string;
 

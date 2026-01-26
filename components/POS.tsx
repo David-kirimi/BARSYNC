@@ -203,15 +203,17 @@ const POS: React.FC<POSProps> = ({
                 <h2 className="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Notebook</h2>
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2">{tabs.length} Active Sessions</p>
               </div>
-              <button
-                onClick={() => setShowOpenTabModal(true)}
-                className="px-6 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 transition-all active:scale-95 flex items-center gap-3 shadow-xl shadow-slate-200"
-              >
-                <i className="fa-solid fa-plus"></i> Open New Tab
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowOpenTabModal(true)}
+                  className="px-6 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 transition-all active:scale-95 flex items-center gap-3 shadow-xl shadow-slate-200"
+                >
+                  <i className="fa-solid fa-plus"></i> Open New Tab
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-64 lg:pb-0">
               {tabs.map(tab => (
                 <div key={tab.id} className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all p-8 flex flex-col group relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-2 h-full bg-orange-400 group-hover:w-4 transition-all"></div>
@@ -247,6 +249,15 @@ const POS: React.FC<POSProps> = ({
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Debt</span>
                     <span className="text-3xl font-black text-slate-900 tracking-tighter">Ksh {tab.totalAmount.toLocaleString()}</span>
                   </div>
+
+                  {cart.length > 0 && (
+                    <button
+                      onClick={() => handleAddToTab(tab.id)}
+                      className="w-full mb-3 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-3"
+                    >
+                      <i className="fa-solid fa-cart-arrow-down"></i> Add Items from Terminal
+                    </button>
+                  )}
 
                   <div className="grid grid-cols-3 gap-2">
                     <button onClick={() => { handleSettleTab(tab.id, 'Cash'); }} className="py-3 bg-slate-100 text-slate-600 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-200 active:scale-95">Cash</button>

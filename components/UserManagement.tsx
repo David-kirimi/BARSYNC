@@ -32,7 +32,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAdd, onUpdate,
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-32">
         {users.map(u => (
           <div key={u.id} className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm relative overflow-hidden group">
             <div className={`absolute top-0 right-0 w-2 h-full ${u.status === 'Active' ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>

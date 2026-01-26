@@ -23,6 +23,7 @@ interface POSProps {
   onSettleTab: (tabId: string, method: 'Cash' | 'Mpesa' | 'Card') => Promise<Sale | undefined>;
   onCancelTab: (tabId: string) => Promise<void>;
   onUpdateTabQuantity: (tabId: string, productId: string, delta: number) => Promise<void>;
+  onAddCartToTab: (tabId: string, items: CartItem[]) => Promise<void>;
   activeView: string;
 }
 
@@ -75,7 +76,7 @@ const SortableProductCard: React.FC<{ product: Product, addToCart: (p: Product) 
 const POS: React.FC<POSProps> = ({
   products, addToCart, cart, updateCartQuantity, removeFromCart, onCheckout,
   businessName, onReorder, tabs, onOpenTab, onAddToTab, onSettleTab, onCancelTab,
-  onUpdateTabQuantity, activeView
+  onUpdateTabQuantity, onAddCartToTab, activeView
 }) => {
   const { showToast } = useToast();
   const [search, setSearch] = useState('');
@@ -170,15 +171,8 @@ const POS: React.FC<POSProps> = ({
 
   const handleAddToTab = async (tabId: string) => {
     if (cart.length === 0) return;
-    // Sequential add to maintain inventory integrity
-    for (const item of cart) {
-      // Add items from cart to tab
-      await onAddToTab(tabId, item);
-      // Wait slightly or just let the async flow handle it
-    }
-    // Note: App side handles quantity and stock deduction per onAddToTab
+    await onAddCartToTab(tabId, cart);
     cart.forEach(i => removeFromCart(i.id));
-    showToast("Items added to tab", "success");
     setMobileCartExpanded(false);
   };
 
@@ -518,6 +512,23 @@ const POS: React.FC<POSProps> = ({
                   <div className="text-center py-12">
                     <i className="fa-solid fa-cart-shopping text-5xl text-slate-200 mb-4"></i>
                     <p className="text-slate-400 font-bold text-sm">Cart is empty</p>
+                  </div>
+                )}
+                {cart.length > 0 && tabs.length > 0 && (
+                  <div className="pt-4 border-t border-slate-100">
+                    <h3 className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-3 px-1">Assign to Open Tab</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      {tabs.map(tab => (
+                        <button
+                          key={tab.id}
+                          onClick={() => handleAddToTab(tab.id)}
+                          className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-tight text-slate-700 hover:border-orange-500 hover:bg-orange-50 transition-all text-left flex items-center justify-between"
+                        >
+                          <span className="truncate">{tab.customerName}</span>
+                          <i className="fa-solid fa-plus text-orange-500"></i>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

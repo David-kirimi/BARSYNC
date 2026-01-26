@@ -221,6 +221,48 @@ const AppContent: React.FC = () => {
     } catch (err) { addToast("Cloud update failed", "error"); }
   };
 
+  const onAddCartToTab = async (tabId: string, items: CartItem[]) => {
+    if (!currentUser || items.length === 0) return;
+
+    const updatedTabs = tabs.map(t => {
+      if (t.id !== tabId) return t;
+      const newItems = [...t.items];
+      items.forEach(newItem => {
+        const existing = newItems.find(i => i.id === newItem.id);
+        if (existing) {
+          existing.quantity += newItem.quantity;
+        } else {
+          newItems.push({ ...newItem });
+        }
+      });
+      return { ...t, items: newItems, totalAmount: newItems.reduce((sum, i) => sum + (i.price * i.quantity), 0) };
+    });
+    setTabs(updatedTabs);
+
+    const updatedProducts = products.map(p => {
+      const cartItem = items.find(i => i.id === p.id);
+      if (!cartItem) return p;
+      return { ...p, stock: Math.max(0, p.stock - cartItem.quantity), updatedAt: now() };
+    });
+    setProducts(updatedProducts);
+
+    try {
+      await Promise.all([
+        fetch('/api/tabs/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessId: currentUser.businessId, tabs: updatedTabs })
+        }),
+        fetch('/api/products/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessId: currentUser.businessId, products: updatedProducts })
+        })
+      ]);
+      addToast(`Items added to tab`, "success");
+    } catch (err) { addToast("Cloud update failed", "error"); }
+  };
+
   const onUpdateTabQuantity = async (tabId: string, productId: string, delta: number) => {
     if (!currentUser) return;
     let stockDiff = 0;
@@ -554,6 +596,7 @@ const AppContent: React.FC = () => {
                   onSettleTab={onSettleTab}
                   onCancelTab={onCancelTab}
                   onUpdateTabQuantity={onUpdateTabQuantity}
+                  onAddCartToTab={onAddCartToTab}
                   activeView={view}
                 />
               )}
@@ -606,7 +649,7 @@ const AppContent: React.FC = () => {
               )}
 
               {view === 'REPORTS' && <Reports sales={sales} businessName={business.name} logo={business.logo} />}
-              {view === 'PROFILE' && currentUser && (
+              {(view === 'PROFILE' || view === 'SETTINGS') && currentUser && (
                 <Profile
                   user={currentUser}
                   onUpdate={handleUpdateUser}

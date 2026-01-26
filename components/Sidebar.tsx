@@ -66,7 +66,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-1">
+          <div className="flex-1 overflow-y-auto p-4 space-y-1 pb-24">
             {visibleItems.map(item => (
               <button
                 key={item.id}
@@ -95,23 +95,25 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
       </div>
 
       {/* Mobile Bottom Nav - Quick Access Only */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-950 flex justify-around items-center p-3 z-50 border-t border-slate-800 safe-area-bottom">
-        <button
-          onClick={() => setView('POS')}
-          className={`flex flex-col items-center gap-1 transition-all ${currentView === 'POS' ? 'text-orange-400' : 'text-slate-500'}`}
-        >
-          <i className="fa-solid fa-cash-register text-xl"></i>
-          <span className="text-[9px] font-black uppercase tracking-widest">Terminal</span>
-        </button>
+      {!mobileOpen && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-950 flex justify-around items-center p-3 z-50 border-t border-slate-800 safe-area-bottom">
+          <button
+            onClick={() => setView('POS')}
+            className={`flex flex-col items-center gap-1 transition-all ${currentView === 'POS' ? 'text-orange-400' : 'text-slate-500'}`}
+          >
+            <i className="fa-solid fa-cash-register text-xl"></i>
+            <span className="text-[9px] font-black uppercase tracking-widest">Terminal</span>
+          </button>
 
-        <button
-          onClick={() => setView('INVENTORY')}
-          className={`flex flex-col items-center gap-1 transition-all ${currentView === 'INVENTORY' ? 'text-orange-400' : 'text-slate-500'}`}
-        >
-          <i className="fa-solid fa-boxes-stacked text-xl"></i>
-          <span className="text-[9px] font-black uppercase tracking-widest">Inventory</span>
-        </button>
-      </div>
+          <button
+            onClick={() => setView('INVENTORY')}
+            className={`flex flex-col items-center gap-1 transition-all ${currentView === 'INVENTORY' ? 'text-orange-400' : 'text-slate-500'}`}
+          >
+            <i className="fa-solid fa-boxes-stacked text-xl"></i>
+            <span className="text-[9px] font-black uppercase tracking-widest">Inventory</span>
+          </button>
+        </div>
+      )}
 
       <aside className="hidden md:flex w-64 bg-slate-950 flex-col shrink-0 border-r border-slate-800 overflow-y-auto no-scrollbar">
         <div className="p-8">

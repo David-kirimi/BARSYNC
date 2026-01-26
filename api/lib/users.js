@@ -216,6 +216,7 @@ router.put('/admin/businesses/:id', async (req, res) => {
     const database = await connectToMongo();
     if (!database) return res.status(503).json({ error: "Database offline" });
     try {
+        if (updateData._id) delete updateData._id;
         await database.collection('businesses').updateOne({ id }, { $set: updateData });
         res.json({ success: true });
     } catch (err) {
@@ -255,6 +256,7 @@ router.put('/admin/users/:id', async (req, res) => {
     const database = await connectToMongo();
     if (!database) return res.status(503).json({ error: "Database offline" });
     try {
+        if (updateData._id) delete updateData._id;
         await database.collection('users').updateOne({ id }, { $set: updateData });
         res.json({ success: true });
     } catch (err) {

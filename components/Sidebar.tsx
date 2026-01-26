@@ -27,15 +27,17 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
     return "Good evening";
   };
   const menuItems = [
-    { id: 'SUPER_ADMIN_PORTAL' as View, label: 'Platform Hub', icon: 'fa-server', roles: [Role.SUPER_ADMIN] },
+    { id: 'TABS' as View, label: 'Notebook', icon: 'fa-book-open', roles: [Role.ADMIN, Role.BARTENDER, Role.OWNER] }, // Tabs first
     { id: 'POS' as View, label: 'Terminal', icon: 'fa-cash-register', roles: [Role.ADMIN, Role.BARTENDER, Role.OWNER] },
     { id: 'INVENTORY' as View, label: 'Inventory', icon: 'fa-boxes-stacked', roles: [Role.ADMIN, Role.OWNER] },
+    { id: 'SALES' as View, label: 'Sales History', icon: 'fa-clock-rotate-left', roles: [Role.ADMIN, Role.BARTENDER, Role.OWNER] },
+    { id: 'REPORTS' as View, label: 'BI Reports', icon: 'fa-chart-pie', roles: [Role.ADMIN, Role.OWNER] },
     { id: 'USER_MANAGEMENT' as View, label: 'Staff Hub', icon: 'fa-users-gear', roles: [Role.ADMIN, Role.OWNER] },
-    { id: 'AUDIT_LOGS' as View, label: 'Audit Trail', icon: 'fa-shield-halved', roles: [Role.ADMIN, Role.OWNER, Role.SUPER_ADMIN] },
-    { id: 'REPORTS' as View, label: 'BI Reports', icon: 'fa-file-invoice-dollar', roles: [Role.ADMIN, Role.OWNER] },
-    { id: 'SALES' as View, label: 'Sales Log', icon: 'fa-receipt', roles: [Role.ADMIN, Role.BARTENDER, Role.OWNER] },
-    { id: 'ANALYTICS' as View, label: 'BI Stats', icon: 'fa-chart-line', roles: [Role.ADMIN, Role.OWNER] },
-    { id: 'SUBSCRIPTION' as View, label: 'Activation', icon: 'fa-credit-card', roles: [Role.ADMIN, Role.OWNER] },
+    { id: 'ANALYTICS' as View, label: 'Performance', icon: 'fa-bolt', roles: [Role.ADMIN, Role.OWNER] },
+    { id: 'AUDIT_LOGS' as View, label: 'Audit Trail', icon: 'fa-list-check', roles: [Role.ADMIN, Role.OWNER, Role.SUPER_ADMIN] },
+    { id: 'SETTINGS' as View, label: 'Config', icon: 'fa-sliders', roles: [Role.ADMIN, Role.OWNER] },
+    { id: 'SUBSCRIPTION' as View, label: 'Subscription', icon: 'fa-credit-card', roles: [Role.ADMIN, Role.OWNER] },
+    { id: 'SUPER_ADMIN_PORTAL' as View, label: 'Platform Hub', icon: 'fa-server', roles: [Role.SUPER_ADMIN] },
     { id: 'PROFILE' as View, label: 'Account', icon: 'fa-circle-user', roles: [Role.SUPER_ADMIN, Role.ADMIN, Role.BARTENDER, Role.OWNER] },
   ];
 

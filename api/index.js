@@ -8,6 +8,7 @@ import usersRouter, { seedDatabase } from './lib/users.js';
 import productsRouter from './lib/products.js';
 import salesRouter from './lib/sales.js';
 import auditLogsRouter from './lib/auditLogs.js';
+import tabsRouter from './lib/tabs.js';
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ app.use('/api/users', usersRouter);
 app.use('/api/products', productsRouter);
 app.use('/api/sales', salesRouter);
 app.use('/api/auditLogs', auditLogsRouter);
+app.use('/api/tabs', tabsRouter);
 
 // Duplicate mounts for robustness
 app.use('/auth', usersRouter);
@@ -44,6 +46,7 @@ app.use('/users', usersRouter);
 app.use('/products', productsRouter);
 app.use('/sales', salesRouter);
 app.use('/auditLogs', auditLogsRouter);
+app.use('/tabs', tabsRouter);
 
 // Test Routes
 app.get('/api/test', (req, res) => res.json({ message: 'API /api/test is reachable' }));

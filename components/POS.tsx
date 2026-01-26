@@ -15,6 +15,15 @@ interface POSProps {
   onCheckout: (method: 'Cash' | 'Mpesa' | 'Card', customerPhone?: string) => Sale | undefined;
   businessName: string;
   onReorder: (newOrder: Product[]) => void;
+
+  // Tab Extensions
+  tabs: any[];
+  onOpenTab: (name: string) => Promise<any | undefined>;
+  onAddToTab: (tabId: string, item: Product) => Promise<void>;
+  onSettleTab: (tabId: string, method: 'Cash' | 'Mpesa' | 'Card') => Promise<Sale | undefined>;
+  onCancelTab: (tabId: string) => Promise<void>;
+  onUpdateTabQuantity: (tabId: string, productId: string, delta: number) => Promise<void>;
+  activeView: string;
 }
 
 /* -------------------- SORTABLE ITEM COMPONENT -------------------- */
@@ -63,7 +72,11 @@ const SortableProductCard: React.FC<{ product: Product, addToCart: (p: Product) 
   );
 };
 
-const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity, removeFromCart, onCheckout, businessName, onReorder }) => {
+const POS: React.FC<POSProps> = ({
+  products, addToCart, cart, updateCartQuantity, removeFromCart, onCheckout,
+  businessName, onReorder, tabs, onOpenTab, onAddToTab, onSettleTab, onCancelTab,
+  onUpdateTabQuantity, activeView
+}) => {
   const { showToast } = useToast();
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
@@ -71,6 +84,13 @@ const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity
   const [showReceipt, setShowReceipt] = useState(false);
   const [custPhone, setCustPhone] = useState('');
   const [mobileCartExpanded, setMobileCartExpanded] = useState(false);
+
+  // Tab UI State
+  const [showOpenTabModal, setShowOpenTabModal] = useState(false);
+  const [newTabName, setNewTabName] = useState('');
+  const [isOpeningTab, setIsOpeningTab] = useState(false);
+  const [selectedTabId, setSelectedTabId] = useState<string | null>(null);
+  const [isSettling, setIsSettling] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -139,58 +159,163 @@ const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity
     window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
   };
 
+  const handleOpenTab = async () => {
+    if (!newTabName.trim()) return;
+    setIsOpeningTab(true);
+    await onOpenTab(newTabName);
+    setNewTabName('');
+    setShowOpenTabModal(false);
+    setIsOpeningTab(false);
+  };
+
+  const handleAddToTab = async (tabId: string) => {
+    if (cart.length === 0) return;
+    // Sequential add to maintain inventory integrity
+    for (const item of cart) {
+      // Add items from cart to tab
+      await onAddToTab(tabId, item);
+      // Wait slightly or just let the async flow handle it
+    }
+    // Note: App side handles quantity and stock deduction per onAddToTab
+    cart.forEach(i => removeFromCart(i.id));
+    showToast("Items added to tab", "success");
+    setMobileCartExpanded(false);
+  };
+
+  const handleSettleTab = async (tabId: string, method: 'Cash' | 'Mpesa' | 'Card') => {
+    setIsSettling(true);
+    const sale = await onSettleTab(tabId, method);
+    if (sale) {
+      setLastSale(sale);
+      setShowReceipt(true);
+      showToast("Tab settled!", "success");
+    }
+    setIsSettling(false);
+  };
+
   return (
     <div className="flex h-full flex-col lg:flex-row gap-2 lg:gap-8 pb-32 lg:pb-0">
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="mb-2 lg:mb-8 space-y-3 lg:space-y-4">
-          <div className="relative group">
-            <i className="fa-solid fa-magnifying-glass absolute left-4 lg:left-6 top-1/2 -translate-y-1/2 text-slate-400"></i>
-            <input
-              type="text"
-              placeholder="Search..."
-              className="w-full pl-10 lg:pl-14 pr-4 lg:pr-6 py-3 lg:py-5 bg-white border border-slate-200 rounded-xl lg:rounded-[2rem] focus:outline-none shadow-sm text-sm lg:text-lg font-medium"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeCategory === cat ? 'bg-slate-900 text-white shadow-lg' : 'bg-white text-slate-500 border border-slate-200'
-                  }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-auto pr-2">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={filteredProducts.map(p => p.id)}
-              strategy={rectSortingStrategy}
-            >
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 pb-20">
-                {filteredProducts.map(product => (
-                  <SortableProductCard key={product.id} product={product} addToCart={addToCart} />
-                ))}
-                {filteredProducts.length === 0 && (
-                  <div className="col-span-full py-12 text-center text-slate-400">
-                    <p className="font-bold">No active items found.</p>
-                    <p className="text-xs">Out-of-stock items are hidden automatically.</p>
-                  </div>
-                )}
+        {activeView === 'TABS' ? (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Notebook</h2>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2">{tabs.length} Active Sessions</p>
               </div>
-            </SortableContext>
-          </DndContext>
-        </div>
+              <button
+                onClick={() => setShowOpenTabModal(true)}
+                className="px-6 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 transition-all active:scale-95 flex items-center gap-3 shadow-xl shadow-slate-200"
+              >
+                <i className="fa-solid fa-plus"></i> Open New Tab
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {tabs.map(tab => (
+                <div key={tab.id} className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all p-8 flex flex-col group relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-2 h-full bg-orange-400 group-hover:w-4 transition-all"></div>
+                  <div className="flex justify-between items-start mb-6">
+                    <div>
+                      <h4 className="font-black text-slate-800 text-lg uppercase leading-none mb-1">{tab.customerName}</h4>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Served By: {tab.servedBy}</p>
+                    </div>
+                    <span className="text-[9px] font-black bg-orange-50 text-orange-600 px-3 py-1 rounded-full border border-orange-100 uppercase tracking-widest">Open</span>
+                  </div>
+
+                  <div className="flex-1 space-y-3 mb-8 max-h-48 overflow-y-auto no-scrollbar border-y border-slate-50 py-4">
+                    {tab.items.map((i: any, idx: number) => (
+                      <div key={idx} className="flex justify-between items-center bg-slate-50 p-2 rounded-xl">
+                        <div className="flex-1 min-w-0">
+                          <span className="text-[10px] font-black text-slate-700 uppercase block truncate">{i.name}</span>
+                          <span className="text-[9px] font-bold text-slate-400">Ksh {i.price}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-slate-100 shadow-sm">
+                            <button onClick={() => onUpdateTabQuantity(tab.id, i.id, -1)} className="text-slate-400 hover:text-indigo-600"><i className="fa-solid fa-minus text-[8px]"></i></button>
+                            <span className="text-[10px] font-black w-4 text-center">{i.quantity}</span>
+                            <button onClick={() => onUpdateTabQuantity(tab.id, i.id, 1)} className="text-slate-400 hover:text-indigo-600"><i className="fa-solid fa-plus text-[8px]"></i></button>
+                          </div>
+                          <span className="text-[10px] font-black text-slate-900 w-16 text-right">Ksh {i.price * i.quantity}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {tab.items.length === 0 && <p className="text-[10px] text-slate-300 italic text-center py-4">Empty Tab - Add items in Terminal</p>}
+                  </div>
+
+                  <div className="flex items-center justify-between mb-8">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Debt</span>
+                    <span className="text-3xl font-black text-slate-900 tracking-tighter">Ksh {tab.totalAmount.toLocaleString()}</span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <button onClick={() => { handleSettleTab(tab.id, 'Cash'); }} className="py-3 bg-slate-100 text-slate-600 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-200 active:scale-95">Cash</button>
+                    <button onClick={() => { handleSettleTab(tab.id, 'Mpesa'); }} className="py-3 bg-emerald-50 text-emerald-600 rounded-xl font-black text-[9px] uppercase tracking-widest border border-emerald-100 hover:bg-emerald-100 active:scale-95">M-Pesa</button>
+                    <button onClick={() => { if (confirm("Cancel this tab and restore items to stock?")) onCancelTab(tab.id); }} className="py-3 bg-rose-50 text-rose-500 rounded-xl font-black text-[9px] uppercase tracking-widest border border-rose-100 hover:bg-rose-100 active:scale-95">Void</button>
+                  </div>
+                </div>
+              ))}
+              {tabs.length === 0 && (
+                <div className="col-span-full py-20 bg-white rounded-[3rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center text-slate-300">
+                  <i className="fa-solid fa-book-open text-6xl mb-4 opacity-20"></i>
+                  <p className="font-black uppercase tracking-widest text-[10px]">No active tabs found</p>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col h-full">
+            <div className="mb-2 lg:mb-8 space-y-3 lg:space-y-4">
+              <div className="relative group">
+                <i className="fa-solid fa-magnifying-glass absolute left-4 lg:left-6 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  className="w-full pl-10 lg:pl-14 pr-4 lg:pr-6 py-3 lg:py-5 bg-white border border-slate-200 rounded-xl lg:rounded-[2rem] focus:outline-none shadow-sm text-sm lg:text-lg font-medium"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                {CATEGORIES.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setActiveCategory(cat)}
+                    className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeCategory === cat ? 'bg-slate-900 text-white shadow-lg' : 'bg-white text-slate-500 border border-slate-200'
+                      }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-auto pr-2">
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={filteredProducts.map(p => p.id)}
+                  strategy={rectSortingStrategy}
+                >
+                  <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 pb-20">
+                    {filteredProducts.map(product => (
+                      <SortableProductCard key={product.id} product={product} addToCart={addToCart} />
+                    ))}
+                    {filteredProducts.length === 0 && (
+                      <div className="col-span-full py-12 text-center text-slate-400">
+                        <p className="font-bold">No active items found.</p>
+                        <p className="text-xs">Out-of-stock items are hidden automatically.</p>
+                      </div>
+                    )}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Desktop Cart - Hidden on Mobile */}
@@ -240,7 +365,39 @@ const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity
           <div className="grid grid-cols-3 gap-2 lg:gap-3">
             <button disabled={cart.length === 0} onClick={() => handleCheckout('Cash')} className="py-4 bg-slate-800 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest border border-slate-700 hover:bg-slate-700 transition-all active:scale-95 disabled:opacity-50">Cash</button>
             <button disabled={cart.length === 0} onClick={() => handleCheckout('Mpesa')} className="py-4 bg-emerald-600 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-emerald-500 shadow-xl shadow-emerald-900/40 transition-all active:scale-95 disabled:opacity-50">M-Pesa</button>
-            <button disabled={cart.length === 0} onClick={() => handleCheckout('Card')} className="py-4 bg-indigo-600 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-900/40 transition-all active:scale-95 disabled:opacity-50">Card</button>
+
+            {/* Add to Tab Mechanism */}
+            <div className="relative group">
+              <button
+                disabled={cart.length === 0}
+                className="w-full h-full py-4 bg-orange-600 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-orange-500 shadow-xl shadow-orange-900/40 transition-all active:scale-95 disabled:opacity-50"
+              >
+                To Tab <i className="fa-solid fa-chevron-up ml-1 text-[8px]"></i>
+              </button>
+
+              {/* Dropdown for active tabs */}
+              <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden hidden group-hover:block z-50">
+                <div className="max-h-48 overflow-y-auto no-scrollbar">
+                  {tabs.map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => handleAddToTab(tab.id)}
+                      className="w-full px-4 py-3 text-left hover:bg-orange-50 flex items-center justify-between border-b border-slate-50 last:border-0"
+                    >
+                      <span className="text-[10px] font-bold text-slate-700 uppercase truncate">{tab.customerName}</span>
+                      <i className="fa-solid fa-plus text-orange-500 text-[10px]"></i>
+                    </button>
+                  ))}
+                  {tabs.length === 0 && <p className="p-3 text-[9px] text-slate-400 font-bold italic text-center">No active tabs</p>}
+                </div>
+                <button
+                  onClick={() => setShowOpenTabModal(true)}
+                  className="w-full p-3 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all"
+                >
+                  New Tab
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -280,6 +437,26 @@ const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity
               <i className="fa-solid fa-mobile-screen mr-2"></i>M-Pesa
             </button>
           </div>
+          {/* Mobile Tab Quick Add - Only if items in cart */}
+          {cart.length > 0 && (
+            <div className="mt-2 flex gap-2 overflow-x-auto no-scrollbar pb-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowOpenTabModal(true); }}
+                className="px-4 py-2 bg-indigo-600/20 text-indigo-400 rounded-lg text-[9px] font-black uppercase tracking-widest border border-indigo-500/30 whitespace-nowrap"
+              >
+                + New Tab
+              </button>
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={(e) => { e.stopPropagation(); handleAddToTab(tab.id); }}
+                  className="px-4 py-2 bg-orange-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest shadow-lg shadow-orange-900/40 whitespace-nowrap"
+                >
+                  To {tab.customerName}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Expanded State - Full Screen Bottom Sheet */}
@@ -387,6 +564,41 @@ const POS: React.FC<POSProps> = ({ products, addToCart, cart, updateCartQuantity
           </div>
         )}
       </div>
+
+      {/* Open Tab Modal */}
+      {showOpenTabModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-[150] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[3.5rem] w-full max-w-sm p-10 shadow-2xl relative animate-in zoom-in-95 duration-300">
+            <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter mb-2">Notebook Entry</h3>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">Start a new customer session</p>
+
+            <div className="space-y-6">
+              <div>
+                <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2 block px-2">Customer Name / Table</label>
+                <input
+                  type="text"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all uppercase"
+                  placeholder="e.g. SLIEM @ TABLE 5"
+                  value={newTabName}
+                  onChange={e => setNewTabName(e.target.value)}
+                  autoFocus
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <button onClick={() => setShowOpenTabModal(false)} className="py-4 bg-slate-100 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95">Cancel</button>
+                <button
+                  onClick={handleOpenTab}
+                  disabled={!newTabName.trim() || isOpeningTab}
+                  className="py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {isOpeningTab ? 'Syncing...' : 'Open Tab'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showReceipt && lastSale && (
         <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-4 z-[100] animate-fade-in">

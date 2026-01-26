@@ -71,6 +71,18 @@ export interface Sale {
   // Sales are append-only
 }
 
+export interface Tab {
+  id: string;
+  businessId: string;
+  customerName: string;
+  items: CartItem[];
+  totalAmount: number;
+  servedBy: string;
+  status: 'OPEN' | 'CLOSED';
+  createdAt: string;
+  closedAt?: string;
+}
+
 export interface AuditLog {
   id: string;
   timestamp: string;
@@ -84,6 +96,7 @@ export interface AuditLog {
 export type View =
   | 'POS'
   | 'INVENTORY'
+  | 'TABS'
   | 'SALES'
   | 'ANALYTICS'
   | 'SETTINGS'

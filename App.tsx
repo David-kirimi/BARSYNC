@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Product, Sale, CartItem, User, Role, AuditLog, Business } from './types';
+import { View, Product, Sale, CartItem, User, Role, AuditLog, Business, Tab } from './types';
 import { PRODUCT_TEMPLATES } from './constants';
 import POS from './components/POS';
 import Inventory from './components/Inventory';
@@ -39,6 +39,7 @@ const AppContent: React.FC = () => {
     updatedAt: now()
   });
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [tabs, setTabs] = useState<Tab[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -47,17 +48,19 @@ const AppContent: React.FC = () => {
   const fetchState = async (bizId: string) => {
     setIsSyncing(true);
     try {
-      const [pRes, sRes, uRes, lRes] = await Promise.all([
+      const [pRes, sRes, uRes, lRes, tRes] = await Promise.all([
         fetch(`/api/products?businessId=${bizId}`),
         fetch(`/api/sales?businessId=${bizId}`),
         fetch(`/api/users?businessId=${bizId}`),
-        fetch(`/api/auditLogs?businessId=${bizId}`)
+        fetch(`/api/auditLogs?businessId=${bizId}`),
+        fetch(`/api/tabs?businessId=${bizId}`)
       ]);
 
       if (pRes.ok) setProducts(await pRes.json());
       if (sRes.ok) setSales((await sRes.json()).reverse());
       if (uRes.ok) setUsers(await uRes.json());
       if (lRes.ok) setAuditLogs((await lRes.json()).reverse());
+      if (tRes.ok) setTabs(await tRes.json());
 
       // If Super Admin, fetch all businesses for the portal
       if (currentUser?.role === Role.SUPER_ADMIN) {
@@ -159,6 +162,167 @@ const AppContent: React.FC = () => {
     return newSale;
   };
 
+  const onOpenTab = async (customerName: string): Promise<Tab | undefined> => {
+    if (!currentUser || !customerName.trim()) return;
+    const newTab: Tab = {
+      id: `tab_${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
+      businessId: currentUser.businessId,
+      customerName: customerName.trim(),
+      items: [],
+      totalAmount: 0,
+      servedBy: currentUser.name,
+      status: 'OPEN',
+      createdAt: now()
+    };
+    const updatedTabs = [...tabs, newTab];
+    setTabs(updatedTabs);
+    try {
+      await fetch('/api/tabs/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId: currentUser.businessId, tabs: updatedTabs })
+      });
+      addToast(`Tab opened for ${customerName}`, "success");
+    } catch (err) { addToast("Cloud sync failed", "error"); }
+    return newTab;
+  };
+
+  const onAddToTab = async (tabId: string, item: Product) => {
+    if (!currentUser) return;
+    const updatedTabs = tabs.map(t => {
+      if (t.id !== tabId) return t;
+      const items = [...t.items];
+      const existing = items.find(i => i.id === item.id);
+      if (existing) {
+        existing.quantity += 1;
+      } else {
+        items.push({ ...item, quantity: 1 });
+      }
+      return { ...t, items, totalAmount: items.reduce((sum, i) => sum + (i.price * i.quantity), 0) };
+    });
+    setTabs(updatedTabs);
+
+    const updatedProducts = products.map(p => p.id === item.id ? { ...p, stock: Math.max(0, p.stock - 1), updatedAt: now() } : p);
+    setProducts(updatedProducts);
+
+    try {
+      await Promise.all([
+        fetch('/api/tabs/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessId: currentUser.businessId, tabs: updatedTabs })
+        }),
+        fetch('/api/products/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessId: currentUser.businessId, products: updatedProducts })
+        })
+      ]);
+    } catch (err) { addToast("Cloud update failed", "error"); }
+  };
+
+  const onUpdateTabQuantity = async (tabId: string, productId: string, delta: number) => {
+    if (!currentUser) return;
+    let stockDiff = 0;
+    const updatedTabs = tabs.map(t => {
+      if (t.id !== tabId) return t;
+      const items = t.items.map(i => {
+        if (i.id !== productId) return i;
+        const oldQty = i.quantity;
+        const newQty = Math.max(0, i.quantity + delta);
+        stockDiff = newQty - oldQty;
+        return { ...i, quantity: newQty };
+      }).filter(i => i.quantity > 0);
+      return { ...t, items, totalAmount: items.reduce((sum, i) => sum + (i.price * i.quantity), 0) };
+    });
+
+    setTabs(updatedTabs);
+    const updatedProducts = products.map(p => p.id === productId ? { ...p, stock: Math.max(0, p.stock - stockDiff), updatedAt: now() } : p);
+    setProducts(updatedProducts);
+
+    try {
+      await Promise.all([
+        fetch('/api/tabs/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessId: currentUser.businessId, tabs: updatedTabs })
+        }),
+        fetch('/api/products/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessId: currentUser.businessId, products: updatedProducts })
+        })
+      ]);
+    } catch (err) { addToast("Cloud update failed", "error"); }
+  };
+
+  const onSettleTab = async (tabId: string, method: 'Cash' | 'Mpesa' | 'Card'): Promise<Sale | undefined> => {
+    const tab = tabs.find(t => t.id === tabId);
+    if (!tab || !currentUser) return;
+
+    const sale: Sale = {
+      id: `${new Date().getFullYear().toString().slice(-2)}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
+      businessId: currentUser.businessId,
+      date: now(),
+      items: tab.items,
+      totalAmount: tab.totalAmount,
+      paymentMethod: method,
+      salesPerson: tab.servedBy,
+    };
+
+    const updatedTabs = tabs.filter(t => t.id !== tabId);
+    setTabs(updatedTabs);
+    setSales(prev => [sale, ...prev]);
+
+    try {
+      await Promise.all([
+        fetch('/api/sales', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessId: currentUser.businessId, sale })
+        }),
+        fetch('/api/tabs/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessId: currentUser.businessId, tabs: updatedTabs })
+        })
+      ]);
+      addToast("Tab settled successfully", "success");
+    } catch (err) { addToast("Cloud sync failed during settlement", "error"); }
+    return sale;
+  };
+
+  const onCancelTab = async (tabId: string) => {
+    const tab = tabs.find(t => t.id === tabId);
+    if (!tab || !currentUser) return;
+
+    const updatedProducts = products.map(p => {
+      const tabItem = tab.items.find(ti => ti.id === p.id);
+      if (!tabItem) return p;
+      return { ...p, stock: p.stock + tabItem.quantity, updatedAt: now() };
+    });
+    const updatedTabs = tabs.filter(t => t.id !== tabId);
+
+    setProducts(updatedProducts);
+    setTabs(updatedTabs);
+
+    try {
+      await Promise.all([
+        fetch('/api/tabs/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessId: currentUser.businessId, tabs: updatedTabs })
+        }),
+        fetch('/api/products/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessId: currentUser.businessId, products: updatedProducts })
+        })
+      ]);
+      addToast("Tab cancelled and stock restored", "warning");
+    } catch (err) { addToast("Cloud sync failed", "error"); }
+  };
+
   const handleProductUpdate = async (updated: Product) => {
     const productWithTimestamp = { ...updated, updatedAt: now() };
     const newProducts = products.map(p => p.id === updated.id ? productWithTimestamp : p);
@@ -219,6 +383,11 @@ const AppContent: React.FC = () => {
           if (prodRes.ok) {
             const cloudProducts = await prodRes.json();
             setProducts(cloudProducts);
+          }
+
+          const tabsRes = await fetch(`/api/tabs?businessId=${bid}`);
+          if (tabsRes.ok) {
+            setTabs(await tabsRes.json());
           }
         }
 
@@ -369,7 +538,7 @@ const AppContent: React.FC = () => {
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
           <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-8 scroll-smooth" id="main-scroll">
             <div className="max-w-[1600px] mx-auto h-full">
-              {view === 'POS' && (
+              {(view === 'POS' || view === 'TABS') && (
                 <POS
                   products={products}
                   addToCart={addToCart}
@@ -379,6 +548,13 @@ const AppContent: React.FC = () => {
                   onCheckout={onCheckout}
                   businessName={business?.name || 'BarSync'}
                   onReorder={() => { }}
+                  tabs={tabs}
+                  onOpenTab={onOpenTab}
+                  onAddToTab={onAddToTab}
+                  onSettleTab={onSettleTab}
+                  onCancelTab={onCancelTab}
+                  onUpdateTabQuantity={onUpdateTabQuantity}
+                  activeView={view}
                 />
               )}
 

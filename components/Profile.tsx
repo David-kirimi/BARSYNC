@@ -4,9 +4,9 @@ import { User, Role } from '../types';
 
 interface ProfileProps {
   user: User;
-  onUpdate: (updatedUser: User) => void;
+  onUpdate: (updatedUser: User) => Promise<void>;
   business: any;
-  onUpdateBusiness: (b: any) => void;
+  onUpdateBusiness: (b: any) => Promise<void>;
 }
 
 const Profile: React.FC<ProfileProps> = ({ user, onUpdate, business, onUpdateBusiness }) => {
@@ -46,13 +46,13 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate, business, onUpdateBus
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     setMessage(null);
 
-    setTimeout(() => {
-      onUpdate({
+    try {
+      await onUpdate({
         ...user,
         name: formData.name,
         phone: formData.phone,
@@ -62,17 +62,21 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate, business, onUpdateBus
       });
 
       if (user.role === Role.OWNER || user.role === Role.ADMIN) {
-        onUpdateBusiness({
+        await onUpdateBusiness({
           ...business,
           name: bizData.name,
-          logo: bizData.logo
+          logo: bizData.logo,
+          updatedAt: new Date().toISOString()
         });
       }
 
-      setIsSaving(false);
       setMessage({ text: 'Settings updated successfully!', type: 'success' });
       setTimeout(() => setMessage(null), 3000);
-    }, 600);
+    } catch (err) {
+      setMessage({ text: 'Sync failed. Please check connection.', type: 'error' });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (

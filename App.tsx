@@ -262,10 +262,16 @@ const AppContent: React.FC = () => {
       });
       if (res.ok) {
         setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
+        if (currentUser?.id === updatedUser.id) {
+          setCurrentUser(updatedUser);
+        }
         addToast("User updated successfully", "success");
+      } else {
+        throw new Error("Update failed");
       }
     } catch (err) {
       addToast("Update failed", "error");
+      throw err;
     }
   };
 
@@ -291,10 +297,14 @@ const AppContent: React.FC = () => {
       });
       if (res.ok) {
         setBusinesses(businesses.map(b => b.id === updatedBiz.id ? updatedBiz : b));
+        setBusiness(updatedBiz); // Critical: Update active business local state
         addToast("Business configuration synced", "success");
+      } else {
+        throw new Error("Sync failed");
       }
     } catch (err) {
       addToast("Update failed", "error");
+      throw err;
     }
   };
 

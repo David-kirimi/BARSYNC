@@ -303,10 +303,28 @@ const Reports: React.FC<ReportsProps & { logo?: string }> = ({ sales, businessNa
 
       <style>{`
         @media print {
-          body { background: white !important; }
-          .print\\:hidden, aside, nav, header { display: none !important; }
-          main { padding: 0 !important; margin: 0 !important; width: 100% !important; }
+          /* Aggressive Reset for Parent Containers */
+          html, body, #root, #root > div, main, #main-scroll {
+            height: auto !important;
+            min-height: 0 !important;
+            overflow: visible !important;
+            position: static !important;
+            display: block !important;
+          }
+
+          body { background: white !important; visibility: visible !important; }
+          .print\:hidden, aside, nav, header, button, .no-print { display: none !important; }
+          
+          main { 
+            padding: 0 !important; 
+            margin: 0 !important; 
+            width: 100% !important; 
+            display: block !important;
+          }
+
           #printable-report, #single-receipt { 
+            display: block !important;
+            visibility: visible !important;
             position: relative !important; 
             width: 100% !important; 
             border: none !important; 
@@ -316,15 +334,19 @@ const Reports: React.FC<ReportsProps & { logo?: string }> = ({ sales, businessNa
             background: white !important;
             overflow: visible !important;
           }
+
           .printable-area { 
             display: block !important; 
             visibility: visible !important; 
           }
-          .no-scrollbar { overflow: visible !important; }
+
+          /* Ensure table is fully unconstrained */
+          .overflow-x-auto { overflow: visible !important; }
           
           /* If single receipt is visible, hide the full report */
           ${selectedSale ? '#printable-report { display: none !important; } #single-receipt { visibility: visible !important; }' : ''}
           
+          /* Global visibility reset for print */
           body * { visibility: hidden; }
           #printable-report, #printable-report *, #single-receipt, #single-receipt * { visibility: visible !important; }
           

@@ -426,20 +426,27 @@ const POS: React.FC<POSProps> = ({
               <i className="fa-solid fa-chevron-up text-slate-400"></i>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <button
               disabled={cart.length === 0}
               onClick={(e) => { e.stopPropagation(); handleCheckout('Cash'); }}
-              className="py-4 bg-slate-800 rounded-xl font-black text-[11px] uppercase tracking-widest border border-slate-700 active:scale-95 disabled:opacity-50 transition-all"
+              className="py-4 bg-slate-800 rounded-xl font-black text-[9px] uppercase tracking-widest border border-slate-700 active:scale-95 disabled:opacity-50 transition-all flex flex-col items-center justify-center gap-1"
             >
-              <i className="fa-solid fa-money-bills mr-2"></i>Cash
+              <i className="fa-solid fa-money-bills"></i>Cash
             </button>
             <button
               disabled={cart.length === 0}
               onClick={(e) => { e.stopPropagation(); handleCheckout('Mpesa'); }}
-              className="py-4 bg-emerald-600 rounded-xl font-black text-[11px] uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all"
+              className="py-4 bg-emerald-600 rounded-xl font-black text-[9px] uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all flex flex-col items-center justify-center gap-1"
             >
-              <i className="fa-solid fa-mobile-screen mr-2"></i>M-Pesa
+              <i className="fa-solid fa-mobile-screen"></i>M-Pesa
+            </button>
+            <button
+              disabled={cart.length === 0}
+              onClick={(e) => { e.stopPropagation(); setMobileCartExpanded(true); setTimeout(() => document.getElementById('assign-to-tab-section')?.scrollIntoView({ behavior: 'smooth' }), 300); }}
+              className="py-4 bg-orange-600 rounded-xl font-black text-[9px] uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all flex flex-col items-center justify-center gap-1"
+            >
+              <i className="fa-solid fa-book-bookmark"></i>To Tab
             </button>
           </div>
           {/* Mobile Tab Quick Add - Only if items in cart */}
@@ -515,7 +522,7 @@ const POS: React.FC<POSProps> = ({
                   </div>
                 )}
                 {cart.length > 0 && tabs.length > 0 && (
-                  <div className="pt-4 border-t border-slate-100">
+                  <div id="assign-to-tab-section" className="pt-4 border-t border-slate-100">
                     <h3 className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-3 px-1">Assign to Open Tab</h3>
                     <div className="grid grid-cols-2 gap-2">
                       {tabs.map(tab => (
@@ -550,7 +557,7 @@ const POS: React.FC<POSProps> = ({
                     <span className="text-3xl font-black tracking-tighter">Ksh {cartTotal.toLocaleString()}</span>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     disabled={cart.length === 0}
                     onClick={() => { handleCheckout('Cash'); setMobileCartExpanded(false); }}
@@ -571,6 +578,13 @@ const POS: React.FC<POSProps> = ({
                     className="py-4 bg-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-indigo-900/40 active:scale-95 disabled:opacity-50 transition-all"
                   >
                     Card
+                  </button>
+                  <button
+                    disabled={cart.length === 0}
+                    onClick={() => { document.getElementById('assign-to-tab-section')?.scrollIntoView({ behavior: 'smooth' }); }}
+                    className="py-4 bg-orange-600 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-orange-900/40 active:scale-95 disabled:opacity-50 transition-all"
+                  >
+                    To Tab
                   </button>
                 </div>
                 {cart.length > 0 && (

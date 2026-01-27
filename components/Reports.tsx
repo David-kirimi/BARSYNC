@@ -304,7 +304,7 @@ const Reports: React.FC<ReportsProps & { logo?: string }> = ({ sales, businessNa
       <style>{`
         @media print {
           /* Aggressive Reset for Parent Containers */
-          html, body, #root, #root > div, main, #main-scroll {
+          html, body, #root, #root > div, main, #main-scroll, .h-screen, .flex-1, .overflow-hidden {
             height: auto !important;
             min-height: 0 !important;
             overflow: visible !important;

@@ -107,7 +107,7 @@ const Reports: React.FC<ReportsProps & { logo?: string }> = ({ sales, businessNa
       </div>
 
       {/* Report View Section */}
-      <div id="printable-report" className="bg-white p-10 md:p-16 rounded-[3.5rem] border border-slate-200 shadow-xl printable-area overflow-hidden">
+      <div id="printable-report" className="bg-white p-10 md:p-16 rounded-[3.5rem] border border-slate-200 shadow-xl printable-area overflow-hidden print:overflow-visible print:border-none print:shadow-none print:p-0">
         <div className="flex flex-col md:flex-row justify-between items-start border-b border-slate-100 pb-10 mb-10">
           <div>
             <div className="flex items-center gap-4 mb-4">
@@ -171,7 +171,7 @@ const Reports: React.FC<ReportsProps & { logo?: string }> = ({ sales, businessNa
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Transaction Registry</h3>
             <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">{filteredSales.length} Logs</span>
           </div>
-          <div className="hidden md:block overflow-x-auto">
+          <div className="hidden md:block print:block overflow-x-auto print:overflow-visible">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -209,7 +209,7 @@ const Reports: React.FC<ReportsProps & { logo?: string }> = ({ sales, businessNa
           </div>
 
           {/* Mobile View: High-Density Transaction Cards */}
-          <div className="md:hidden space-y-4">
+          <div className="md:hidden print:hidden space-y-4">
             {filteredSales.map(sale => (
               <div key={sale.id} className="p-5 bg-slate-50 rounded-3xl border border-slate-100 flex flex-col gap-4">
                 <div className="flex justify-between items-center">
@@ -307,15 +307,14 @@ const Reports: React.FC<ReportsProps & { logo?: string }> = ({ sales, businessNa
           .print\\:hidden, aside, nav, header { display: none !important; }
           main { padding: 0 !important; margin: 0 !important; width: 100% !important; }
           #printable-report, #single-receipt { 
-            position: absolute !important; 
-            left: 0 !important; 
-            top: 0 !important; 
+            position: relative !important; 
             width: 100% !important; 
             border: none !important; 
             box-shadow: none !important; 
             padding: 0 !important;
             margin: 0 !important;
             background: white !important;
+            overflow: visible !important;
           }
           .printable-area { 
             display: block !important; 
@@ -328,10 +327,14 @@ const Reports: React.FC<ReportsProps & { logo?: string }> = ({ sales, businessNa
           
           body * { visibility: hidden; }
           #printable-report, #printable-report *, #single-receipt, #single-receipt * { visibility: visible !important; }
+          
+          /* Force page break compatibility */
+          tr { page-break-inside: avoid !important; }
+          thead { display: table-header-group !important; }
         }
         @page {
           size: auto;
-          margin: 15mm;
+          margin: 10mm;
         }
       `}</style>
     </div>

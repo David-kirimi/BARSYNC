@@ -532,6 +532,16 @@ const AppContent: React.FC = () => {
     }
   };
 
+  const handleUpdateVerification = async (note: string) => {
+    try {
+      const updatedBiz = { ...business, verificationNote: note, updatedAt: now() };
+      await handleUpdateBusiness(updatedBiz);
+      addToast("Verification details submitted for review", "success");
+    } catch (err) {
+      addToast("Submission failed", "error");
+    }
+  };
+
   if (!currentUser) {
     return (
       <Login
@@ -553,6 +563,47 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="h-[100dvh] flex flex-col overflow-hidden bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 relative">
+      {/* Verification Overlay for Unverified Businesses */}
+      {business?.subscriptionStatus === 'Pending Approval' && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-lg p-12 text-center relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-2 bg-amber-500"></div>
+            <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center text-3xl mx-auto mb-8 shadow-xl shadow-amber-100/50">
+              <i className="fa-solid fa-clock-rotate-left"></i>
+            </div>
+            <h2 className="text-3xl font-black text-slate-800 tracking-tighter uppercase mb-4">Verification Required</h2>
+            <p className="text-slate-500 font-medium mb-8 leading-relaxed">
+              Your account is currently <span className="text-amber-600 font-black">PENDING APPROVAL</span>.
+              You can explore the terminal, but all business actions like checkout and stock updates are restricted until our team verifies your payment.
+            </p>
+
+            <div className="space-y-6 text-left">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-2">Payment Reference / Message</label>
+                <textarea
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 font-bold text-sm min-h-[100px] focus:ring-4 focus:ring-amber-500/10 outline-none"
+                  placeholder="Paste your M-Pesa/Bank transaction code or message here..."
+                  onBlur={(e) => {
+                    const val = e.target.value.trim();
+                    if (val && val !== business.verificationNote) {
+                      handleUpdateVerification(val);
+                    }
+                  }}
+                  defaultValue={business.verificationNote || ''}
+                />
+              </div>
+              <button
+                onClick={() => setView('PROFILE')}
+                className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95"
+              >
+                Access Portal (View-Only)
+              </button>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] text-center">Typical verification time: 5-15 Minutes</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Mobile Hamburger Trigger */}
       <button
         onClick={() => setMobileSidebarOpen(true)}
@@ -578,7 +629,7 @@ const AppContent: React.FC = () => {
         />
 
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-          <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-8 scroll-smooth" id="main-scroll">
+          <div className={`flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-8 scroll-smooth ${business?.subscriptionStatus === 'Pending Approval' ? 'grayscale opacity-80' : ''}`} id="main-scroll">
             <div className="max-w-[1600px] mx-auto h-full">
               {(view === 'POS' || view === 'TABS') && (
                 <POS
@@ -598,6 +649,7 @@ const AppContent: React.FC = () => {
                   onUpdateTabQuantity={onUpdateTabQuantity}
                   onAddCartToTab={onAddCartToTab}
                   activeView={view}
+                  isUnverified={business?.subscriptionStatus === 'Pending Approval'}
                 />
               )}
 
@@ -611,6 +663,7 @@ const AppContent: React.FC = () => {
                   onUpdate={handleProductUpdate}
                   onAdd={handleProductAdd}
                   userRole={currentUser.role}
+                  isUnverified={business?.subscriptionStatus === 'Pending Approval'}
                 />
               )}
 

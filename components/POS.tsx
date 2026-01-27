@@ -25,6 +25,7 @@ interface POSProps {
   onUpdateTabQuantity: (tabId: string, productId: string, delta: number) => Promise<void>;
   onAddCartToTab: (tabId: string, items: CartItem[]) => Promise<void>;
   activeView: string;
+  isUnverified?: boolean;
 }
 
 /* -------------------- SORTABLE ITEM COMPONENT -------------------- */
@@ -76,7 +77,7 @@ const SortableProductCard: React.FC<{ product: Product, addToCart: (p: Product) 
 const POS: React.FC<POSProps> = ({
   products, addToCart, cart, updateCartQuantity, removeFromCart, onCheckout,
   businessName, onReorder, tabs, onOpenTab, onAddToTab, onSettleTab, onCancelTab,
-  onUpdateTabQuantity, onAddCartToTab, activeView
+  onUpdateTabQuantity, onAddCartToTab, activeView, isUnverified
 }) => {
   const { showToast } = useToast();
   const [search, setSearch] = useState('');
@@ -119,29 +120,22 @@ const POS: React.FC<POSProps> = ({
     const { active, over } = event;
 
     if (active.id !== over?.id) {
-      // We need to reorder the GLOBAL product list based on the change in the FILTERED list.
-      // 1. Find the old index and new index in the DISPLAYED list
       const oldIndex = filteredProducts.findIndex((p) => p.id === active.id);
       const newIndex = filteredProducts.findIndex((p) => p.id === over?.id);
-
-      // 2. Create the new order for the DISPLAYED subset
       const newFilteredOrder = arrayMove(filteredProducts, oldIndex, newIndex) as Product[];
-
-      // 3. Construct the full new list:
-      //    - Keep items NOT in the filtered view in their original relative positions (or just push them to end/start? No, keep them inplace-ish)
-      //    - Actually, for a simple "favorites" system, reordering usually implies a global rank.
-      //    - Strategy: Take the global list, remove the filtered items, then re-insert them in their new order at their original "first" index? 
-      //    - Simpler Strategy: Just replace the products in the master list.
-
       const productIds = new Set(newFilteredOrder.map(p => p.id));
       const remainingProducts = products.filter(p => !productIds.has(p.id));
-      const combined = [...newFilteredOrder, ...remainingProducts]; // This moves filtered items to top. Good for favorites.
+      const combined = [...newFilteredOrder, ...remainingProducts];
 
       onReorder(combined);
     }
   };
 
   const handleCheckout = async (method: 'Cash' | 'Mpesa' | 'Card') => {
+    if (isUnverified) {
+      showToast("Access Restricted: Verification Required", "warning");
+      return;
+    }
     const sale = await onCheckout(method, custPhone);
     if (sale) {
       setLastSale(sale);
@@ -162,6 +156,10 @@ const POS: React.FC<POSProps> = ({
 
   const handleOpenTab = async () => {
     if (!newTabName.trim()) return;
+    if (isUnverified) {
+      showToast("Access Restricted: Verification Required", "warning");
+      return;
+    }
     setIsOpeningTab(true);
     await onOpenTab(newTabName);
     setNewTabName('');
@@ -170,6 +168,10 @@ const POS: React.FC<POSProps> = ({
   };
 
   const handleAddToTab = async (tabId: string) => {
+    if (isUnverified) {
+      showToast("Access Restricted: Verification Required", "warning");
+      return;
+    }
     if (cart.length === 0) return;
     await onAddCartToTab(tabId, cart);
     cart.forEach(i => removeFromCart(i.id));
@@ -177,6 +179,10 @@ const POS: React.FC<POSProps> = ({
   };
 
   const handleSettleTab = async (tabId: string, method: 'Cash' | 'Mpesa' | 'Card') => {
+    if (isUnverified) {
+      showToast("Access Restricted", "warning");
+      return;
+    }
     setIsSettling(true);
     const sale = await onSettleTab(tabId, method);
     if (sale) {

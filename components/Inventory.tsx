@@ -8,9 +8,10 @@ interface InventoryProps {
   onUpdate: (product: Product) => void;
   onAdd: (product: Omit<Product, 'id' | 'openingStock' | 'additions'>) => void;
   userRole: Role;
+  isUnverified?: boolean;
 }
 
-const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRole }) => {
+const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRole, isUnverified }) => {
   const { showToast } = useToast();
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -35,6 +36,10 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
   });
 
   const handleQuickStock = (product: Product, delta: number) => {
+    if (isUnverified) {
+      showToast("Access Restricted", "warning");
+      return;
+    }
     onUpdate({ ...product, stock: Math.max(0, product.stock + delta) });
     showToast(`${product.name} stock updated`, 'success');
   };
@@ -83,6 +88,10 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRo
   };
 
   const saveForm = () => {
+    if (isUnverified) {
+      showToast("Access Restricted", "warning");
+      return;
+    }
     if (isAdding) {
       onAdd(form as Omit<Product, 'id' | 'openingStock' | 'additions'>);
       showToast(`${form.name} registered`, 'success');

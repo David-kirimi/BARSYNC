@@ -123,7 +123,7 @@ router.post('/register', async (req, res) => {
             id: businessId,
             name: businessName.trim(),
             ownerName: ownerName.trim(),
-            subscriptionStatus: 'Trial',
+            subscriptionStatus: 'Pending Approval',
             subscriptionPlan: plan || 'Basic',
             paymentStatus: 'Pending',
             createdAt: new Date().toISOString(),

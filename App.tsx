@@ -565,8 +565,8 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="h-[100dvh] flex flex-col overflow-hidden bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 relative">
-      {/* Verification Overlay for Unverified Businesses */}
-      {business?.subscriptionStatus === 'Pending Approval' && showVerificationOverlay && (
+      {/* Verification Overlay for Unverified Businesses - Bypass for Super Admins */}
+      {currentUser?.role !== Role.SUPER_ADMIN && business?.subscriptionStatus === 'Pending Approval' && showVerificationOverlay && (
         <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-6">
           <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-lg p-12 text-center relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-2 bg-amber-500"></div>
@@ -634,7 +634,7 @@ const AppContent: React.FC = () => {
         />
 
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-          <div className={`flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-8 scroll-smooth ${business?.subscriptionStatus === 'Pending Approval' ? 'grayscale opacity-80' : ''}`} id="main-scroll">
+          <div className={`flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-8 scroll-smooth ${(currentUser?.role !== Role.SUPER_ADMIN && business?.subscriptionStatus === 'Pending Approval') ? 'grayscale opacity-80' : ''}`} id="main-scroll">
             <div className="max-w-[1600px] mx-auto h-full">
               {(view === 'POS' || view === 'TABS') && (
                 <POS

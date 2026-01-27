@@ -43,6 +43,7 @@ const AppContent: React.FC = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [showVerificationOverlay, setShowVerificationOverlay] = useState(true);
 
   /* -------------------- API SYNC -------------------- */
   const fetchState = async (bizId: string) => {
@@ -548,6 +549,7 @@ const AppContent: React.FC = () => {
         onLogin={(user, biz) => {
           setCurrentUser(user);
           if (biz) setBusiness(biz);
+          setShowVerificationOverlay(true);
           if (user.role === Role.SUPER_ADMIN) {
             setView('SUPER_ADMIN_PORTAL');
           } else {
@@ -564,7 +566,7 @@ const AppContent: React.FC = () => {
   return (
     <div className="h-[100dvh] flex flex-col overflow-hidden bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 relative">
       {/* Verification Overlay for Unverified Businesses */}
-      {business?.subscriptionStatus === 'Pending Approval' && (
+      {business?.subscriptionStatus === 'Pending Approval' && showVerificationOverlay && (
         <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-6">
           <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-lg p-12 text-center relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-2 bg-amber-500"></div>
@@ -593,7 +595,10 @@ const AppContent: React.FC = () => {
                 />
               </div>
               <button
-                onClick={() => setView('PROFILE')}
+                onClick={() => {
+                  setShowVerificationOverlay(false);
+                  setView('PROFILE');
+                }}
                 className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95"
               >
                 Access Portal (View-Only)

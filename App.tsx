@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, Product, Sale, CartItem, User, Role, AuditLog, Business, Tab } from './types';
 import { PRODUCT_TEMPLATES } from './constants';
 import POS from './components/POS';
@@ -44,6 +44,23 @@ const AppContent: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showVerificationOverlay, setShowVerificationOverlay] = useState(true);
+
+  // CRITICAL: 3-Day Lockout Logic
+  const isAccountLocked = useMemo(() => {
+    if (currentUser?.role === Role.SUPER_ADMIN) return false;
+    if (business?.subscriptionStatus === 'Active') return false;
+    
+    // Check if Trial has expired
+    const trialDuration = 3 * 24 * 60 * 60 * 1000; // 3 days
+    const startTimeStr = business?.trialStartedAt || business?.createdAt;
+    if (!startTimeStr) return false;
+
+    const startTime = new Date(startTimeStr).getTime();
+    const expiry = startTime + trialDuration;
+    const nowTs = new Date().getTime();
+    
+    return nowTs > expiry;
+  }, [business, currentUser]);
 
   /* -------------------- API SYNC -------------------- */
   const fetchState = async (bizId: string) => {
@@ -613,18 +630,18 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="h-[100dvh] flex flex-col overflow-hidden bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 relative">
-      {/* Verification Overlay for Unverified Businesses - Bypass for Super Admins */}
-      {currentUser?.role !== Role.SUPER_ADMIN && business?.subscriptionStatus === 'Pending Approval' && showVerificationOverlay && (
+      {/* Verification Overlay - ONLY show if trial is EXPIRED or status is specifically EXPIRED */}
+      {isAccountLocked && showVerificationOverlay && (
         <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-6">
           <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-lg p-12 text-center relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-2 bg-amber-500"></div>
             <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center text-3xl mx-auto mb-8 shadow-xl shadow-amber-100/50">
               <i className="fa-solid fa-clock-rotate-left"></i>
             </div>
-            <h2 className="text-3xl font-black text-slate-800 tracking-tighter uppercase mb-4">Verification Required</h2>
+            <h2 className="text-3xl font-black text-slate-800 tracking-tighter uppercase mb-4">Trial Has Expired</h2>
             <p className="text-slate-500 font-medium mb-8 leading-relaxed">
-              Your account is currently <span className="text-amber-600 font-black">PENDING APPROVAL</span>.
-              You can explore the terminal, but all business actions like checkout and stock updates are restricted until our team verifies your payment.
+              Your 3-day trial period has <span className="text-rose-600 font-black">EXPIRED</span>.
+              Please complete your subscription payment to restore full access to your business node.
             </p>
 
             <div className="space-y-6 text-left">
@@ -642,14 +659,13 @@ const AppContent: React.FC = () => {
                   defaultValue={business.verificationNote || ''}
                 />
               </div>
-              <button
+                <button
                 onClick={() => {
-                  setShowVerificationOverlay(false);
-                  setView('PROFILE');
+                  setView('SUBSCRIPTION');
                 }}
-                className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95"
+                className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-700 transition-all active:scale-95"
               >
-                Access Portal (View-Only)
+                Go to Subscription Hub
               </button>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] text-center">Typical verification time: 5-15 Minutes</p>
             </div>
@@ -682,7 +698,7 @@ const AppContent: React.FC = () => {
         />
 
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-          <div className={`flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-8 scroll-smooth ${(currentUser?.role !== Role.SUPER_ADMIN && business?.subscriptionStatus === 'Pending Approval') ? 'grayscale opacity-80' : ''}`} id="main-scroll">
+          <div className={`flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-8 scroll-smooth ${isAccountLocked ? 'grayscale opacity-80' : ''}`} id="main-scroll">
             <div className="max-w-[1600px] mx-auto h-full">
               {(view === 'POS' || view === 'TABS') && (
                 <POS
@@ -702,7 +718,7 @@ const AppContent: React.FC = () => {
                   onUpdateTabQuantity={onUpdateTabQuantity}
                   onAddCartToTab={onAddCartToTab}
                   activeView={view}
-                  isUnverified={business?.subscriptionStatus === 'Pending Approval'}
+                  isUnverified={isAccountLocked}
                 />
               )}
 
@@ -717,7 +733,7 @@ const AppContent: React.FC = () => {
                   onAdd={handleProductAdd}
                   onResetStock={handleResetStock}
                   userRole={currentUser.role}
-                  isUnverified={business?.subscriptionStatus === 'Pending Approval'}
+                  isUnverified={isAccountLocked}
                 />
               )}
 

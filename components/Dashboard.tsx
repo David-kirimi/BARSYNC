@@ -128,7 +128,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, products, business, setVie
   return (
     <div className="space-y-6 pt-16 md:pt-0">
       {/* Trial Countdown Banner */}
-      {business?.subscriptionStatus === 'Trial' && timeLeft && (
+      {(business?.subscriptionStatus === 'Trial' || business?.subscriptionStatus === 'Pending Approval') && timeLeft && (
         <div className="bg-indigo-600 rounded-[2rem] p-6 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl shadow-indigo-500/20 animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="flex items-center gap-5">
             <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center text-2xl backdrop-blur-md">

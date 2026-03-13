@@ -630,45 +630,48 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="h-[100dvh] flex flex-col overflow-hidden bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 relative">
-      {/* Verification Overlay - ONLY show if trial is EXPIRED or status is specifically EXPIRED */}
-      {isAccountLocked && showVerificationOverlay && (
+      {/* Verification / Trial Overlay */}
+      {business?.subscriptionStatus !== 'Active' && showVerificationOverlay && (
         <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-6">
           <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-lg p-12 text-center relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-2 bg-amber-500"></div>
             <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center text-3xl mx-auto mb-8 shadow-xl shadow-amber-100/50">
               <i className="fa-solid fa-clock-rotate-left"></i>
             </div>
-            <h2 className="text-3xl font-black text-slate-800 tracking-tighter uppercase mb-4">Trial Has Expired</h2>
-            <p className="text-slate-500 font-medium mb-8 leading-relaxed">
-              Your 3-day trial period has <span className="text-rose-600 font-black">EXPIRED</span>.
-              Please complete your subscription payment to restore full access to your business node.
-            </p>
-
-            <div className="space-y-6 text-left">
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-2">Payment Reference / Message</label>
-                <textarea
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 font-bold text-sm min-h-[100px] focus:ring-4 focus:ring-amber-500/10 outline-none"
-                  placeholder="Paste your M-Pesa/Bank transaction code or message here..."
-                  onBlur={(e) => {
-                    const val = e.target.value.trim();
-                    if (val && val !== business.verificationNote) {
-                      handleUpdateVerification(val);
-                    }
-                  }}
-                  defaultValue={business.verificationNote || ''}
-                />
-              </div>
+            
+            {!isAccountLocked ? (
+              <>
+                <h2 className="text-3xl font-black text-slate-800 tracking-tighter uppercase mb-4">Welcome to BarSync</h2>
+                <p className="text-slate-500 font-medium mb-8 leading-relaxed">
+                  Open the app with <span className="text-indigo-600 font-black">3 DAYS UNLIMITED ACCESS</span>.
+                  To pay, visit the <span className="text-slate-900 font-black">SUBSCRIPTION</span> tab for bank details or contact support.
+                </p>
                 <button
-                onClick={() => {
-                  setView('SUBSCRIPTION');
-                }}
-                className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-700 transition-all active:scale-95"
-              >
-                Go to Subscription Hub
-              </button>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] text-center">Typical verification time: 5-15 Minutes</p>
-            </div>
+                  onClick={() => setShowVerificationOverlay(false)}
+                  className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-700 transition-all active:scale-95 shadow-xl shadow-indigo-100"
+                >
+                  Enter Terminal (Full Access)
+                </button>
+              </>
+            ) : (
+              <>
+                <h2 className="text-3xl font-black text-slate-800 tracking-tighter uppercase mb-4">Trial Has Expired</h2>
+                <p className="text-slate-500 font-medium mb-8 leading-relaxed">
+                  Your 3-day trial period has <span className="text-rose-600 font-black">EXPIRED</span>.
+                  Please complete your subscription payment to restore full access to your business node.
+                </p>
+                <button
+                  onClick={() => {
+                    setView('SUBSCRIPTION');
+                  }}
+                  className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95"
+                >
+                  Go to Subscription Hub
+                </button>
+              </>
+            )}
+            
+            <p className="mt-6 text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] text-center">Typical verification time: 5-15 Minutes</p>
           </div>
         </div>
       )}

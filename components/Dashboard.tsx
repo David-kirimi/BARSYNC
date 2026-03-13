@@ -17,7 +17,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, products, business, setVie
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
 
   useEffect(() => {
-    if (business?.subscriptionStatus !== 'Trial') return;
+    if (business?.subscriptionStatus !== 'Trial' && business?.subscriptionStatus !== 'Pending Approval') return;
 
     const calculateTimeLeft = () => {
       const trialDuration = 3 * 24 * 60 * 60 * 1000; // 3 days in ms

@@ -8,46 +8,11 @@ interface DashboardProps {
   sales: Sale[];
   products: Product[];
   business: any;
-  setView: (v: any) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ sales, products, business, setView }) => {
+const Dashboard: React.FC<DashboardProps> = ({ sales, products, business }) => {
   const [insights, setInsights] = useState<string | null>(null);
   const [loadingInsights, setLoadingInsights] = useState(false);
-  const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
-
-  useEffect(() => {
-    if (business?.subscriptionStatus !== 'Trial' && business?.subscriptionStatus !== 'Pending Approval') return;
-
-    const calculateTimeLeft = () => {
-      const trialDuration = 3 * 24 * 60 * 60 * 1000; // 3 days in ms
-      
-      // CRITICAL: Ensure we have a valid start date
-      const startTimeStr = business?.trialStartedAt || business?.createdAt;
-      if (!startTimeStr) return;
-
-      const startTime = new Date(startTimeStr).getTime();
-      const expiry = startTime + trialDuration;
-      const nowTs = new Date().getTime();
-      const difference = expiry - nowTs;
-
-      if (difference > 0) {
-        setTimeLeft({
-          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-          minutes: Math.floor((difference / 1000 / 60) % 60),
-          seconds: Math.floor((difference / 1000) % 60)
-        });
-      } else {
-        // Set to zeroed out state instead of null to keep UI consistent
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-      }
-    };
-
-    const timer = setInterval(calculateTimeLeft, 1000);
-    calculateTimeLeft();
-    return () => clearInterval(timer);
-  }, [business?.subscriptionStatus, business?.trialStartedAt, business?.createdAt]);
 
   const { totalRev, totalProfit } = useMemo(() => {
     let rev = 0;
@@ -127,43 +92,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, products, business, setVie
 
   return (
     <div className="space-y-6 pt-16 md:pt-0">
-      {/* Trial Countdown Banner */}
-      {(business?.subscriptionStatus === 'Trial' || business?.subscriptionStatus === 'Pending Approval') && timeLeft && (
-        <div className="bg-indigo-600 rounded-[2rem] p-6 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl shadow-indigo-500/20 animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="flex items-center gap-5">
-            <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center text-2xl backdrop-blur-md">
-              <i className="fa-solid fa-hourglass-half animate-pulse"></i>
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-indigo-200 uppercase tracking-[0.2em] mb-1">Trial Version Active</p>
-              <h3 className="text-xl font-black tracking-tight uppercase">Your free trial expires in:</h3>
-            </div>
-          </div>
-
-          <div className="flex gap-4">
-            {[
-              { label: 'Days', value: timeLeft.days },
-              { label: 'Hrs', value: timeLeft.hours },
-              { label: 'Min', value: timeLeft.minutes },
-              { label: 'Sec', value: timeLeft.seconds }
-            ].map((unit, i) => (
-              <div key={i} className="flex flex-col items-center">
-                <div className="bg-white/10 w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-black backdrop-blur-md border border-white/5">
-                  {unit.value.toString().padStart(2, '0')}
-                </div>
-                <span className="text-[9px] font-black text-indigo-300 uppercase tracking-widest mt-2">{unit.label}</span>
-              </div>
-            ))}
-          </div>
-
-          <button
-            onClick={() => setView('SUBSCRIPTION')}
-            className="bg-white text-indigo-600 px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-slate-50 transition-all shadow-xl active:scale-95"
-          >
-            Upgrade Now
-          </button>
-        </div>
-      )}
+      {/* Analytics Content */}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">

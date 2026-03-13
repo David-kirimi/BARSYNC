@@ -44,6 +44,41 @@ const AppContent: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showVerificationOverlay, setShowVerificationOverlay] = useState(true);
+  const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
+
+  // Trial Timer logic moved from Dashboard to App (Global)
+  useEffect(() => {
+    if (business?.subscriptionStatus !== 'Trial' && business?.subscriptionStatus !== 'Pending Approval') {
+      setTimeLeft(null);
+      return;
+    }
+
+    const calculateTimeLeft = () => {
+      const trialDuration = 3 * 24 * 60 * 60 * 1000;
+      const startTimeStr = business?.trialStartedAt || business?.createdAt;
+      if (!startTimeStr) return;
+
+      const startTime = new Date(startTimeStr).getTime();
+      const expiry = startTime + trialDuration;
+      const nowTs = new Date().getTime();
+      const difference = expiry - nowTs;
+
+      if (difference > 0) {
+        setTimeLeft({
+          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+          minutes: Math.floor((difference / 1000 / 60) % 60),
+          seconds: Math.floor((difference / 1000) % 60)
+        });
+      } else {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+      }
+    };
+
+    const timer = setInterval(calculateTimeLeft, 1000);
+    calculateTimeLeft();
+    return () => clearInterval(timer);
+  }, [business?.subscriptionStatus, business?.trialStartedAt, business?.createdAt]);
 
   // CRITICAL: 3-Day Lockout Logic
   const isAccountLocked = useMemo(() => {
@@ -701,6 +736,23 @@ const AppContent: React.FC = () => {
         />
 
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+          {timeLeft && !isAccountLocked && (
+            <div className="bg-indigo-600 text-white px-4 lg:px-6 py-2 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 shadow-lg z-30 animate-in slide-in-from-top duration-300 shrink-0">
+              <div className="flex items-center gap-2 lg:gap-3">
+                <i className="fa-solid fa-clock-rotate-left text-indigo-200 animate-pulse text-[10px] lg:text-xs"></i>
+                <p className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-center sm:text-left leading-tight">
+                  Trial Active: <span className="text-white">{timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}m {timeLeft.seconds}s</span> remaining
+                </p>
+              </div>
+              <button 
+                onClick={() => setView('SUBSCRIPTION')}
+                className="bg-white text-indigo-600 px-3 lg:px-4 py-1 rounded-full text-[8px] lg:text-[9px] font-black uppercase tracking-widest hover:bg-indigo-50 active:scale-95 transition-all shadow-md shrink-0 w-full sm:w-auto"
+              >
+                Top Up / Pay
+              </button>
+            </div>
+          )}
+
           <div className={`flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-8 scroll-smooth ${isAccountLocked ? 'grayscale opacity-80' : ''}`} id="main-scroll">
             <div className="max-w-[1600px] mx-auto h-full">
               {(view === 'POS' || view === 'TABS') && (
@@ -726,7 +778,7 @@ const AppContent: React.FC = () => {
               )}
 
               {view === 'ANALYTICS' && (
-                <Dashboard sales={sales} products={products} business={business} setView={setView} />
+                <Dashboard sales={sales} products={products} business={business} />
               )}
 
               {view === 'INVENTORY' && (

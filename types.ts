@@ -63,6 +63,9 @@ export interface Product {
   stock: number;
   openingStock: number;
   additions: number;
+  
+  barcode?: string;
+  productCode?: string;
 
   imageUrl?: string;
 

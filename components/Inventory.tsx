@@ -59,6 +59,8 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, onRese
       price: 0,
       buyingPrice: 0,
       stock: 0,
+      barcode: '',
+      productCode: '',
       imageUrl: ''
     });
   };
@@ -430,6 +432,29 @@ const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, onRese
                     value={form.stock || 0}
                     onChange={e => setForm(prev => ({ ...prev, stock: Number(e.target.value) }))}
                     className="w-full rounded-2xl p-3 border border-slate-200 text-sm font-black focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Barcode (Scanner)</label>
+                  <input
+                    type="text"
+                    placeholder="Scan or type..."
+                    className="w-full rounded-2xl p-3 border border-slate-200 text-xs font-black focus:outline-none focus:ring-4 focus:ring-indigo-100 uppercase"
+                    value={form.barcode || ''}
+                    onChange={e => setForm(prev => ({ ...prev, barcode: e.target.value.toUpperCase() }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">SKU Code</label>
+                  <input
+                    type="text"
+                    placeholder="Short code..."
+                    className="w-full rounded-2xl p-3 border border-slate-200 text-xs font-black focus:outline-none focus:ring-4 focus:ring-indigo-100 uppercase"
+                    value={form.productCode || ''}
+                    onChange={e => setForm(prev => ({ ...prev, productCode: e.target.value.toUpperCase() }))}
                   />
                 </div>
               </div>

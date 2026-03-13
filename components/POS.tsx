@@ -86,6 +86,8 @@ const POS: React.FC<POSProps> = ({
   const [showReceipt, setShowReceipt] = useState(false);
   const [custPhone, setCustPhone] = useState('');
   const [mobileCartExpanded, setMobileCartExpanded] = useState(false);
+  const [barcodeInput, setBarcodeInput] = useState('');
+  const barcodeRef = React.useRef<HTMLInputElement>(null);
 
   // Tab UI State
   const [showOpenTabModal, setShowOpenTabModal] = useState(false);
@@ -93,6 +95,7 @@ const POS: React.FC<POSProps> = ({
   const [isOpeningTab, setIsOpeningTab] = useState(false);
   const [selectedTabId, setSelectedTabId] = useState<string | null>(null);
   const [isSettling, setIsSettling] = useState(false);
+  const [lastScannedId, setLastScannedId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -104,6 +107,42 @@ const POS: React.FC<POSProps> = ({
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  // BARCODE SCANNING LOGIC
+  React.useEffect(() => {
+    const focusScanner = () => {
+      if (activeView === 'POS' && barcodeRef.current) {
+        barcodeRef.current.focus();
+      }
+    };
+    
+    focusScanner();
+    const interval = setInterval(focusScanner, 2000); // Aggressive refocus
+    return () => clearInterval(interval);
+  }, [activeView]);
+
+  const handleBarcodeScan = (code: string) => {
+    if (!code.trim()) return;
+    
+    const product = products.find(p => 
+      (p.barcode?.toUpperCase() === code.toUpperCase()) || 
+      (p.productCode?.toUpperCase() === code.toUpperCase())
+    );
+
+    if (product) {
+      if (product.stock > 0) {
+        addToCart(product);
+        setLastScannedId(product.id);
+        setTimeout(() => setLastScannedId(null), 500); // 500ms flash
+        showToast(`${product.name} added`, 'success');
+      } else {
+        showToast(`${product.name} is out of stock!`, 'warning');
+      }
+    } else {
+      showToast("Product not found", 'error');
+    }
+    setBarcodeInput('');
+  };
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
@@ -277,15 +316,38 @@ const POS: React.FC<POSProps> = ({
         ) : (
           <div className="flex flex-col h-full">
             <div className="mb-2 lg:mb-8 space-y-3 lg:space-y-4">
-              <div className="relative group">
-                <i className="fa-solid fa-magnifying-glass absolute left-4 lg:left-6 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="w-full pl-10 lg:pl-14 pr-4 lg:pr-6 py-3 lg:py-5 bg-white border border-slate-200 rounded-xl lg:rounded-[2rem] focus:outline-none shadow-sm text-sm lg:text-lg font-medium"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1 group">
+                  <i className="fa-solid fa-barcode absolute left-4 lg:left-6 top-1/2 -translate-y-1/2 text-indigo-500 z-10"></i>
+                  <input
+                    ref={barcodeRef}
+                    type="text"
+                    placeholder="SCAN BARCODE HERE..."
+                    className="w-full pl-10 lg:pl-14 pr-4 lg:pr-6 py-3 lg:py-5 bg-indigo-50 border-2 border-indigo-200 rounded-xl lg:rounded-[2rem] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none text-sm lg:text-lg font-black tracking-widest placeholder:text-indigo-300"
+                    value={barcodeInput}
+                    onChange={(e) => setBarcodeInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleBarcodeScan(barcodeInput);
+                      }
+                    }}
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                    <span className="hidden sm:block text-[8px] font-black text-indigo-400 uppercase tracking-widest">Active Scanner</span>
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                  </div>
+                </div>
+
+                <div className="relative flex-1 group">
+                  <i className="fa-solid fa-magnifying-glass absolute left-4 lg:left-6 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                  <input
+                    type="text"
+                    placeholder="Search by name..."
+                    className="w-full pl-10 lg:pl-14 pr-4 lg:pr-6 py-3 lg:py-5 bg-white border border-slate-200 rounded-xl lg:rounded-[2rem] focus:outline-none shadow-sm text-sm lg:text-lg font-medium"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
               </div>
               <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
                 {CATEGORIES.map(cat => (
@@ -338,7 +400,12 @@ const POS: React.FC<POSProps> = ({
 
         <div className="flex-1 overflow-auto p-4 lg:p-6 space-y-3 lg:space-y-4">
           {cart.map(item => (
-            <div key={item.id} className="flex gap-3 lg:gap-4 p-3 lg:p-4 bg-slate-50 rounded-[1.5rem] lg:rounded-[2rem] border border-transparent hover:border-indigo-100 transition-all">
+            <div 
+              key={item.id} 
+              className={`flex gap-3 lg:gap-4 p-3 lg:p-4 bg-slate-50 rounded-[1.5rem] lg:rounded-[2rem] border transition-all ${
+                lastScannedId === item.id ? 'border-indigo-500 bg-indigo-50 animate-flash shadow-lg shadow-indigo-100' : 'border-transparent hover:border-indigo-100'
+              }`}
+            >
               <img src={item.imageUrl} className="w-12 h-12 lg:w-16 lg:h-16 rounded-xl lg:rounded-2xl object-cover shadow-md" alt="" />
               <div className="flex-1 min-w-0 flex flex-col justify-center">
                 <h4 className="font-black text-[11px] lg:text-[13px] text-slate-800 truncate uppercase tracking-tight">{item.name}</h4>
@@ -499,7 +566,12 @@ const POS: React.FC<POSProps> = ({
 
               <div className="flex-1 overflow-auto p-4 space-y-3">
                 {cart.map(item => (
-                  <div key={item.id} className="flex gap-3 p-3 bg-slate-50 rounded-2xl border border-transparent active:border-indigo-100 transition-all">
+                  <div 
+                    key={item.id} 
+                    className={`flex gap-3 p-3 bg-slate-50 rounded-2xl border transition-all ${
+                      lastScannedId === item.id ? 'border-indigo-500 bg-indigo-50 animate-flash shadow-lg shadow-indigo-100' : 'border-transparent active:border-indigo-100'
+                    }`}
+                  >
                     <img src={item.imageUrl} className="w-14 h-14 rounded-xl object-cover shadow-md" alt="" />
                     <div className="flex-1 min-w-0 flex flex-col justify-center">
                       <h4 className="font-black text-[12px] text-slate-800 truncate uppercase tracking-tight">{item.name}</h4>
@@ -720,6 +792,12 @@ const POS: React.FC<POSProps> = ({
         }
         .animate-slide-up-mobile { animation: slide-up-mobile 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
         .animate-fade-in { animation: fade-in 0.2s ease-out; }
+        @keyframes flash {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.02); }
+          100% { transform: scale(1); }
+        }
+        .animate-flash { animation: flash 0.4s ease-out; }
         .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
       `}</style>
     </div>

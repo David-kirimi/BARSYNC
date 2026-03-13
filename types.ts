@@ -70,7 +70,13 @@ export interface Product {
   imageUrl?: string;
 
   createdAt: string;
-  updatedAt: string;          // ✅ ADD (CRITICAL)
+  updatedAt: string;
+}
+
+export interface StockSnapshot {
+  productId: string;
+  productName: string;
+  quantity: number;
 }
 
 export interface CartItem extends Product {
@@ -87,6 +93,7 @@ export interface Sale {
   salesPerson: string;
   customerPhone?: string;
   mpesaCode?: string;
+  shiftId?: string;
 
   // ❌ NO updatedAt ON PURPOSE
   // Sales are append-only
@@ -102,6 +109,25 @@ export interface Tab {
   status: 'OPEN' | 'CLOSED';
   createdAt: string;
   closedAt?: string;
+  shiftId?: string;
+}
+
+export interface Shift {
+  id: string;
+  businessId: string;
+  startTime: string;
+  endTime?: string;
+  openedBy: string;
+  closedBy?: string;
+  transactionsCount: number;
+  cashTotal: number;
+  mpesaTotal: number;
+  cardTotal: number;
+  totalSales: number;
+  openingStockSnapshot: StockSnapshot[];
+  closingStockSnapshot?: StockSnapshot[];
+  openTabsTransferred: { name: string; amount: number }[];
+  status: 'OPEN' | 'CLOSED';
 }
 
 export interface AuditLog {
@@ -126,4 +152,5 @@ export type View =
   | 'REPORTS'
   | 'PROFILE'
   | 'AUDIT_LOGS'
-  | 'SUBSCRIPTION';
+  | 'SUBSCRIPTION'
+  | 'SHIFT_HISTORY';

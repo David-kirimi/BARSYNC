@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Product, CartItem, Sale } from '../types';
+import { Product, CartItem, Sale, Shift, StockSnapshot } from '../types';
 import { CATEGORIES } from '../constants';
 import { useToast } from './Toast';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
@@ -26,6 +26,12 @@ interface POSProps {
   onAddCartToTab: (tabId: string, items: CartItem[]) => Promise<void>;
   activeView: string;
   isUnverified?: boolean;
+  sales: Sale[];
+
+  // Shift Management
+  currentShift: Shift | null;
+  onStartShift: () => Promise<void>;
+  onCloseShift: (closingStock: StockSnapshot[]) => Promise<void>;
 }
 
 /* -------------------- SORTABLE ITEM COMPONENT -------------------- */
@@ -73,12 +79,13 @@ const SortableProductCard: React.FC<{ product: Product, addToCart: (p: Product) 
     </div>
   );
 };
-
 const POS: React.FC<POSProps> = ({
   products, addToCart, cart, updateCartQuantity, removeFromCart, onCheckout,
   businessName, onReorder, tabs, onOpenTab, onAddToTab, onSettleTab, onCancelTab,
-  onUpdateTabQuantity, onAddCartToTab, activeView, isUnverified
+  onUpdateTabQuantity, onAddCartToTab, activeView, isUnverified,
+  currentShift, onStartShift, onCloseShift, sales
 }) => {
+  const alphanumeric = /^[a-z0-9]+$/i;
   const { showToast } = useToast();
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
@@ -108,6 +115,11 @@ const POS: React.FC<POSProps> = ({
   const [mpesaCodeInput, setMpesaCodeInput] = useState('');
   const [mpesaError, setMpesaError] = useState('');
   const [mpesaContext, setMpesaContext] = useState<{ type: 'checkout' | 'settle', tabId?: string } | null>(null);
+  
+  // Shift UI State
+  const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
+  const [closeShiftStep, setCloseShiftStep] = useState(1); // 1: Tabs, 2: Sales, 3: Stock
+  const [closingStockInput, setClosingStockInput] = useState<StockSnapshot[]>([]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -370,6 +382,20 @@ const POS: React.FC<POSProps> = ({
     setMpesaContext(null);
   };
 
+  const handleCloseShiftStart = () => {
+    if (isUnverified) {
+      showToast("Access Restricted", "warning");
+      return;
+    }
+    setClosingStockInput(products.map(p => ({
+      productId: p.id,
+      productName: p.name,
+      quantity: p.stock
+    })));
+    setCloseShiftStep(1);
+    setShowCloseShiftModal(true);
+  };
+
   return (
     <div className="flex h-full flex-col lg:flex-row gap-2 lg:gap-8 pb-32 lg:pb-0">
       <div className="flex-1 flex flex-col min-w-0">
@@ -381,6 +407,14 @@ const POS: React.FC<POSProps> = ({
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2">{tabs.length} Active Sessions</p>
               </div>
               <div className="flex gap-2">
+                {currentShift && (
+                  <button
+                    onClick={handleCloseShiftStart}
+                    className="px-6 py-4 bg-white border border-slate-200 text-rose-500 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-50 transition-all active:scale-95 flex items-center gap-3 shadow-sm"
+                  >
+                    <i className="fa-solid fa-power-off"></i> Close Shift
+                  </button>
+                )}
                 <button
                   onClick={() => setShowOpenTabModal(true)}
                   className="px-6 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 transition-all active:scale-95 flex items-center gap-3 shadow-xl shadow-slate-200"
@@ -453,6 +487,22 @@ const POS: React.FC<POSProps> = ({
           </div>
         ) : (
           <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Terminal</h2>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2 font-mono">
+                  {currentShift ? `Active Shift: ${currentShift.id}` : 'Syncing Live Terminal...'}
+                </p>
+              </div>
+              {currentShift && (
+                <button
+                  onClick={handleCloseShiftStart}
+                  className="px-6 py-4 bg-white border border-slate-200 text-rose-500 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-50 transition-all active:scale-95 flex items-center gap-3 shadow-sm"
+                >
+                  <i className="fa-solid fa-power-off"></i> Close Shift
+                </button>
+              )}
+            </div>
             <div className="mb-2 lg:mb-8 space-y-3 lg:space-y-4">
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1 group">
@@ -505,7 +555,26 @@ const POS: React.FC<POSProps> = ({
               </div>
             </div>
 
-            <div className="flex-1 overflow-auto pr-2">
+            <div className="flex-1 overflow-auto pr-2 relative">
+              {!currentShift && (
+                <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-50 flex items-center justify-center p-8 rounded-[3rem]">
+                  <div className="bg-white p-12 rounded-[4rem] shadow-2xl border border-slate-100 text-center max-w-md animate-in zoom-in-95 duration-300">
+                    <div className="w-20 h-20 bg-indigo-50 text-indigo-500 rounded-3xl flex items-center justify-center text-3xl mx-auto mb-8 shadow-xl shadow-indigo-100/50">
+                      <i className="fa-solid fa-clock-rotate-left"></i>
+                    </div>
+                    <h3 className="text-3xl font-black text-slate-800 uppercase tracking-tighter mb-4">No Active Shift</h3>
+                    <p className="text-sm text-slate-500 font-medium mb-10 leading-relaxed">
+                      Please start a new shift to begin recording sales and tracking inventory movements.
+                    </p>
+                    <button
+                      onClick={onStartShift}
+                      className="w-full py-5 bg-slate-900 text-white rounded-[2rem] font-black text-xs uppercase tracking-widest hover:bg-indigo-600 transition-all active:scale-95 shadow-2xl shadow-slate-200"
+                    >
+                      Start Business Shift
+                    </button>
+                  </div>
+                </div>
+              )}
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -977,6 +1046,178 @@ const POS: React.FC<POSProps> = ({
                   Done
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Shift Closing Modal */}
+      {showCloseShiftModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-[200] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[3.5rem] w-full max-w-lg p-10 shadow-2xl relative animate-in zoom-in-95 duration-300 overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center mb-8 shrink-0">
+              <div>
+                <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Close Shift</h3>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                  Step {closeShiftStep} of 3: {closeShiftStep === 1 ? 'Open Tabs' : closeShiftStep === 2 ? 'Sales Summary' : 'Stock Reconciliation'}
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowCloseShiftModal(false)}
+                className="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center hover:bg-slate-100 transition-all"
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto pr-2 no-scrollbar mb-8">
+              {closeShiftStep === 1 && (
+                <div className="space-y-6 animate-in slide-in-from-right-4">
+                  <div className="p-6 bg-orange-50 rounded-3xl border border-orange-100">
+                    <div className="flex items-center gap-4 mb-3">
+                      <div className="w-10 h-10 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center text-lg">
+                        <i className="fa-solid fa-triangle-exclamation"></i>
+                      </div>
+                      <h4 className="font-black text-orange-900 uppercase text-xs tracking-tight">Open Tabs Detected</h4>
+                    </div>
+                    <p className="text-xs text-orange-700 font-medium leading-relaxed">
+                      The following tabs are still open. They will be transferred to the next shift and will NOT count towards this shift's totals.
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    {tabs.filter(t => t.status === 'OPEN').map(tab => (
+                      <div key={tab.id} className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <span className="text-xs font-black text-slate-700 uppercase">{tab.customerName}</span>
+                        <span className="text-sm font-black text-slate-900 tracking-tighter">Ksh {tab.totalAmount.toLocaleString()}</span>
+                      </div>
+                    ))}
+                    {tabs.filter(t => t.status === 'OPEN').length === 0 && (
+                      <p className="text-center py-10 text-slate-300 font-bold uppercase tracking-widest text-[10px]">No Open Tabs</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {closeShiftStep === 2 && (
+                <div className="space-y-8 animate-in slide-in-from-right-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Items in Cart</p>
+                      <p className="text-2xl font-black text-slate-800 tracking-tighter">{cart.length}</p>
+                    </div>
+                    <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Active View</p>
+                      <p className="text-2xl font-black text-indigo-600 tracking-tighter uppercase">{activeView}</p>
+                    </div>
+                  </div>
+                  <div className="p-8 bg-slate-900 rounded-[2.5rem] text-white">
+                    <div className="flex justify-between items-center mb-4">
+                      <p className="text-[10px] font-black opacity-40 uppercase tracking-[0.3em]">Shift Sale Totals</p>
+                      <span className="px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-full text-[8px] font-black uppercase tracking-widest">Live Estimate</span>
+                    </div>
+                    <div className="space-y-2">
+                       <div className="flex justify-between text-xs font-medium">
+                          <span className="text-slate-400">Cash:</span>
+                          <span className="font-black">Ksh {sales.filter(s => s.shiftId === currentShift?.id && s.paymentMethod === 'Cash').reduce((sum, s) => sum + s.totalAmount, 0).toLocaleString()}</span>
+                       </div>
+                       <div className="flex justify-between text-xs font-medium">
+                          <span className="text-slate-400">M-Pesa:</span>
+                          <span className="font-black">Ksh {sales.filter(s => s.shiftId === currentShift?.id && s.paymentMethod === 'Mpesa').reduce((sum, s) => sum + s.totalAmount, 0).toLocaleString()}</span>
+                       </div>
+                       <div className="h-px bg-slate-800 my-4"></div>
+                       <div className="flex justify-between items-end">
+                          <span className="text-sm font-black text-indigo-400 uppercase tracking-wider">Total Sales:</span>
+                          <span className="text-3xl font-black tracking-tighter">Ksh {sales.filter(s => s.shiftId === currentShift?.id).reduce((sum, s) => sum + s.totalAmount, 0).toLocaleString()}</span>
+                       </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {closeShiftStep === 3 && (
+                <div className="space-y-6 animate-in slide-in-from-right-4">
+                  <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 flex items-center gap-3">
+                    <i className="fa-solid fa-list-check text-indigo-600"></i>
+                    <p className="text-[10px] font-bold text-indigo-800 uppercase tracking-tight">Verify Physical Stock Matches System Count</p>
+                  </div>
+                  <div className="space-y-2">
+                    {closingStockInput.map((item, idx) => (
+                      <div key={item.productId} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div className="flex-1 min-w-0 pr-4">
+                          <span className="text-[11px] font-black text-slate-700 uppercase truncate block">{item.productName}</span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">System expects: {products.find(p => p.id === item.productId)?.stock || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button 
+                            onClick={() => {
+                              const newStock = [...closingStockInput];
+                              newStock[idx].quantity = Math.max(0, newStock[idx].quantity - 1);
+                              setClosingStockInput(newStock);
+                            }}
+                            className="w-8 h-8 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 active:scale-90 transition-all shadow-sm"
+                          >
+                            <i className="fa-solid fa-minus text-[10px]"></i>
+                          </button>
+                          <input 
+                            type="number"
+                            className="w-12 bg-transparent text-center font-black text-slate-900 outline-none text-sm"
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const newStock = [...closingStockInput];
+                              newStock[idx].quantity = parseInt(e.target.value) || 0;
+                              setClosingStockInput(newStock);
+                            }}
+                          />
+                          <button 
+                            onClick={() => {
+                              const newStock = [...closingStockInput];
+                              newStock[idx].quantity += 1;
+                              setClosingStockInput(newStock);
+                            }}
+                            className="w-8 h-8 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 active:scale-90 transition-all shadow-sm"
+                          >
+                            <i className="fa-solid fa-plus text-[10px]"></i>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 shrink-0">
+              {closeShiftStep > 1 ? (
+                <button 
+                  onClick={() => setCloseShiftStep(prev => prev - 1)} 
+                  className="py-5 bg-slate-100 text-slate-500 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
+                >
+                  <i className="fa-solid fa-arrow-left mr-2"></i> Back
+                </button>
+              ) : (
+                <button 
+                  onClick={() => setShowCloseShiftModal(false)} 
+                  className="py-5 bg-slate-100 text-slate-500 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
+                >
+                  Discard
+                </button>
+              )}
+              
+              {closeShiftStep < 3 ? (
+                <button 
+                  onClick={() => setCloseShiftStep(prev => prev + 1)} 
+                  className="py-5 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 active:scale-95 shadow-xl shadow-slate-200 transition-all"
+                >
+                  Next Step <i className="fa-solid fa-arrow-right ml-2"></i>
+                </button>
+              ) : (
+                <button 
+                  onClick={() => { onCloseShift(closingStockInput); setShowCloseShiftModal(false); }}
+                  className="py-5 bg-rose-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-700 active:scale-95 shadow-xl shadow-rose-200 transition-all"
+                >
+                  <i className="fa-solid fa-check-double mr-2"></i> Finalize
+                </button>
+              )}
             </div>
           </div>
         </div>

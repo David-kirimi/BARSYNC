@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Product, Sale, CartItem, User, Role, AuditLog, Business, Tab } from './types';
+import { View, Product, Sale, CartItem, User, Role, AuditLog, Business, Tab, Shift, StockSnapshot } from './types';
 import { PRODUCT_TEMPLATES } from './constants';
 import POS from './components/POS';
 import Inventory from './components/Inventory';
@@ -14,6 +14,7 @@ import Profile from './components/Profile';
 import AuditLogs from './components/AuditLogs';
 import SubscriptionTerminal from './components/SubscriptionTerminal';
 import SuperAdminPortal from './components/SuperAdminPortal';
+import ShiftHistory from './components/ShiftHistory';
 
 const now = () => new Date().toISOString();
 
@@ -21,12 +22,8 @@ const now = () => new Date().toISOString();
 const AppContent: React.FC = () => {
   const { showToast: addToast } = useToast();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [view, setView] = useState<View>('POS');
-  const [products, setProducts] = useState<Product[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [businesses, setBusinesses] = useState<Business[]>([]);
-  const [business, setBusiness] = useState<any>({
+  const [view, setView] = useState<View>('LOGIN');
+  const [business, setBusiness] = useState<Business>({
     id: 'loading',
     name: 'Loading...',
     ownerName: 'Admin',
@@ -38,8 +35,14 @@ const AppContent: React.FC = () => {
     createdAt: now(),
     updatedAt: now()
   });
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
   const [tabs, setTabs] = useState<Tab[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [currentShift, setCurrentShift] = useState<Shift | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -182,6 +185,7 @@ const AppContent: React.FC = () => {
       salesPerson: currentUser.name,
       customerPhone,
       mpesaCode,
+      shiftId: currentShift?.id,
     };
 
     // Update Local State for UI responsiveness
@@ -226,7 +230,8 @@ const AppContent: React.FC = () => {
       totalAmount: 0,
       servedBy: currentUser.name,
       status: 'OPEN',
-      createdAt: now()
+      createdAt: now(),
+      shiftId: currentShift?.id,
     };
     const updatedTabs = [...tabs, newTab];
     setTabs(updatedTabs);
@@ -365,6 +370,7 @@ const AppContent: React.FC = () => {
       paymentMethod: method,
       salesPerson: tab.servedBy,
       mpesaCode,
+      shiftId: currentShift?.id,
     };
 
     const updatedTabs = tabs.filter(t => t.id !== tabId);
@@ -387,6 +393,83 @@ const AppContent: React.FC = () => {
       addToast("Tab settled successfully", "success");
     } catch (err) { addToast("Cloud sync failed during settlement", "error"); }
     return sale;
+  };
+
+  const onStartShift = async () => {
+    if (!currentUser) return;
+    const newShift: Shift = {
+      id: `SH-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+      businessId: currentUser.businessId,
+      startTime: now(),
+      openedBy: currentUser.name,
+      transactionsCount: 0,
+      cashTotal: 0,
+      mpesaTotal: 0,
+      cardTotal: 0,
+      totalSales: 0,
+      openingStockSnapshot: products.map(p => ({ 
+        productId: p.id, 
+        productName: p.name, 
+        quantity: p.stock 
+      })),
+      status: 'OPEN',
+      openTabsTransferred: tabs.filter(t => t.status === 'OPEN').map(t => ({ 
+        name: t.name, 
+        amount: t.totalAmount 
+      }))
+    };
+
+    // Update open tabs with the new shift ID
+    const updatedTabs = tabs.map(t => t.status === 'OPEN' ? { ...t, shiftId: newShift.id } : t);
+    setTabs(updatedTabs);
+    setCurrentShift(newShift);
+    setShifts(prev => [newShift, ...prev]);
+
+    try {
+      await fetch('/api/shifts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId: currentUser.businessId, shift: newShift })
+      });
+      addToast("Shift started", "success");
+    } catch (err) { addToast("Failed to sync shift start", "error"); }
+  };
+
+  const onCloseShift = async (closingStock: StockSnapshot[]) => {
+    if (!currentShift || !currentUser) return;
+
+    // Filter sales belonging to THIS shift
+    const shiftSales = sales.filter(s => s.shiftId === currentShift.id);
+    const transactionsCount = shiftSales.length;
+    const cashTotal = shiftSales.filter(s => s.paymentMethod === 'Cash').reduce((sum, s) => sum + s.totalAmount, 0);
+    const mpesaTotal = shiftSales.filter(s => s.paymentMethod === 'Mpesa').reduce((sum, s) => sum + s.totalAmount, 0);
+    const cardTotal = shiftSales.filter(s => s.paymentMethod === 'Card').reduce((sum, s) => sum + s.totalAmount, 0);
+    const totalSales = shiftSales.reduce((sum, s) => sum + s.totalAmount, 0);
+
+    const closedShift: Shift = {
+      ...currentShift,
+      endTime: now(),
+      closedBy: currentUser.name,
+      transactionsCount,
+      cashTotal,
+      mpesaTotal,
+      cardTotal,
+      totalSales,
+      closingStockSnapshot: closingStock,
+      status: 'CLOSED'
+    };
+
+    setShifts(prev => prev.map(s => s.id === closedShift.id ? closedShift : s));
+    setCurrentShift(null);
+
+    try {
+      await fetch('/api/shifts', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId: currentUser.businessId, shift: closedShift })
+      });
+      addToast("Shift closed successfully", "success");
+    } catch (err) { addToast("Failed to sync shift close", "error"); }
   };
 
   const onCancelTab = async (tabId: string) => {
@@ -765,6 +848,7 @@ const AppContent: React.FC = () => {
                   updateCartQuantity={updateCartQuantity}
                   removeFromCart={removeFromCart}
                   onCheckout={onCheckout}
+                  sales={sales}
                   businessName={business?.name || 'BarSync'}
                   onReorder={() => { }}
                   tabs={tabs}
@@ -776,6 +860,9 @@ const AppContent: React.FC = () => {
                   onAddCartToTab={onAddCartToTab}
                   activeView={view}
                   isUnverified={isAccountLocked}
+                  currentShift={currentShift}
+                  onStartShift={onStartShift}
+                  onCloseShift={onCloseShift}
                 />
               )}
 
@@ -796,6 +883,10 @@ const AppContent: React.FC = () => {
 
               {view === 'SALES' && (
                 <SalesHistory sales={sales} />
+              )}
+
+              {view === 'SHIFT_HISTORY' && (
+                <ShiftHistory shifts={shifts} />
               )}
 
               {view === 'USER_MANAGEMENT' && (

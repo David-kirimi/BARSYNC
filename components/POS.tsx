@@ -88,6 +88,11 @@ const POS: React.FC<POSProps> = ({
   const [mobileCartExpanded, setMobileCartExpanded] = useState(false);
   const [barcodeInput, setBarcodeInput] = useState('');
   const barcodeRef = React.useRef<HTMLInputElement>(null);
+  
+  // Advanced Scan Buffer (Ref based for speed/precision)
+  const scanBuffer = React.useRef<string>('');
+  const lastCharTime = React.useRef<number>(0);
+  const scanTimeout = React.useRef<any>(null);
 
   // Tab UI State
   const [showOpenTabModal, setShowOpenTabModal] = useState(false);
@@ -96,6 +101,7 @@ const POS: React.FC<POSProps> = ({
   const [selectedTabId, setSelectedTabId] = useState<string | null>(null);
   const [isSettling, setIsSettling] = useState(false);
   const [lastScannedId, setLastScannedId] = useState<string | null>(null);
+  const [lastScanError, setLastScanError] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -108,18 +114,6 @@ const POS: React.FC<POSProps> = ({
     })
   );
 
-  // BARCODE SCANNING LOGIC
-  React.useEffect(() => {
-    const focusScanner = () => {
-      if (activeView === 'POS' && barcodeRef.current) {
-        barcodeRef.current.focus();
-      }
-    };
-    
-    focusScanner();
-    const interval = setInterval(focusScanner, 2000); // Aggressive refocus
-    return () => clearInterval(interval);
-  }, [activeView]);
 
   const handleBarcodeScan = (code: string) => {
     if (!code.trim()) return;
@@ -133,16 +127,100 @@ const POS: React.FC<POSProps> = ({
       if (product.stock > 0) {
         addToCart(product);
         setLastScannedId(product.id);
-        setTimeout(() => setLastScannedId(null), 500); // 500ms flash
+        setLastScanError(false);
+        setTimeout(() => setLastScannedId(null), 500); 
+        playBeep(800, 0.1, 0.1); 
         showToast(`${product.name} added`, 'success');
       } else {
+        setLastScanError(true);
+        setTimeout(() => setLastScanError(false), 500);
+        playBeep(200, 0.3, 0.1); 
         showToast(`${product.name} is out of stock!`, 'warning');
       }
     } else {
+      setLastScanError(true);
+      setTimeout(() => setLastScanError(false), 500);
+      playBeep(200, 0.3, 0.1);
       showToast("Product not found", 'error');
     }
     setBarcodeInput('');
+    scanBuffer.current = '';
   };
+
+  // Audio Feedback
+  const playBeep = (freq = 800, duration = 0.1, volume = 0.1) => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    } catch (e) { console.warn("Beep failed", e); }
+  };
+
+  // ADVANCED GLOBAL SCANNER LISTENER
+  React.useEffect(() => {
+    if (activeView !== 'POS') return;
+
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Guard: Ignore if typing in a field
+      const active = document.activeElement;
+      const isInput = active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement;
+      
+      // But allow if it's our specific manual barcode input
+      const isManualInput = active === barcodeRef.current;
+      
+      if (isInput && !isManualInput) return;
+
+      const now = Date.now();
+      const diff = now - lastCharTime.current;
+      lastCharTime.current = now;
+
+      // Reset timeout on every char
+      if (scanTimeout.current) clearTimeout(scanTimeout.current);
+
+      if (e.key === 'Enter') {
+        if (scanBuffer.current.length > 2) {
+          e.preventDefault();
+          handleBarcodeScan(scanBuffer.current);
+          scanBuffer.current = '';
+        }
+        return;
+      }
+
+      if (e.key.length === 1) {
+        scanBuffer.current += e.key;
+        
+        // Auto-finalize if it looks like a scanner (fast arrival < 30ms)
+        scanTimeout.current = setTimeout(() => {
+          if (scanBuffer.current.length > 2 && diff < 30) { 
+            handleBarcodeScan(scanBuffer.current);
+            scanBuffer.current = '';
+          }
+        }, 80); 
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [products, addToCart]); // Re-bind on critical deps
+
+  // Keep manual field focused as fallback
+  React.useEffect(() => {
+    if (activeView !== 'POS') return;
+    const interval = setInterval(() => {
+      const active = document.activeElement;
+      if (!active || (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA')) {
+         barcodeRef.current?.focus();
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [activeView]);
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
@@ -323,7 +401,11 @@ const POS: React.FC<POSProps> = ({
                     ref={barcodeRef}
                     type="text"
                     placeholder="SCAN BARCODE HERE..."
-                    className="w-full pl-10 lg:pl-14 pr-4 lg:pr-6 py-3 lg:py-5 bg-indigo-50 border-2 border-indigo-200 rounded-xl lg:rounded-[2rem] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none text-sm lg:text-lg font-black tracking-widest placeholder:text-indigo-300"
+                    className={`w-full pl-10 lg:pl-14 pr-4 lg:pr-6 py-3 lg:py-5 border-2 rounded-xl lg:rounded-[2rem] focus:ring-4 outline-none text-sm lg:text-lg font-black tracking-widest placeholder:text-indigo-300 transition-all ${
+                        lastScanError 
+                        ? 'bg-rose-50 border-rose-500 focus:border-rose-500 focus:ring-rose-500/10' 
+                        : 'bg-indigo-50 border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500/10'
+                    }`}
                     value={barcodeInput}
                     onChange={(e) => setBarcodeInput(e.target.value)}
                     onKeyDown={(e) => {

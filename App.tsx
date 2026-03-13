@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Product, Sale, CartItem, User, Role, AuditLog, Business, Tab, Shift, StockSnapshot } from './types';
+import { View, Product, Sale, CartItem, User, Role, AuditLog, Business, Tab, Shift, StockSnapshot, StaffLog } from './types';
 import { PRODUCT_TEMPLATES } from './constants';
 import POS from './components/POS';
 import Inventory from './components/Inventory';
@@ -15,6 +15,8 @@ import AuditLogs from './components/AuditLogs';
 import SubscriptionTerminal from './components/SubscriptionTerminal';
 import SuperAdminPortal from './components/SuperAdminPortal';
 import ShiftHistory from './components/ShiftHistory';
+import CounterDashboard from './components/CounterDashboard';
+import SupervisorPortal from './components/SupervisorPortal';
 
 const now = () => new Date().toISOString();
 
@@ -40,6 +42,7 @@ const AppContent: React.FC = () => {
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [currentShift, setCurrentShift] = useState<Shift | null>(null);
+  const [staffLogs, setStaffLogs] = useState<StaffLog[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
@@ -617,7 +620,47 @@ const AppContent: React.FC = () => {
     return () => clearInterval(syncInterval);
   }, [currentUser, business.id]);
 
+  const handleUpdateUserRole = async (userId: string, newRole: Role) => {
+    const updatedUsers = users.map(u => 
+      u.id === userId ? { ...u, role: newRole, updatedAt: now() } : u
+    );
+    setUsers(updatedUsers);
+
+    // If the updated user is the current user, update their profile too
+    if (currentUser?.id === userId) {
+      setCurrentUser({ ...currentUser, role: newRole, updatedAt: now() });
+      addToast(`Your role has been updated to ${newRole}`, 'info');
+    }
+
+    try {
+      await fetch('/api/users/update-role', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId: currentUser?.businessId, userId, role: newRole })
+      });
+      addToast("Staff role updated successfully", "success");
+    } catch (err) {
+      addToast("Failed to persist role change to cloud", "error");
+    }
+  };
+
   const onLogout = () => {
+    if (currentUser?.role === Role.WAITER) {
+      const hasPendingOrders = sales.some(s => s.status === 'PENDING_PAYMENT' && s.createdBy === currentUser.name);
+      if (hasPendingOrders) {
+        addToast("Cannot sign out: You have pending orders at the counter.", "error");
+        return;
+      }
+    }
+
+    if (currentUser) {
+      setStaffLogs(prev => prev.map(log => 
+        (log.userId === currentUser.id && !log.signOutTime) 
+        ? { ...log, signOutTime: now() } 
+        : log
+      ));
+    }
+
     setCurrentUser(null);
     setCart([]);
     setView('LOGIN');
@@ -735,8 +778,18 @@ const AppContent: React.FC = () => {
           setCurrentUser(user);
           if (biz) setBusiness(biz);
           setShowVerificationOverlay(true);
+
+          setStaffLogs(prev => [
+            ...prev,
+            { id: Math.random().toString(36).substr(2, 9), businessId: user.businessId || 'admin_node', userId: user.id, userName: user.name, role: user.role, signInTime: now() }
+          ]);
+
           if (user.role === Role.SUPER_ADMIN) {
             setView('SUPER_ADMIN_PORTAL');
+          } else if (user.role === Role.CASHIER) {
+            setView('COUNTER_DASHBOARD');
+          } else if (user.role === Role.SUPERVISOR) {
+            setView('SUPERVISOR_PORTAL');
           } else {
             setView('POS');
           }
@@ -887,6 +940,36 @@ const AppContent: React.FC = () => {
 
               {view === 'SHIFT_HISTORY' && (
                 <ShiftHistory shifts={shifts} />
+              )}
+
+              {view === 'COUNTER_DASHBOARD' && (
+                <CounterDashboard
+                  sales={sales}
+                  staffLogs={staffLogs}
+                  onVerifyPayment={async (saleId, method, code) => {
+                    const updatedSales = sales.map(s => 
+                      s.id === saleId 
+                      ? { ...s, paymentMethod: method, mpesaCode: code, status: 'COMPLETED' as const, verifiedBy: currentUser?.name, completedAt: now() }
+                      : s
+                    );
+                    setSales(updatedSales);
+                    addToast(`Payment verified via ${method}`, "success");
+                  }}
+                  onCancelOrder={async (saleId) => {
+                    setSales(prev => prev.filter(s => s.id !== saleId));
+                    addToast("Order cancelled", "warning");
+                  }}
+                  onSwitchView={setView}
+                />
+              )}
+
+              {view === 'SUPERVISOR_PORTAL' && (
+                <SupervisorPortal 
+                  sales={sales} 
+                  staffLogs={staffLogs} 
+                  businessName={business?.name || 'BarSync'} 
+                  onUpdateRole={handleUpdateUserRole}
+                />
               )}
 
               {view === 'USER_MANAGEMENT' && (

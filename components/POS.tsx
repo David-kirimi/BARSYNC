@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Product, CartItem, Sale, Shift, StockSnapshot } from '../types';
+import { Product, CartItem, Sale, Shift, StockSnapshot, Role } from '../types';
 import { CATEGORIES } from '../constants';
 import { useToast } from './Toast';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
@@ -12,7 +12,7 @@ interface POSProps {
   cart: CartItem[];
   updateCartQuantity: (id: string, delta: number) => void;
   removeFromCart: (id: string) => void;
-  onCheckout: (method: 'Cash' | 'Mpesa' | 'Card', customerPhone?: string, mpesaCode?: string) => Sale | undefined;
+  onCheckout: (method: 'Cash' | 'Mpesa' | 'Card' | 'Pending', customerPhone?: string, mpesaCode?: string) => Promise<Sale | undefined>;
   businessName: string;
   onReorder: (newOrder: Product[]) => void;
 
@@ -27,6 +27,7 @@ interface POSProps {
   activeView: string;
   isUnverified?: boolean;
   sales: Sale[];
+  userRole?: Role;
 
   // Shift Management
   currentShift: Shift | null;
@@ -83,7 +84,7 @@ const POS: React.FC<POSProps> = ({
   products, addToCart, cart, updateCartQuantity, removeFromCart, onCheckout,
   businessName, onReorder, tabs, onOpenTab, onAddToTab, onSettleTab, onCancelTab,
   onUpdateTabQuantity, onAddCartToTab, activeView, isUnverified,
-  currentShift, onStartShift, onCloseShift, sales
+  currentShift, onStartShift, onCloseShift, sales, userRole
 }) => {
   const alphanumeric = /^[a-z0-9]+$/i;
   const { showToast } = useToast();
@@ -266,7 +267,7 @@ const POS: React.FC<POSProps> = ({
     }
   };
 
-  const handleCheckout = async (method: 'Cash' | 'Mpesa' | 'Card') => {
+  const handleCheckout = async (method: 'Cash' | 'Mpesa' | 'Card' | 'Pending') => {
     if (isUnverified) {
       showToast("Access Restricted: Verification Required", "warning");
       return;
@@ -277,6 +278,14 @@ const POS: React.FC<POSProps> = ({
       setMpesaCodeInput('');
       setMpesaError('');
       setShowMpesaModal(true);
+      return;
+    }
+
+    if (method === 'Pending') {
+      const sale = await onCheckout(method, custPhone);
+      if (sale) {
+        showToast("Order sent to counter for verification", "success");
+      }
       return;
     }
 
@@ -651,9 +660,22 @@ const POS: React.FC<POSProps> = ({
               <span className="text-2xl lg:text-4xl font-black tracking-tighter">Ksh {cartTotal.toLocaleString()}</span>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-2 lg:gap-3">
-            <button disabled={cart.length === 0} onClick={() => handleCheckout('Cash')} className="py-4 bg-slate-800 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest border border-slate-700 hover:bg-slate-700 transition-all active:scale-95 disabled:opacity-50">Cash</button>
-            <button disabled={cart.length === 0} onClick={() => handleCheckout('Mpesa')} className="py-4 bg-emerald-600 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-emerald-500 shadow-xl shadow-emerald-900/40 transition-all active:scale-95 disabled:opacity-50">M-Pesa</button>
+          <div className="grid grid-cols-3 gap-2 lg:gap-3 mt-4">
+            {userRole === 'WAITER' ? (
+              <button 
+                disabled={cart.length === 0} 
+                onClick={() => handleCheckout('Pending')} 
+                className="col-span-3 py-4 bg-orange-600 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest border border-orange-500 hover:bg-orange-500 shadow-xl shadow-orange-900/40 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                Send to Counter <i className="fa-solid fa-paper-plane"></i>
+              </button>
+            ) : (
+              <>
+                <button disabled={cart.length === 0} onClick={() => handleCheckout('Cash')} className="py-4 bg-slate-800 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest border border-slate-700 hover:bg-slate-700 transition-all active:scale-95 disabled:opacity-50">Cash</button>
+                <button disabled={cart.length === 0} onClick={() => handleCheckout('Mpesa')} className="py-4 bg-emerald-600 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-emerald-500 shadow-xl shadow-emerald-900/40 transition-all active:scale-95 disabled:opacity-50">M-Pesa</button>
+              </>
+            )}
+          </div>
 
             {/* Add to Tab Mechanism */}
             <div className="relative group">
@@ -689,8 +711,7 @@ const POS: React.FC<POSProps> = ({
             </div>
           </div>
         </div>
-      </div>
-
+      
       {/* Mobile Floating Cart - Only visible on mobile */}
       <div className="lg:hidden">
         {/* Sticky Bottom Panel - Collapsed State */}
@@ -711,20 +732,32 @@ const POS: React.FC<POSProps> = ({
             </div>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <button
-              disabled={cart.length === 0}
-              onClick={(e) => { e.stopPropagation(); handleCheckout('Cash'); }}
-              className="py-4 bg-slate-800 rounded-xl font-black text-[9px] uppercase tracking-widest border border-slate-700 active:scale-95 disabled:opacity-50 transition-all flex flex-col items-center justify-center gap-1"
-            >
-              <i className="fa-solid fa-money-bills"></i>Cash
-            </button>
-            <button
-              disabled={cart.length === 0}
-              onClick={(e) => { e.stopPropagation(); handleCheckout('Mpesa'); }}
-              className="py-4 bg-emerald-600 rounded-xl font-black text-[9px] uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all flex flex-col items-center justify-center gap-1"
-            >
-              <i className="fa-solid fa-mobile-screen"></i>M-Pesa
-            </button>
+            {userRole === 'WAITER' ? (
+              <button
+                disabled={cart.length === 0}
+                onClick={(e) => { e.stopPropagation(); handleCheckout('Pending'); }}
+                className="col-span-2 py-4 bg-orange-600 rounded-xl font-black text-[9px] uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all flex flex-col items-center justify-center gap-1 shadow-xl shadow-orange-900/40"
+              >
+                <i className="fa-solid fa-paper-plane"></i>Send to Counter
+              </button>
+            ) : (
+              <>
+                <button
+                  disabled={cart.length === 0}
+                  onClick={(e) => { e.stopPropagation(); handleCheckout('Cash'); }}
+                  className="py-4 bg-slate-800 rounded-xl font-black text-[9px] uppercase tracking-widest border border-slate-700 active:scale-95 disabled:opacity-50 transition-all flex flex-col items-center justify-center gap-1"
+                >
+                  <i className="fa-solid fa-money-bills"></i>Cash
+                </button>
+                <button
+                  disabled={cart.length === 0}
+                  onClick={(e) => { e.stopPropagation(); handleCheckout('Mpesa'); }}
+                  className="py-4 bg-emerald-600 rounded-xl font-black text-[9px] uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all flex flex-col items-center justify-center gap-1"
+                >
+                  <i className="fa-solid fa-mobile-screen"></i>M-Pesa
+                </button>
+              </>
+            )}
             <button
               disabled={cart.length === 0}
               onClick={(e) => { e.stopPropagation(); setMobileCartExpanded(true); setTimeout(() => document.getElementById('assign-to-tab-section')?.scrollIntoView({ behavior: 'smooth' }), 300); }}
@@ -847,27 +880,39 @@ const POS: React.FC<POSProps> = ({
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <button
-                    disabled={cart.length === 0}
-                    onClick={() => { handleCheckout('Cash'); setMobileCartExpanded(false); }}
-                    className="py-4 bg-slate-800 rounded-xl font-black text-[10px] uppercase tracking-widest border border-slate-700 active:scale-95 disabled:opacity-50 transition-all"
-                  >
-                    Cash
-                  </button>
-                  <button
-                    disabled={cart.length === 0}
-                    onClick={() => { handleCheckout('Mpesa'); setMobileCartExpanded(false); }}
-                    className="py-4 bg-emerald-600 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-900/40 active:scale-95 disabled:opacity-50 transition-all"
-                  >
-                    M-Pesa
-                  </button>
-                  <button
-                    disabled={cart.length === 0}
-                    onClick={() => { handleCheckout('Card'); setMobileCartExpanded(false); }}
-                    className="py-4 bg-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-indigo-900/40 active:scale-95 disabled:opacity-50 transition-all"
-                  >
-                    Card
-                  </button>
+                  {userRole === 'WAITER' ? (
+                    <button
+                      disabled={cart.length === 0}
+                      onClick={() => { handleCheckout('Pending'); setMobileCartExpanded(false); }}
+                      className="col-span-2 py-4 bg-orange-600 rounded-xl font-black text-[12px] uppercase tracking-widest shadow-xl shadow-orange-900/40 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                    >
+                      Send to Counter <i className="fa-solid fa-paper-plane"></i>
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        disabled={cart.length === 0}
+                        onClick={() => { handleCheckout('Cash'); setMobileCartExpanded(false); }}
+                        className="py-4 bg-slate-800 rounded-xl font-black text-[10px] uppercase tracking-widest border border-slate-700 active:scale-95 disabled:opacity-50 transition-all"
+                      >
+                        Cash
+                      </button>
+                      <button
+                        disabled={cart.length === 0}
+                        onClick={() => { handleCheckout('Mpesa'); setMobileCartExpanded(false); }}
+                        className="py-4 bg-emerald-600 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-900/40 active:scale-95 disabled:opacity-50 transition-all"
+                      >
+                        M-Pesa
+                      </button>
+                      <button
+                        disabled={cart.length === 0}
+                        onClick={() => { handleCheckout('Card'); setMobileCartExpanded(false); }}
+                        className="col-span-2 py-4 bg-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-indigo-900/40 active:scale-95 disabled:opacity-50 transition-all"
+                      >
+                        Card
+                      </button>
+                    </>
+                  )}
                   <button
                     disabled={cart.length === 0}
                     onClick={() => { document.getElementById('assign-to-tab-section')?.scrollIntoView({ behavior: 'smooth' }); }}

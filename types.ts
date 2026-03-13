@@ -2,7 +2,10 @@ export enum Role {
   SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN = 'ADMIN',
   BARTENDER = 'BARTENDER',
-  OWNER = 'OWNER'
+  OWNER = 'OWNER',
+  WAITER = 'WAITER',
+  CASHIER = 'CASHIER',
+  SUPERVISOR = 'SUPERVISOR'
 }
 
 export interface Business {
@@ -89,11 +92,17 @@ export interface Sale {
   date: string;
   items: CartItem[];
   totalAmount: number;
-  paymentMethod: 'Cash' | 'Mpesa' | 'Card';
+  paymentMethod: 'Cash' | 'Mpesa' | 'Card' | 'Pending'; // 'Pending' for waiter orders
   salesPerson: string;
   customerPhone?: string;
   mpesaCode?: string;
   shiftId?: string;
+
+  // New fields for role-based workflow
+  status?: 'PENDING_PAYMENT' | 'COMPLETED';
+  createdBy?: string; // Waiter ID/Name
+  verifiedBy?: string; // Cashier ID/Name
+  completedAt?: string;
 
   // ❌ NO updatedAt ON PURPOSE
   // Sales are append-only
@@ -140,6 +149,16 @@ export interface AuditLog {
   businessId?: string;
 }
 
+export interface StaffLog {
+  id: string;
+  businessId: string;
+  userId: string;
+  userName: string;
+  role: Role;
+  signInTime: string;
+  signOutTime?: string;
+}
+
 export type View =
   | 'POS'
   | 'INVENTORY'
@@ -153,4 +172,6 @@ export type View =
   | 'PROFILE'
   | 'AUDIT_LOGS'
   | 'SUBSCRIPTION'
-  | 'SHIFT_HISTORY';
+  | 'SHIFT_HISTORY'
+  | 'COUNTER_DASHBOARD'
+  | 'SUPERVISOR_PORTAL';

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { User, Business } from '../types';
+import { User, Business, Role } from '../types';
 
 interface RegisterProps {
     onBack: () => void;

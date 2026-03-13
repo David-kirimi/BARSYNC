@@ -101,6 +101,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAdd, onUpdate,
                   onChange={e => setNewUser({ ...newUser, role: e.target.value as Role })}
                 >
                   <option value={Role.BARTENDER}>Bartender (Terminal Only)</option>
+                  <option value={Role.WAITER}>Waiter (Orders Only)</option>
+                  <option value={Role.CASHIER}>Cashier (Counter + Terminal)</option>
+                  <option value={Role.SUPERVISOR}>Supervisor (Portal Access)</option>
                   <option value={Role.ADMIN}>Business Admin (Terminal + Reports)</option>
                   <option value={Role.OWNER}>Business Owner (Full Access)</option>
                 </select>

@@ -29,6 +29,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
   const menuItems = [
     { id: 'TABS' as View, label: 'Notebook', icon: 'fa-book-open', roles: [Role.ADMIN, Role.BARTENDER, Role.OWNER] }, // Tabs first
     { id: 'POS' as View, label: 'Terminal', icon: 'fa-cash-register', roles: [Role.ADMIN, Role.BARTENDER, Role.OWNER, Role.CASHIER] },
+    { id: 'COUNTER_DASHBOARD' as View, label: 'Counter', icon: 'fa-cash-register', roles: [Role.ADMIN, Role.OWNER, Role.CASHIER, Role.SUPERVISOR] },
+    { id: 'SUPERVISOR_PORTAL' as View, label: 'Supervisor Hub', icon: 'fa-user-shield', roles: [Role.ADMIN, Role.OWNER, Role.SUPERVISOR] },
     { id: 'INVENTORY' as View, label: 'Inventory', icon: 'fa-boxes-stacked', roles: [Role.ADMIN, Role.OWNER] },
     { id: 'SALES' as View, label: 'Sales History', icon: 'fa-clock-rotate-left', roles: [Role.ADMIN, Role.BARTENDER, Role.OWNER] },
     { id: 'REPORTS' as View, label: 'BI Reports', icon: 'fa-chart-pie', roles: [Role.ADMIN, Role.OWNER] },

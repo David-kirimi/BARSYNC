@@ -822,6 +822,10 @@ const POS: React.FC<POSProps> = ({
               </div>
 
               <div className="pt-6 border-t border-slate-200 border-dashed space-y-2">
+                <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest no-print">
+                  <span>Method</span>
+                  <span className="text-orange-600">{lastSale.paymentMethod}</span>
+                </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-black text-slate-800 uppercase tracking-widest">Total Pay</span>
                   <span className="text-2xl font-extrabold text-slate-900 tracking-tighter">Ksh {lastSale.totalAmount.toLocaleString()}</span>
@@ -830,6 +834,14 @@ const POS: React.FC<POSProps> = ({
             </div>
 
             <div className="space-y-4">
+              <button
+                onClick={shareReceiptWhatsApp}
+                className="w-full py-5 bg-orange-600 text-white rounded-[2rem] font-black text-[12px] uppercase tracking-[0.2em] hover:bg-orange-700 transition-all flex items-center justify-center gap-4 shadow-2xl shadow-orange-200 active:scale-95 no-print"
+              >
+                <i className="fa-brands fa-whatsapp text-xl"></i>
+                Send to Customer
+              </button>
+
               <div className="grid grid-cols-2 gap-4 no-print">
                 <button
                   onClick={() => window.print()}

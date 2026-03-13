@@ -158,6 +158,14 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
                 <p className="text-[9px] font-black text-orange-300 uppercase tracking-widest flex items-center justify-center gap-2">
                   <i className="fa-solid fa-shield-check"></i> End-to-End Encryption Active
                 </p>
+                <div className="pt-2">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-loose">
+                    Having trouble? Contact Support:
+                  </p>
+                  <a href="tel:+254757983954" className="text-[11px] font-black text-orange-600 hover:text-orange-700 tracking-wider">
+                    <i className="fa-solid fa-phone mr-2"></i> +254 757 983 954
+                  </a>
+                </div>
               </div>
             </>
           ) : (

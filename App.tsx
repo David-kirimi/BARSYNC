@@ -383,6 +383,28 @@ const AppContent: React.FC = () => {
     }
   };
 
+  const handleResetStock = async () => {
+    if (!confirm("This will set Current Stock as the 'Opening Stock' for all items. Proceed?")) return;
+
+    const newProducts = products.map(p => ({
+      ...p,
+      openingStock: p.stock,
+      updatedAt: now()
+    }));
+
+    setProducts(newProducts);
+    try {
+      await fetch('/api/products/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId: currentUser?.businessId, products: newProducts })
+      });
+      addToast("Stock snapshot saved successfully", "success");
+    } catch (err) {
+      addToast("Failed to save snapshot", "error");
+    }
+  };
+
   const handleProductAdd = async (newProductData: Omit<Product, 'id' | 'openingStock' | 'additions' | 'createdAt' | 'updatedAt'>) => {
     const newProduct: Product = {
       ...newProductData,
@@ -659,7 +681,7 @@ const AppContent: React.FC = () => {
               )}
 
               {view === 'ANALYTICS' && (
-                <Dashboard sales={sales} products={products} />
+                <Dashboard sales={sales} products={products} business={business} setView={setView} />
               )}
 
               {view === 'INVENTORY' && (
@@ -667,6 +689,7 @@ const AppContent: React.FC = () => {
                   products={products}
                   onUpdate={handleProductUpdate}
                   onAdd={handleProductAdd}
+                  onResetStock={handleResetStock}
                   userRole={currentUser.role}
                   isUnverified={business?.subscriptionStatus === 'Pending Approval'}
                 />
@@ -706,7 +729,15 @@ const AppContent: React.FC = () => {
                 />
               )}
 
-              {view === 'REPORTS' && <Reports sales={sales} businessName={business.name} logo={business.logo} />}
+              {view === 'REPORTS' && (
+                <Reports
+                  sales={sales}
+                  products={products}
+                  currentUser={currentUser}
+                  businessName={business.name}
+                  logo={business.logo}
+                />
+              )}
               {(view === 'PROFILE' || view === 'SETTINGS') && currentUser && (
                 <Profile
                   user={currentUser}

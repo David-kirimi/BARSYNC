@@ -86,23 +86,58 @@ const SubscriptionTerminal: React.FC<SubscriptionTerminalProps> = ({ business, o
             <div className="bg-slate-950 rounded-[3rem] p-10 md:p-16 text-white shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/20 blur-[100px] rounded-full -mr-32 -mt-32"></div>
                 <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                    <div className="space-y-6">
+                    <div className="space-y-10">
                         <h2 className="text-3xl font-black tracking-tighter uppercase">Activate Terminal</h2>
-                        <p className="text-slate-400 text-sm leading-relaxed font-medium">
-                            To activate your subscription, please pay the monthly fee for your selected plan to:
-                        </p>
-                        <div className="bg-white/5 border border-white/10 rounded-3xl p-8 space-y-4">
-                            <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Bank</span>
-                                <span className="font-black text-indigo-400">DTB Account Paybill</span>
+                        <div className="grid grid-cols-1 gap-6">
+                            {/* Option 1: Bank Paybill */}
+                            <div className="group relative bg-white/5 border border-white/10 rounded-[2.5rem] p-8 hover:border-indigo-500/50 transition-all duration-500 overflow-hidden">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-indigo-500/20 transition-all"></div>
+                                <div className="relative space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-indigo-500/20 rounded-xl flex items-center justify-center text-indigo-400">
+                                                <i className="fa-solid fa-building-columns"></i>
+                                            </div>
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Option 1: Bank</span>
+                                        </div>
+                                        <span className="font-black text-indigo-400 text-[10px] uppercase tracking-widest">DTB Paybill</span>
+                                    </div>
+                                    <div className="pt-4 border-t border-white/5 space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] font-black text-slate-500 uppercase">Paybill Number</span>
+                                            <span className="text-xl font-black tracking-widest text-white">516600</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] font-black text-slate-500 uppercase">Account Number</span>
+                                            <span className="text-lg font-black tracking-tight text-emerald-400">5492080001</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex justify-between items-center border-t border-white/5 pt-4">
-                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Paybill Number</span>
-                                <span className="text-2xl font-black tracking-widest">516600</span>
-                            </div>
-                            <div className="flex justify-between items-center border-t border-white/5 pt-4">
-                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Account Number</span>
-                                <span className="text-xl font-black tracking-tight text-emerald-400">5492080001</span>
+
+                            {/* Option 2: M-Pesa Direct */}
+                            <div className="group relative bg-white/5 border border-white/10 rounded-[2.5rem] p-8 hover:border-emerald-500/50 transition-all duration-500 overflow-hidden">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-emerald-500/20 transition-all"></div>
+                                <div className="relative space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center text-emerald-400">
+                                                <i className="fa-solid fa-mobile-screen-button"></i>
+                                            </div>
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Option 2: Mobile</span>
+                                        </div>
+                                        <span className="font-black text-emerald-400 text-[10px] uppercase tracking-widest">M-Pesa Direct</span>
+                                    </div>
+                                    <div className="pt-4 border-t border-white/5 space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] font-black text-slate-500 uppercase">Phone Number</span>
+                                            <span className="text-xl font-black tracking-widest text-white">0757983954</span>
+                                        </div>
+                                        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-center">
+                                            <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Send Payment Directly to this Number</p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -1,15 +1,20 @@
-
 import React, { useState, useMemo } from 'react';
-import { Sale } from '../types';
+import { Sale, Product, User } from '../types';
 
 interface ReportsProps {
   sales: Sale[];
+  products: Product[];
+  currentUser: User | null;
   businessName: string;
   logo?: string;
 }
 
-const Reports: React.FC<ReportsProps & { logo?: string }> = ({ sales, businessName, logo }) => {
+const Reports: React.FC<ReportsProps> = ({ sales, products, currentUser, businessName, logo }) => {
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [showStock, setShowStock] = useState(true);
+  const [showProfits, setShowProfits] = useState(true);
+  const [showRegistry, setShowRegistry] = useState(true);
+
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
@@ -26,6 +31,37 @@ const Reports: React.FC<ReportsProps & { logo?: string }> = ({ sales, businessNa
   }, [sales, startDate, endDate]);
 
   const totalRevenue = useMemo(() => filteredSales.reduce((sum, s) => sum + s.totalAmount, 0), [filteredSales]);
+
+  const profitLossData = useMemo(() => {
+    let totalCost = 0;
+    filteredSales.forEach(s => {
+      s.items.forEach(i => {
+        const originalProduct = products.find(p => p.id === i.id);
+        const costPrice = originalProduct?.buyingPrice || 0;
+        totalCost += (costPrice * i.quantity);
+      });
+    });
+    return {
+      totalCost,
+      grossProfit: totalRevenue - totalCost,
+      margin: totalRevenue > 0 ? ((totalRevenue - totalCost) / totalRevenue) * 100 : 0
+    };
+  }, [filteredSales, products, totalRevenue]);
+
+  const stockReport = useMemo(() => {
+    return products.map(p => {
+      const soldQuantity = filteredSales.reduce((sum, s) => {
+        const item = s.items.find(i => i.id === p.id);
+        return sum + (item?.quantity || 0);
+      }, 0);
+
+      return {
+        ...p,
+        sold: soldQuantity,
+        closingStock: p.stock
+      };
+    });
+  }, [products, filteredSales]);
 
   const categorySales = useMemo(() => {
     const cats: Record<string, number> = {};
@@ -68,9 +104,9 @@ const Reports: React.FC<ReportsProps & { logo?: string }> = ({ sales, businessNa
     <div className="space-y-8 pt-16 md:pt-0">
       {/* Filter Section */}
       <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm print:hidden">
-        <div className="flex flex-col md:flex-row items-center gap-6">
+        <div className="flex flex-col md:flex-row items-center gap-6 mb-6">
           <div className="flex-1 w-full">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Start Date</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-2">Start Date</label>
             <input
               type="date"
               className="w-full border border-slate-200 rounded-2xl px-5 py-3 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold"
@@ -79,7 +115,7 @@ const Reports: React.FC<ReportsProps & { logo?: string }> = ({ sales, businessNa
             />
           </div>
           <div className="flex-1 w-full">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">End Date</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-2">End Date</label>
             <input
               type="date"
               className="w-full border border-slate-200 rounded-2xl px-5 py-3 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold"
@@ -99,10 +135,25 @@ const Reports: React.FC<ReportsProps & { logo?: string }> = ({ sales, businessNa
               onClick={exportPDF}
               className="flex-1 md:flex-none px-8 py-3 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center justify-center gap-3 shadow-xl shadow-slate-200"
             >
-              <i className="fa-solid fa-file-pdf"></i>
-              Export PDF
+              <i className="fa-solid fa-print"></i>
+              Print Report
             </button>
           </div>
+        </div>
+
+        <div className="flex flex-wrap gap-4 border-t border-slate-100 pt-6">
+          <label className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition-all">
+            <input type="checkbox" checked={showStock} onChange={e => setShowStock(e.target.checked)} className="accent-indigo-500" />
+            <span className="text-[10px] font-black uppercase text-slate-600 tracking-widest">Stock Levels</span>
+          </label>
+          <label className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition-all">
+            <input type="checkbox" checked={showProfits} onChange={e => setShowProfits(e.target.checked)} className="accent-indigo-500" />
+            <span className="text-[10px] font-black uppercase text-slate-600 tracking-widest">Profit & Loss</span>
+          </label>
+          <label className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition-all">
+            <input type="checkbox" checked={showRegistry} onChange={e => setShowRegistry(e.target.checked)} className="accent-indigo-500" />
+            <span className="text-[10px] font-black uppercase text-slate-600 tracking-widest">Transaction Registry</span>
+          </label>
         </div>
       </div>
 
@@ -121,24 +172,27 @@ const Reports: React.FC<ReportsProps & { logo?: string }> = ({ sales, businessNa
               <h1 className="text-4xl font-black text-slate-800 tracking-tighter uppercase">{businessName}</h1>
             </div>
             <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-widest">Business Intelligence Report</p>
+            <p className="text-[9px] text-slate-400 font-bold mt-2 uppercase tracking-widest">Generated by: {currentUser?.name || 'Authorized User'}</p>
           </div>
           <div className="text-right mt-6 md:mt-0">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Reporting Interval</p>
             <p className="text-lg font-black text-slate-800 uppercase tracking-tighter">{startDate} <span className="text-slate-300 font-normal">thru</span> {endDate}</p>
+            <p className="text-[8px] text-slate-400 font-bold mt-1 uppercase">Printed: {new Date().toLocaleString()}</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+        {/* Financial Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
           <div>
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Financial Summary</h3>
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Revenue Summary</h3>
             <div className="space-y-4">
               <div className="p-8 bg-slate-950 rounded-[2.5rem] text-white shadow-2xl">
-                <p className="text-[10px] font-black opacity-50 uppercase tracking-[0.3em] mb-2">Total Periodic Revenue</p>
+                <p className="text-[10px] font-black opacity-50 uppercase tracking-[0.3em] mb-2">Total Sales Revenue</p>
                 <p className="text-5xl font-black tracking-tighter text-indigo-400">Ksh {totalRevenue.toLocaleString()}</p>
               </div>
               <div className="flex gap-4">
                 <div className="flex-1 p-6 bg-slate-50 rounded-3xl border border-slate-100">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Orders</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Orders</p>
                   <p className="text-2xl font-black text-slate-800 tracking-tighter">{filteredSales.length}</p>
                 </div>
                 <div className="flex-1 p-6 bg-slate-50 rounded-3xl border border-slate-100">
@@ -166,73 +220,111 @@ const Reports: React.FC<ReportsProps & { logo?: string }> = ({ sales, businessNa
           </div>
         </div>
 
-        <div className="mt-16">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Transaction Registry</h3>
-            <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">{filteredSales.length} Logs</span>
-          </div>
-          <div className="hidden md:block print:block overflow-x-auto print:overflow-visible">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  <th className="py-5 px-4">Identifier</th>
-                  <th className="py-5 px-4">Date & Time</th>
-                  <th className="py-5 px-4">Items / Qty</th>
-                  <th className="py-5 px-4">Method</th>
-                  <th className="py-5 px-4 text-right">Settlement (Ksh)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {filteredSales.map(sale => (
-                  <tr key={sale.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-5 px-4 font-mono text-[10px] font-bold text-indigo-500 uppercase tracking-wider">
-                      <button onClick={() => setSelectedSale(sale)} className="hover:underline">#{sale.id}</button>
-                    </td>
-                    <td className="py-5 px-4 text-xs font-medium text-slate-600">{new Date(sale.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</td>
-                    <td className="py-5 px-4">
-                      <div className="flex flex-col gap-1">
-                        {sale.items?.map((i, idx) => (
-                          <div key={idx} className="text-[11px] font-bold text-slate-800 leading-none">
-                            {i.name} <span className="text-slate-400 font-medium">x{i.quantity}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="py-5 px-4">
-                      <span className="text-[9px] font-black uppercase text-slate-400 tracking-[0.1em] border px-2 py-1 rounded-lg">{sale.paymentMethod}</span>
-                    </td>
-                    <td className="py-5 px-4 text-right font-black text-slate-800 text-sm tracking-tight">{sale.totalAmount.toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile View: High-Density Transaction Cards */}
-          <div className="md:hidden print:hidden space-y-4">
-            {filteredSales.map(sale => (
-              <div key={sale.id} className="p-5 bg-slate-50 rounded-3xl border border-slate-100 flex flex-col gap-4">
-                <div className="flex justify-between items-center">
-                  <button onClick={() => setSelectedSale(sale)} className="text-[9px] font-black text-indigo-500 uppercase tracking-widest font-mono hover:underline">#{sale.id}</button>
-                  <span className="text-sm font-black text-slate-900 tracking-tighter">Ksh {sale.totalAmount.toLocaleString()}</span>
-                </div>
-
-                <div className="flex flex-wrap gap-1">
-                  {sale.items?.map((i, idx) => (
-                    <span key={idx} className="text-[10px] font-bold text-slate-500 bg-white border border-slate-100 px-2 py-0.5 rounded-lg">
-                      {i.name} x{i.quantity}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 pt-2 border-t border-slate-100">
-                  <span>{new Date(sale.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
-                  <span className="bg-white border px-2 py-0.5 rounded-lg uppercase tracking-widest text-[8px]">{sale.paymentMethod}</span>
-                </div>
+        {/* Profit & Loss Section */}
+        {showProfits && (
+          <div className="mb-16 animate-in slide-in-from-top-4 duration-300">
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Profit & Loss Metrics</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Cost of Goods (COGS)</p>
+                <p className="text-3xl font-black text-slate-800 tracking-tighter">Ksh {profitLossData.totalCost.toLocaleString()}</p>
               </div>
-            ))}
+              <div className="p-8 bg-emerald-50 rounded-[2.5rem] border border-emerald-100">
+                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-2">Gross Profit</p>
+                <p className="text-3xl font-black text-emerald-700 tracking-tighter">Ksh {profitLossData.grossProfit.toLocaleString()}</p>
+              </div>
+              <div className="p-8 bg-indigo-50 rounded-[2.5rem] border border-indigo-100">
+                <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-2">Profit Margin</p>
+                <p className="text-3xl font-black text-indigo-700 tracking-tighter">{profitLossData.margin.toFixed(1)}%</p>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Stock Report Section */}
+        {showStock && (
+          <div className="mb-16 animate-in slide-in-from-top-4 duration-300">
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Inventory Status & Flow</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <th className="py-4 px-4">Product Name</th>
+                    <th className="py-4 px-4 text-center">Opening Stock</th>
+                    <th className="py-4 px-4 text-center">Sold Units</th>
+                    <th className="py-4 px-4 text-center">Closing Stock</th>
+                    <th className="py-4 px-4 text-right">Potential Value</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {stockReport.map(item => (
+                    <tr key={item.id} className="text-xs font-bold text-slate-700">
+                      <td className="py-4 px-4 uppercase tracking-tighter">{item.name}</td>
+                      <td className="py-4 px-4 text-center font-mono opacity-50">{item.openingStock}</td>
+                      <td className="py-4 px-4 text-center text-rose-500">-{item.sold}</td>
+                      <td className="py-4 px-4 text-center font-black text-slate-900">{item.closingStock}</td>
+                      <td className="py-4 px-4 text-right font-black text-indigo-600 tracking-tighter">Ksh {(item.closingStock * item.price).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Registry Section */}
+        {showRegistry && (
+          <div className="animate-in slide-in-from-top-4 duration-300">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Transaction Registry</h3>
+              <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">{filteredSales.length} Records</span>
+            </div>
+            <div className="hidden md:block print:block overflow-x-auto print:overflow-visible">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <th className="py-5 px-4">Identifier</th>
+                    <th className="py-5 px-4">Date & Time</th>
+                    <th className="py-5 px-4">Staff Member</th>
+                    <th className="py-5 px-4">Method</th>
+                    <th className="py-5 px-4 text-right">Settlement (Ksh)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {filteredSales.map(sale => (
+                    <tr key={sale.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-5 px-4 font-mono text-[10px] font-bold text-indigo-500 uppercase tracking-wider">
+                        <button onClick={() => setSelectedSale(sale)} className="hover:underline">#{sale.id}</button>
+                      </td>
+                      <td className="py-5 px-4 text-xs font-medium text-slate-600">{new Date(sale.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</td>
+                      <td className="py-5 px-4 text-xs font-black text-slate-800 uppercase tracking-tight">{sale.salesPerson}</td>
+                      <td className="py-5 px-4">
+                        <span className="text-[9px] font-black uppercase text-slate-400 tracking-[0.1em] border px-2 py-1 rounded-lg">{sale.paymentMethod}</span>
+                      </td>
+                      <td className="py-5 px-4 text-right font-black text-slate-800 text-sm tracking-tight">{sale.totalAmount.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile View */}
+            <div className="md:hidden print:hidden space-y-4">
+              {filteredSales.map(sale => (
+                <div key={sale.id} className="p-5 bg-slate-50 rounded-3xl border border-slate-100 flex flex-col gap-4">
+                  <div className="flex justify-between items-center">
+                    <button onClick={() => setSelectedSale(sale)} className="text-[9px] font-black text-indigo-500 uppercase tracking-widest font-mono hover:underline">#{sale.id}</button>
+                    <span className="text-sm font-black text-slate-900 tracking-tighter">Ksh {sale.totalAmount.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] font-bold text-slate-400">
+                    <span>{sale.salesPerson}</span>
+                    <span>{new Date(sale.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="mt-20 pt-10 border-t border-slate-100 flex justify-between items-center text-[8px] font-black text-slate-300 uppercase tracking-[0.4em]">
           <span>© BarSync System Generated</span>

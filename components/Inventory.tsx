@@ -7,11 +7,12 @@ interface InventoryProps {
   products: Product[];
   onUpdate: (product: Product) => void;
   onAdd: (product: Omit<Product, 'id' | 'openingStock' | 'additions'>) => void;
+  onResetStock?: () => void;
   userRole: Role;
   isUnverified?: boolean;
 }
 
-const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, userRole, isUnverified }) => {
+const Inventory: React.FC<InventoryProps> = ({ products, onUpdate, onAdd, onResetStock, userRole, isUnverified }) => {
   const { showToast } = useToast();
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isAdding, setIsAdding] = useState(false);

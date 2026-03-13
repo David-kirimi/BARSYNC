@@ -149,6 +149,11 @@ const SalesHistory: React.FC<SalesHistoryProps> = ({ sales }) => {
                         }`}>
                         {sale.paymentMethod}
                       </span>
+                      {sale.mpesaCode && (
+                        <div className="mt-1 text-[8px] font-mono text-emerald-500 font-bold tracking-tighter">
+                          {sale.mpesaCode}
+                        </div>
+                      )}
                     </td>
                     <td className="px-10 py-6 text-right font-black text-slate-900 text-sm">
                       {sale.totalAmount.toLocaleString()}

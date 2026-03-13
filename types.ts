@@ -86,6 +86,7 @@ export interface Sale {
   paymentMethod: 'Cash' | 'Mpesa' | 'Card';
   salesPerson: string;
   customerPhone?: string;
+  mpesaCode?: string;
 
   // ❌ NO updatedAt ON PURPOSE
   // Sales are append-only

@@ -12,7 +12,7 @@ interface POSProps {
   cart: CartItem[];
   updateCartQuantity: (id: string, delta: number) => void;
   removeFromCart: (id: string) => void;
-  onCheckout: (method: 'Cash' | 'Mpesa' | 'Card', customerPhone?: string) => Sale | undefined;
+  onCheckout: (method: 'Cash' | 'Mpesa' | 'Card', customerPhone?: string, mpesaCode?: string) => Sale | undefined;
   businessName: string;
   onReorder: (newOrder: Product[]) => void;
 
@@ -20,7 +20,7 @@ interface POSProps {
   tabs: any[];
   onOpenTab: (name: string) => Promise<any | undefined>;
   onAddToTab: (tabId: string, item: Product) => Promise<void>;
-  onSettleTab: (tabId: string, method: 'Cash' | 'Mpesa' | 'Card') => Promise<Sale | undefined>;
+  onSettleTab: (tabId: string, method: 'Cash' | 'Mpesa' | 'Card', mpesaCode?: string) => Promise<Sale | undefined>;
   onCancelTab: (tabId: string) => Promise<void>;
   onUpdateTabQuantity: (tabId: string, productId: string, delta: number) => Promise<void>;
   onAddCartToTab: (tabId: string, items: CartItem[]) => Promise<void>;
@@ -102,6 +102,12 @@ const POS: React.FC<POSProps> = ({
   const [isSettling, setIsSettling] = useState(false);
   const [lastScannedId, setLastScannedId] = useState<string | null>(null);
   const [lastScanError, setLastScanError] = useState(false);
+  
+  // M-Pesa Transaction State
+  const [showMpesaModal, setShowMpesaModal] = useState(false);
+  const [mpesaCodeInput, setMpesaCodeInput] = useState('');
+  const [mpesaError, setMpesaError] = useState('');
+  const [mpesaContext, setMpesaContext] = useState<{ type: 'checkout' | 'settle', tabId?: string } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -253,6 +259,15 @@ const POS: React.FC<POSProps> = ({
       showToast("Access Restricted: Verification Required", "warning");
       return;
     }
+    
+    if (method === 'Mpesa') {
+      setMpesaContext({ type: 'checkout' });
+      setMpesaCodeInput('');
+      setMpesaError('');
+      setShowMpesaModal(true);
+      return;
+    }
+
     const sale = await onCheckout(method, custPhone);
     if (sale) {
       setLastSale(sale);
@@ -265,7 +280,7 @@ const POS: React.FC<POSProps> = ({
   const shareReceiptWhatsApp = () => {
     if (!lastSale) return;
     const itemsText = lastSale.items.map(i => `• ${i.name} x${i.quantity} @ Ksh ${i.price}`).join('%0A');
-    const message = `*RECEIPT: ${businessName}*%0A%0ATransaction ID: ${lastSale.id}%0ADate: ${new Date(lastSale.date).toLocaleString()}%0A%0AItems:%0A${itemsText}%0A%0A*TOTAL: Ksh ${lastSale.totalAmount.toLocaleString()}*%0APayment: ${lastSale.paymentMethod}%0A%0A_Thank you for your business!_`;
+    const message = `*RECEIPT: ${businessName}*%0A%0ATransaction ID: ${lastSale.id}%0ADate: ${new Date(lastSale.date).toLocaleString()}%0A%0AItems:%0A${itemsText}%0A%0A*TOTAL: Ksh ${lastSale.totalAmount.toLocaleString()}*%0APayment: ${lastSale.paymentMethod}${lastSale.mpesaCode ? `%0AM-Pesa Code: ${lastSale.mpesaCode}` : ''}%0A%0A_Thank you for your business!_`;
     const phone = lastSale.customerPhone || '';
     const cleanPhone = phone.replace(/\D/g, '');
     window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
@@ -300,6 +315,15 @@ const POS: React.FC<POSProps> = ({
       showToast("Access Restricted", "warning");
       return;
     }
+    
+    if (method === 'Mpesa') {
+      setMpesaContext({ type: 'settle', tabId });
+      setMpesaCodeInput('');
+      setMpesaError('');
+      setShowMpesaModal(true);
+      return;
+    }
+
     setIsSettling(true);
     const sale = await onSettleTab(tabId, method);
     if (sale) {
@@ -308,6 +332,42 @@ const POS: React.FC<POSProps> = ({
       showToast("Tab settled!", "success");
     }
     setIsSettling(false);
+  };
+
+  const handleConfirmMpesa = async () => {
+    const code = mpesaCodeInput.trim().toUpperCase();
+    const alphanumeric = /^[A-Z0-9]+$/;
+    
+    if (code.length < 8 || code.length > 12) {
+      setMpesaError("Code must be 8-12 characters");
+      return;
+    }
+    if (!alphanumeric.test(code)) {
+      setMpesaError("Only letters and numbers allowed");
+      return;
+    }
+
+    setShowMpesaModal(false);
+    
+    if (mpesaContext?.type === 'checkout') {
+      const sale = await onCheckout('Mpesa', custPhone, code);
+      if (sale) {
+        setLastSale(sale);
+        setShowReceipt(true);
+        setCustPhone('');
+        showToast("Sale successful!", "success");
+      }
+    } else if (mpesaContext?.type === 'settle' && mpesaContext.tabId) {
+      setIsSettling(true);
+      const sale = await onSettleTab(mpesaContext.tabId, 'Mpesa', code);
+      if (sale) {
+        setLastSale(sale);
+        setShowReceipt(true);
+        showToast("Tab settled!", "success");
+      }
+      setIsSettling(false);
+    }
+    setMpesaContext(null);
   };
 
   return (
@@ -796,6 +856,53 @@ const POS: React.FC<POSProps> = ({
         </div>
       )}
 
+      {/* M-Pesa Transaction Modal */}
+      {showMpesaModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-[160] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[3.5rem] w-full max-w-sm p-10 shadow-2xl relative animate-in zoom-in-95 duration-300">
+            <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-6 shadow-xl shadow-emerald-100">
+              <i className="fa-solid fa-mobile-screen-button"></i>
+            </div>
+            <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter mb-2 text-center">M-Pesa Payment</h3>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8 text-center">Enter Transaction Code</p>
+
+            <div className="space-y-6">
+              <div>
+                <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2 block px-2">Transaction Code</label>
+                <input
+                  type="text"
+                  className={`w-full bg-slate-50 border ${mpesaError ? 'border-rose-500' : 'border-slate-200'} rounded-2xl px-6 py-4 font-bold text-slate-800 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase placeholder:text-slate-300`}
+                  placeholder="e.g. QKT7A1S2B"
+                  value={mpesaCodeInput}
+                  onChange={e => {
+                    setMpesaCodeInput(e.target.value.toUpperCase());
+                    setMpesaError('');
+                  }}
+                  autoFocus
+                  onKeyDown={(e) => e.key === 'Enter' && handleConfirmMpesa()}
+                />
+                {mpesaError && <p className="text-[9px] font-bold text-rose-500 uppercase tracking-widest mt-2 px-2">{mpesaError}</p>}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <button 
+                  onClick={() => { setShowMpesaModal(false); setMpesaContext(null); }} 
+                  className="py-4 bg-slate-100 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmMpesa}
+                  className="py-4 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all active:scale-95 shadow-xl shadow-emerald-100"
+                >
+                  Confirm Payment
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showReceipt && lastSale && (
         <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-4 z-[100] animate-fade-in">
           <div id="receipt-modal" className="bg-white rounded-[4rem] w-full max-w-md p-10 shadow-2xl relative overflow-hidden animate-slide-up-mobile">
@@ -826,6 +933,18 @@ const POS: React.FC<POSProps> = ({
                   <span>Method</span>
                   <span className="text-orange-600">{lastSale.paymentMethod}</span>
                 </div>
+                {lastSale.mpesaCode && (
+                  <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest no-print">
+                    <span>M-Pesa Code</span>
+                    <span className="text-emerald-600 font-mono">{lastSale.mpesaCode}</span>
+                  </div>
+                )}
+                {lastSale.mpesaCode && (
+                  <div className="hidden print:flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <span>M-Pesa Code</span>
+                    <span className="text-slate-900 font-mono">{lastSale.mpesaCode}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-black text-slate-800 uppercase tracking-widest">Total Pay</span>
                   <span className="text-2xl font-extrabold text-slate-900 tracking-tighter">Ksh {lastSale.totalAmount.toLocaleString()}</span>

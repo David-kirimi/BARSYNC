@@ -300,6 +300,11 @@ const Reports: React.FC<ReportsProps> = ({ sales, products, currentUser, busines
                       <td className="py-5 px-4 text-xs font-black text-slate-800 uppercase tracking-tight">{sale.salesPerson}</td>
                       <td className="py-5 px-4">
                         <span className="text-[9px] font-black uppercase text-slate-400 tracking-[0.1em] border px-2 py-1 rounded-lg">{sale.paymentMethod}</span>
+                        {sale.mpesaCode && (
+                          <div className="mt-1 text-[8px] font-mono text-emerald-500 font-bold uppercase">
+                            {sale.mpesaCode}
+                          </div>
+                        )}
                       </td>
                       <td className="py-5 px-4 text-right font-black text-slate-800 text-sm tracking-tight">{sale.totalAmount.toLocaleString()}</td>
                     </tr>

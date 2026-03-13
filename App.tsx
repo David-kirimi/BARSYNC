@@ -159,7 +159,7 @@ const AppContent: React.FC = () => {
   };
 
   /* -------------------- MUTATIONS -------------------- */
-  const onCheckout = async (method: 'Cash' | 'Mpesa' | 'Card', customerPhone?: string): Promise<Sale | undefined> => {
+  const onCheckout = async (method: 'Cash' | 'Mpesa' | 'Card', customerPhone?: string, mpesaCode?: string): Promise<Sale | undefined> => {
     if (cart.length === 0 || !currentUser) return undefined;
 
     const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -181,6 +181,7 @@ const AppContent: React.FC = () => {
       paymentMethod: method,
       salesPerson: currentUser.name,
       customerPhone,
+      mpesaCode,
     };
 
     // Update Local State for UI responsiveness
@@ -351,7 +352,7 @@ const AppContent: React.FC = () => {
     } catch (err) { addToast("Cloud update failed", "error"); }
   };
 
-  const onSettleTab = async (tabId: string, method: 'Cash' | 'Mpesa' | 'Card'): Promise<Sale | undefined> => {
+  const onSettleTab = async (tabId: string, method: 'Cash' | 'Mpesa' | 'Card', mpesaCode?: string): Promise<Sale | undefined> => {
     const tab = tabs.find(t => t.id === tabId);
     if (!tab || !currentUser) return;
 
@@ -363,6 +364,7 @@ const AppContent: React.FC = () => {
       totalAmount: tab.totalAmount,
       paymentMethod: method,
       salesPerson: tab.servedBy,
+      mpesaCode,
     };
 
     const updatedTabs = tabs.filter(t => t.id !== tabId);

@@ -1,7 +1,8 @@
 
 import React, { useState, useMemo } from 'react';
-import { Business } from '../types';
+import { Business, Invoice } from '../types';
 import { useToast } from './Toast';
+import { generateInvoicePDF } from '../lib/invoicePDF';
 
 interface SubscriptionTerminalProps {
     business: Business;
@@ -262,7 +263,10 @@ const SubscriptionTerminal: React.FC<SubscriptionTerminalProps> = ({ business, o
                                             </span>
                                         </td>
                                         <td className="py-6 text-right">
-                                            <button className="text-indigo-600 hover:text-indigo-700 transition-colors">
+                                            <button 
+                                                onClick={() => generateInvoicePDF(business, inv)}
+                                                className="text-indigo-600 hover:text-indigo-700 transition-colors"
+                                            >
                                                 <i className="fa-solid fa-download"></i>
                                             </button>
                                         </td>

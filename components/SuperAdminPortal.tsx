@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
-import { Business, Sale, Role, User } from '../types';
+import { Business, Sale, Role, User, Invoice } from '../types';
 import { useToast } from './Toast';
+import { generateInvoicePDF } from '../lib/invoicePDF';
 
 interface SuperAdminPortalProps {
   businesses: Business[];
@@ -16,7 +17,7 @@ interface SuperAdminPortalProps {
 
 const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, onUpdate, onDelete, onUpdateUser, onDeleteUser, sales, allUsers = [] }) => {
   const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState<'NODES' | 'STAFF' | 'INBOX'>('NODES');
+  const [activeTab, setActiveTab] = useState<'NODES' | 'STAFF' | 'INBOX' | 'PAYMENTS'>('NODES');
   const [showAdd, setShowAdd] = useState(false);
   const [editingBiz, setEditingBiz] = useState<Business | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -85,7 +86,7 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
         </div>
       </div>
 
-      <div className="flex gap-4 border-b border-slate-100 pb-2">
+      <div className="flex flex-wrap gap-2 border-b border-slate-100 pb-2">
         <button
           onClick={() => setActiveTab('NODES')}
           className={`px-8 py-3 text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'NODES' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-slate-400 hover:text-slate-600'}`}
@@ -107,6 +108,12 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
             <span className="absolute top-0 right-0 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
           )}
         </button>
+        <button
+          onClick={() => setActiveTab('PAYMENTS')}
+          className={`px-8 py-3 text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'PAYMENTS' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-slate-400 hover:text-slate-600'}`}
+        >
+          Network Invoices
+        </button>
       </div>
 
       <div className="bg-white rounded-[3.5rem] border border-slate-200 overflow-hidden shadow-xl">
@@ -116,7 +123,7 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
               <i className="fa-solid fa-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"></i>
               <input
                 className="w-full pl-12 pr-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 font-bold outline-none"
-                placeholder={`Search ${activeTab === 'NODES' ? 'partners...' : 'staff across network...'}`}
+                placeholder={`Search ${activeTab === 'NODES' ? 'partners...' : activeTab === 'PAYMENTS' ? 'invoices...' : 'staff across network...'}`}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
               />
@@ -132,106 +139,110 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
           )}
         </div>
 
-        <div className="overflow-x-auto min-h-[400px]">
+        <div className="min-h-[400px]">
           {activeTab === 'NODES' ? (
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
-                  <th className="px-10 py-6">Partner Identity</th>
-                  <th className="px-8 py-6">Production Hub URL</th>
-                  <th className="px-8 py-6">Status</th>
-                  <th className="px-10 py-6 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredBusinesses.map(biz => (
-                  <tr key={biz.id} className="hover:bg-orange-50/30 transition-all group">
-                    <td className="px-10 py-8">
-                      <div className="font-black text-slate-800 uppercase text-sm tracking-tight">{biz.name}</div>
-                      <div className="text-[10px] text-orange-500 font-mono mt-1 font-bold">NODE_{biz.id.toUpperCase()}</div>
-                    </td>
-                    <td className="px-8 py-8">
-                      <code className="text-[10px] bg-slate-100 px-3 py-1 rounded-lg text-orange-600 font-bold border border-orange-100">{biz.mongoConnectionString}</code>
-                    </td>
-                    <td className="px-8 py-8">
-                      <div className="flex flex-col gap-2">
-                        <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border w-fit ${biz.subscriptionStatus === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                          biz.subscriptionStatus === 'Trial' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                            'bg-rose-50 text-rose-600 border-rose-100'
-                          }`}>
-                          {biz.subscriptionStatus}
-                        </span>
-                        {biz.verificationNote && (
-                          <div className="text-[9px] text-slate-400 font-bold truncate max-w-[150px]" title={biz.verificationNote}>
-                            Note: {biz.verificationNote}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-10 py-8 text-right">
-                      <div className="flex justify-end gap-3">
-                        <button onClick={() => setEditingBiz(biz)} className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-orange-600 transition-all">
-                          <i className="fa-solid fa-gear"></i>
-                        </button>
-                        <button onClick={() => onDelete?.(biz.id)} className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-rose-600 transition-all">
-                          <i className="fa-solid fa-trash-can"></i>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : activeTab === 'STAFF' ? (
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
-                  <th className="px-10 py-6">Staff Profile</th>
-                  <th className="px-8 py-6">Assigned Node</th>
-                  <th className="px-8 py-6">Role / Level</th>
-                  <th className="px-10 py-6 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredUsers.map(user => (
-                  <tr key={user.id} className="hover:bg-orange-50/30 transition-all group">
-                    <td className="px-10 py-8">
-                      <div className="flex items-center gap-4">
-                        <img src={user.avatar} className="w-10 h-10 rounded-xl bg-slate-100" />
-                        <div>
-                          <div className="font-black text-slate-800 uppercase text-sm tracking-tight">{user.name}</div>
-                          <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{user.status}</div>
+            <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                <thead>
+                    <tr className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
+                    <th className="px-10 py-6">Partner Identity</th>
+                    <th className="px-8 py-6">Production Hub URL</th>
+                    <th className="px-8 py-6">Status</th>
+                    <th className="px-10 py-6 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                    {filteredBusinesses.map(biz => (
+                    <tr key={biz.id} className="hover:bg-orange-50/30 transition-all group">
+                        <td className="px-10 py-8">
+                        <div className="font-black text-slate-800 uppercase text-sm tracking-tight">{biz.name}</div>
+                        <div className="text-[10px] text-orange-500 font-mono mt-1 font-bold">NODE_{biz.id.toUpperCase()}</div>
+                        </td>
+                        <td className="px-8 py-8">
+                        <code className="text-[10px] bg-slate-100 px-3 py-1 rounded-lg text-orange-600 font-bold border border-orange-100">{biz.mongoConnectionString}</code>
+                        </td>
+                        <td className="px-8 py-8">
+                        <div className="flex flex-col gap-2">
+                            <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border w-fit ${biz.subscriptionStatus === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                            biz.subscriptionStatus === 'Trial' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                                'bg-rose-50 text-rose-600 border-rose-100'
+                            }`}>
+                            {biz.subscriptionStatus}
+                            </span>
+                            {biz.verificationNote && (
+                            <div className="text-[9px] text-slate-400 font-bold truncate max-w-[150px]" title={biz.verificationNote}>
+                                Note: {biz.verificationNote}
+                            </div>
+                            )}
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-8 py-8">
-                      <span className="text-[11px] font-black text-slate-600 uppercase">
-                        {businesses.find(b => b.id === user.businessId)?.name || 'Platform Admin'}
-                      </span>
-                    </td>
-                    <td className="px-8 py-8">
-                      <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${user.role === 'SUPER_ADMIN' ? 'bg-orange-950 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="px-10 py-8 text-right">
-                      <div className="flex justify-end gap-3">
-                        <button onClick={() => setEditingUser(user)} className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-orange-600 transition-all">
-                          <i className="fa-solid fa-pen-to-square"></i>
-                        </button>
-                        <button
-                          onClick={() => onDeleteUser?.(user.id)}
-                          className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-rose-600 transition-all"
-                        >
-                          <i className="fa-solid fa-trash-can"></i>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
+                        </td>
+                        <td className="px-10 py-8 text-right">
+                        <div className="flex justify-end gap-3">
+                            <button onClick={() => setEditingBiz(biz)} className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-orange-600 transition-all">
+                            <i className="fa-solid fa-gear"></i>
+                            </button>
+                            <button onClick={() => onDelete?.(biz.id)} className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-rose-600 transition-all">
+                            <i className="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                        </td>
+                    </tr>
+                    ))}
+                </tbody>
+                </table>
+            </div>
+          ) : activeTab === 'STAFF' ? (
+            <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                <thead>
+                    <tr className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
+                    <th className="px-10 py-6">Staff Profile</th>
+                    <th className="px-8 py-6">Assigned Node</th>
+                    <th className="px-8 py-6">Role / Level</th>
+                    <th className="px-10 py-6 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                    {filteredUsers.map(user => (
+                    <tr key={user.id} className="hover:bg-orange-50/30 transition-all group">
+                        <td className="px-10 py-8">
+                        <div className="flex items-center gap-4">
+                            <img src={user.avatar} className="w-10 h-10 rounded-xl bg-slate-100" />
+                            <div>
+                            <div className="font-black text-slate-800 uppercase text-sm tracking-tight">{user.name}</div>
+                            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{user.status}</div>
+                            </div>
+                        </div>
+                        </td>
+                        <td className="px-8 py-8">
+                        <span className="text-[11px] font-black text-slate-600 uppercase">
+                            {businesses.find(b => b.id === user.businessId)?.name || 'Platform Admin'}
+                        </span>
+                        </td>
+                        <td className="px-8 py-8">
+                        <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${user.role === 'SUPER_ADMIN' ? 'bg-orange-950 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                            {user.role}
+                        </span>
+                        </td>
+                        <td className="px-10 py-8 text-right">
+                        <div className="flex justify-end gap-3">
+                            <button onClick={() => setEditingUser(user)} className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-orange-600 transition-all">
+                            <i className="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button
+                            onClick={() => onDeleteUser?.(user.id)}
+                            className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-rose-600 transition-all"
+                            >
+                            <i className="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                        </td>
+                    </tr>
+                    ))}
+                </tbody>
+                </table>
+            </div>
+          ) : activeTab === 'INBOX' ? (
             <div className="p-10 space-y-8">
               {pendingBusinesses.length === 0 ? (
                 <div className="py-20 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">No pending partnership requests</div>
@@ -273,6 +284,60 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
                   ))}
                 </div>
               )}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
+                    <th className="px-10 py-6">Invoice ID</th>
+                    <th className="px-8 py-6">Partner</th>
+                    <th className="px-8 py-6">Date</th>
+                    <th className="px-8 py-6">Amount</th>
+                    <th className="px-8 py-6">Status</th>
+                    <th className="px-10 py-6 text-right">Download</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-bold text-slate-600 text-sm">
+                  {businesses.flatMap(biz => (biz.invoices || []).map(inv => ({ ...inv, biz })))
+                    .filter(record => 
+                        record.id.toLowerCase().includes(search.toLowerCase()) || 
+                        record.biz.name.toLowerCase().includes(search.toLowerCase())
+                    )
+                    .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .map(record => (
+                    <tr key={record.id} className="hover:bg-orange-50/30 transition-all group">
+                      <td className="px-10 py-8">
+                        <span className="font-black text-slate-800 tracking-tighter uppercase">#{record.id}</span>
+                      </td>
+                      <td className="px-8 py-8">
+                        <div className="text-sm font-black text-slate-800">{record.biz.name}</div>
+                        <div className="text-[10px] text-slate-400">Owner: {record.biz.ownerName}</div>
+                      </td>
+                      <td className="px-8 py-8">{new Date(record.date).toLocaleDateString()}</td>
+                      <td className="px-8 py-8 font-black text-slate-800">Ksh {record.amount.toLocaleString()}</td>
+                      <td className="px-8 py-8">
+                        <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${record.status === 'Paid' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                          {record.status}
+                        </span>
+                      </td>
+                      <td className="px-10 py-8 text-right">
+                        <button 
+                          onClick={() => generateInvoicePDF(record.biz, record as any)}
+                          className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-indigo-600 transition-all"
+                        >
+                          <i className="fa-solid fa-download"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {businesses.every(b => !b.invoices || b.invoices.length === 0) && (
+                    <tr>
+                      <td colSpan={6} className="py-20 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">No payment records found in network</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

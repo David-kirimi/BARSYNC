@@ -796,6 +796,7 @@ const AppContent: React.FC = () => {
                       plan: business.subscriptionPlan || 'Basic',
                       status: 'Pending',
                       expiryDate: now(), // Placeholder
+                      note: note, // ✅ ARCHIVE THE MESSAGE
                     };
 
                     const updatedInvList = [...(business.invoices || []), newInvoice];

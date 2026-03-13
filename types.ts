@@ -37,6 +37,7 @@ export interface Invoice {
   status: 'Paid' | 'Pending';
   expiryDate: string;
   reference?: string;
+  note?: string;              // ✅ ADD
 }
 
 export interface User {

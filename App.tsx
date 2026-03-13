@@ -937,6 +937,7 @@ const AppContent: React.FC = () => {
                   currentShift={currentShift}
                   onStartShift={onStartShift}
                   onCloseShift={onCloseShift}
+                  userRole={currentUser.role}
                 />
               )}
 

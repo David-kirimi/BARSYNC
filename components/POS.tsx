@@ -674,22 +674,39 @@ const POS: React.FC<POSProps> = ({
               <span className="text-2xl lg:text-4xl font-black tracking-tighter">Ksh {cartTotal.toLocaleString()}</span>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-2 lg:gap-3 mt-4">
-            {userRole === 'WAITER' ? (
-              <button 
-                disabled={cart.length === 0} 
-                onClick={() => handleCheckout('Pending')} 
-                className="col-span-3 py-4 bg-orange-600 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest border border-orange-500 hover:bg-orange-500 shadow-xl shadow-orange-900/40 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                Send to Counter <i className="fa-solid fa-paper-plane"></i>
-              </button>
+            {userRole === Role.WAITER ? (
+              <div className="col-span-3 space-y-4">
+                <button 
+                  onClick={() => cart.forEach(i => removeFromCart(i.id))}
+                  className="w-full py-3 bg-white/10 text-white border border-white/20 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-white/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <i className="fa-solid fa-rotate-right"></i> New Order
+                </button>
+                <div className="relative">
+                  <i className="fa-solid fa-chair absolute left-4 top-1/2 -translate-y-1/2 text-orange-400"></i>
+                  <input
+                    type="text"
+                    placeholder="TABLE # / CUSTOMER NAME"
+                    className="w-full pl-10 pr-4 py-4 bg-slate-900 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-orange-500 transition-all text-white placeholder:text-slate-600"
+                    value={custPhone} // Reusing custPhone state for Table/Name as requested
+                    onChange={e => setCustPhone(e.target.value)}
+                  />
+                </div>
+                <button 
+                  disabled={cart.length === 0} 
+                  onClick={() => handleCheckout('Pending')} 
+                  className="w-full py-5 bg-orange-600 text-white rounded-[2rem] font-black text-[14px] uppercase tracking-[0.2em] border border-orange-500 hover:bg-orange-500 shadow-2xl shadow-orange-900/40 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 animate-pulse"
+                >
+                  Send to Counter <i className="fa-solid fa-paper-plane"></i>
+                </button>
+              </div>
             ) : (
               <>
                 <button disabled={cart.length === 0} onClick={() => handleCheckout('Cash')} className="py-4 bg-slate-800 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest border border-slate-700 hover:bg-slate-700 transition-all active:scale-95 disabled:opacity-50">Cash</button>
                 <button disabled={cart.length === 0} onClick={() => handleCheckout('Mpesa')} className="py-4 bg-emerald-600 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-emerald-500 shadow-xl shadow-emerald-900/40 transition-all active:scale-95 disabled:opacity-50">M-Pesa</button>
+                <button disabled={cart.length === 0} onClick={() => handleCheckout('Card')} className="col-span-3 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-900/40 transition-all active:scale-95 disabled:opacity-50">Card</button>
               </>
             )}
-          </div>
 
             {/* Add to Tab Mechanism */}
             <div className="relative group">
@@ -893,18 +910,36 @@ const POS: React.FC<POSProps> = ({
                     <span className="text-3xl font-black tracking-tighter">Ksh {cartTotal.toLocaleString()}</span>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {userRole === 'WAITER' ? (
-                    <button
-                      disabled={cart.length === 0}
-                      onClick={() => { handleCheckout('Pending'); setMobileCartExpanded(false); }}
-                      className="col-span-2 py-4 bg-orange-600 rounded-xl font-black text-[12px] uppercase tracking-widest shadow-xl shadow-orange-900/40 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-                    >
-                      Send to Counter <i className="fa-solid fa-paper-plane"></i>
-                    </button>
-                  ) : (
-                    <>
+                <div className="space-y-4">
+                  {userRole === Role.WAITER ? (
+                    <div className="space-y-3">
+                       <button 
+                        onClick={() => { cart.forEach(i => removeFromCart(i.id)); setMobileCartExpanded(false); }}
+                        className="w-full py-4 bg-white/10 text-white border border-white/20 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
+                      >
+                        <i className="fa-solid fa-rotate-right"></i> Reset Order
+                      </button>
+                      <div className="relative">
+                        <i className="fa-solid fa-chair absolute left-4 top-1/2 -translate-y-1/2 text-orange-400"></i>
+                        <input
+                          type="text"
+                          placeholder="TABLE / CUSTOMER"
+                          className="w-full pl-11 pr-4 py-4 bg-slate-900 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:border-orange-500 outline-none text-white"
+                          value={custPhone}
+                          onChange={e => setCustPhone(e.target.value)}
+                        />
+                      </div>
                       <button
+                        disabled={cart.length === 0}
+                        onClick={() => { handleCheckout('Pending'); setMobileCartExpanded(false); }}
+                        className="w-full py-5 bg-orange-600 rounded-2xl font-black text-[14px] uppercase tracking-widest shadow-xl shadow-orange-900/40 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-3 animate-pulse"
+                      >
+                        Send to Counter <i className="fa-solid fa-paper-plane"></i>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                       <button
                         disabled={cart.length === 0}
                         onClick={() => { handleCheckout('Cash'); setMobileCartExpanded(false); }}
                         className="py-4 bg-slate-800 rounded-xl font-black text-[10px] uppercase tracking-widest border border-slate-700 active:scale-95 disabled:opacity-50 transition-all"
@@ -925,12 +960,12 @@ const POS: React.FC<POSProps> = ({
                       >
                         Card
                       </button>
-                    </>
+                    </div>
                   )}
                   <button
                     disabled={cart.length === 0}
                     onClick={() => { document.getElementById('assign-to-tab-section')?.scrollIntoView({ behavior: 'smooth' }); }}
-                    className="py-4 bg-orange-600 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-orange-900/40 active:scale-95 disabled:opacity-50 transition-all"
+                    className="w-full py-4 bg-orange-600 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-orange-900/40 active:scale-95 disabled:opacity-50 transition-all"
                   >
                     To Tab
                   </button>

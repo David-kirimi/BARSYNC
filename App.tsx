@@ -165,10 +165,22 @@ const AppContent: React.FC = () => {
   };
 
   /* -------------------- MUTATIONS -------------------- */
-  const onCheckout = async (method: 'Cash' | 'Mpesa' | 'Card', customerPhone?: string, mpesaCode?: string): Promise<Sale | undefined> => {
+  const onCheckout = async (method: 'Cash' | 'Mpesa' | 'Card' | 'Pending', customerPhone?: string, mpesaCode?: string): Promise<Sale | undefined> => {
     if (cart.length === 0 || !currentUser) return undefined;
 
+    // Waiter Role Enforcement: Only 'Pending' allowed
+    if (currentUser.role === Role.WAITER && method !== 'Pending') {
+      addToast("Unauthorized: Waiters can only send orders to counter.", "error");
+      return undefined;
+    }
+
     const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
+    // Sequential Ticket Number Logic
+    const nextTicketNumber = sales.length > 0 
+      ? (Math.max(...sales.map(s => s.ticketNumber || 0)) + 1)
+      : 200; // Start at 200 as per example or 1 if empty
+
     const formatDateId = () => {
       const d = new Date();
       const yy = d.getFullYear().toString().slice(-2);
@@ -180,12 +192,15 @@ const AppContent: React.FC = () => {
 
     const newSale: Sale = {
       id: formatDateId(),
+      ticketNumber: nextTicketNumber,
       businessId: currentUser.businessId,
       date: now(),
       items: cart,
       totalAmount,
       paymentMethod: method,
+      status: method === 'Pending' ? 'PENDING_PAYMENT' : 'COMPLETED',
       salesPerson: currentUser.name,
+      createdBy: currentUser.name,
       customerPhone,
       mpesaCode,
       shiftId: currentShift?.id,
@@ -363,6 +378,12 @@ const AppContent: React.FC = () => {
   const onSettleTab = async (tabId: string, method: 'Cash' | 'Mpesa' | 'Card', mpesaCode?: string): Promise<Sale | undefined> => {
     const tab = tabs.find(t => t.id === tabId);
     if (!tab || !currentUser) return;
+
+    // Waiter Role Guard
+    if (currentUser.role === Role.WAITER) {
+      addToast("Unauthorized: Waiters cannot settle tabs.", "error");
+      return;
+    }
 
     const sale: Sale = {
       id: `${new Date().getFullYear().toString().slice(-2)}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
@@ -947,17 +968,52 @@ const AppContent: React.FC = () => {
                   sales={sales}
                   staffLogs={staffLogs}
                   onVerifyPayment={async (saleId, method, code) => {
-                    const updatedSales = sales.map(s => 
-                      s.id === saleId 
-                      ? { ...s, paymentMethod: method, mpesaCode: code, status: 'COMPLETED' as const, verifiedBy: currentUser?.name, completedAt: now() }
-                      : s
-                    );
+                    const sale = sales.find(s => s.id === saleId);
+                    if (!sale) return;
+
+                    const updatedSale = { 
+                      ...sale, 
+                      paymentMethod: method, 
+                      mpesaCode: code, 
+                      status: 'COMPLETED' as const, 
+                      verifiedBy: currentUser?.name, 
+                      completedAt: now() 
+                    };
+
+                    const updatedSales = sales.map(s => s.id === saleId ? updatedSale : s);
                     setSales(updatedSales);
-                    addToast(`Payment verified via ${method}`, "success");
+
+                    try {
+                      await fetch('/api/sales/sync', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ businessId: currentUser.businessId, sales: updatedSales })
+                      });
+                      addToast(`Payment verified via ${method} for Ticket #${sale.ticketNumber}`, "success");
+                    } catch (err) {
+                      addToast("Cloud sync failed", "error");
+                    }
                   }}
                   onCancelOrder={async (saleId) => {
-                    setSales(prev => prev.filter(s => s.id !== saleId));
-                    addToast("Order cancelled", "warning");
+                    const sale = sales.find(s => s.id === saleId);
+                    if (!sale) return;
+
+                    // Ideally we should mark as CANCELLED instead of deleting to keep ticket sequentiality
+                    const updatedSales = sales.map(s => 
+                      s.id === saleId ? { ...s, status: 'CANCELLED' as any } : s
+                    );
+                    setSales(updatedSales);
+
+                    try {
+                      await fetch('/api/sales/sync', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ businessId: currentUser.businessId, sales: updatedSales })
+                      });
+                      addToast(`Order #${sale.ticketNumber} cancelled`, "warning");
+                    } catch (err) {
+                      addToast("Cloud sync failed", "error");
+                    }
                   }}
                   onSwitchView={setView}
                 />

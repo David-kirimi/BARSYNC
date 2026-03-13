@@ -103,6 +103,7 @@ export interface Sale {
   createdBy?: string; // Waiter ID/Name
   verifiedBy?: string; // Cashier ID/Name
   completedAt?: string;
+  ticketNumber?: number;
 
   // ❌ NO updatedAt ON PURPOSE
   // Sales are append-only

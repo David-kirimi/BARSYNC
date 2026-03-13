@@ -273,19 +273,28 @@ const POS: React.FC<POSProps> = ({
       return;
     }
     
+    if (method === 'Pending') {
+      const sale = await onCheckout(method, custPhone);
+      if (sale) {
+        setLastSale(sale);
+        setShowReceipt(true);
+        setCustPhone('');
+        showToast("Order sent to counter for verification", "success");
+      }
+      return;
+    }
+
+    // Role Guard: Waiters cannot process payments
+    if (userRole === Role.WAITER) {
+      showToast("Access Restricted: Waiters cannot process payments.", "error");
+      return;
+    }
+
     if (method === 'Mpesa') {
       setMpesaContext({ type: 'checkout' });
       setMpesaCodeInput('');
       setMpesaError('');
       setShowMpesaModal(true);
-      return;
-    }
-
-    if (method === 'Pending') {
-      const sale = await onCheckout(method, custPhone);
-      if (sale) {
-        showToast("Order sent to counter for verification", "success");
-      }
       return;
     }
 
@@ -337,6 +346,11 @@ const POS: React.FC<POSProps> = ({
       return;
     }
     
+    if (userRole === Role.WAITER) {
+      showToast("Access Restricted: Waiters cannot settle tabs.", "error");
+      return;
+    }
+
     if (method === 'Mpesa') {
       setMpesaContext({ type: 'settle', tabId });
       setMpesaCodeInput('');
@@ -1028,8 +1042,10 @@ const POS: React.FC<POSProps> = ({
               <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-[2rem] flex items-center justify-center text-4xl mx-auto mb-6 shadow-xl shadow-emerald-100 rotate-6">
                 <i className="fa-solid fa-circle-check"></i>
               </div>
-              <h1 className="text-3xl font-black text-slate-800 tracking-tighter uppercase mb-2">Order Confirmed!</h1>
-              <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.3em]">{businessName} • Digital Receipt</p>
+              <h1 className="text-3xl font-black text-slate-800 tracking-tighter uppercase mb-2">
+                {lastSale.paymentMethod === 'Pending' ? `Ticket #${lastSale.ticketNumber}` : 'Order Confirmed!'}
+              </h1>
+              <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.3em]">{businessName} • {lastSale.paymentMethod === 'Pending' ? 'Waiter Ticket' : 'Digital Receipt'}</p>
             </div>
 
             <div className="bg-slate-50/50 rounded-[2.5rem] p-8 space-y-6 border border-slate-100 mb-8 max-h-60 overflow-y-auto no-scrollbar">
@@ -1066,7 +1082,14 @@ const POS: React.FC<POSProps> = ({
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 px-4">
+              {lastSale.paymentMethod === 'Pending' && (
+                <div className="bg-orange-50 p-4 rounded-2xl border border-orange-100 text-center mb-4">
+                  <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Payment Required at Counter</p>
+                  <p className="text-[9px] text-orange-400 font-bold leading-tight">Please present this ticket number to the cashier to complete your order.</p>
+                </div>
+              )}
+              
               <button
                 onClick={shareReceiptWhatsApp}
                 className="w-full py-5 bg-orange-600 text-white rounded-[2rem] font-black text-[12px] uppercase tracking-[0.2em] hover:bg-orange-700 transition-all flex items-center justify-center gap-4 shadow-2xl shadow-orange-200 active:scale-95 no-print"

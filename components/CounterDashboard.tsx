@@ -14,15 +14,22 @@ const CounterDashboard: React.FC<CounterDashboardProps> = ({ sales, staffLogs, o
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const [mpesaCodeInput, setMpesaCodeInput] = useState('');
   const [mpesaError, setMpesaError] = useState('');
+  const [ticketSearch, setTicketSearch] = useState('');
 
   // 1. Pending Orders (status === 'PENDING_PAYMENT')
-  const pendingOrders = sales.filter(s => s.status === 'PENDING_PAYMENT').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const pendingOrders = sales.filter(s => 
+    s.status === 'PENDING_PAYMENT' && 
+    (ticketSearch === '' || s.ticketNumber?.toString().includes(ticketSearch))
+  ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   // 2. Active Waiters (signed in, not signed out, role WAITER)
   const activeWaiters = staffLogs.filter(log => log.role === Role.WAITER && !log.signOutTime);
 
   // 3. Recently Completed Orders (status === 'COMPLETED')
   const completedOrders = sales.filter(s => s.status === 'COMPLETED').sort((a, b) => new Date(b.completedAt || b.date).getTime() - new Date(a.completedAt || a.date).getTime()).slice(0, 10);
+
+  // 4. Cancelled Orders
+  const cancelledOrders = sales.filter(s => (s as any).status === 'CANCELLED').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
 
   const handleVerifyCash = async (saleId: string) => {
     await onVerifyPayment(saleId, 'Cash');
@@ -78,12 +85,37 @@ const CounterDashboard: React.FC<CounterDashboardProps> = ({ sales, staffLogs, o
           </div>
         </div>
 
+        {/* Ticket Lookup */}
+        <div className="mb-6">
+          <div className="relative group">
+            <i className="fa-solid fa-ticket absolute left-6 top-1/2 -translate-y-1/2 text-indigo-500 z-10"></i>
+            <input
+              type="text"
+              placeholder="ENTER TICKET NUMBER TO FIND ORDER..."
+              className="w-full pl-14 pr-6 py-5 bg-white border-2 border-slate-100 rounded-3xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-lg font-black tracking-widest placeholder:text-slate-300 transition-all shadow-sm"
+              value={ticketSearch}
+              onChange={(e) => setTicketSearch(e.target.value.replace(/\D/g, ''))}
+            />
+            {ticketSearch && (
+              <button 
+                onClick={() => setTicketSearch('')}
+                className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 hover:text-rose-500 transition-colors"
+              >
+                <i className="fa-solid fa-circle-xmark text-xl"></i>
+              </button>
+            )}
+          </div>
+        </div>
+
         <div className="flex-1 overflow-y-auto pr-2 space-y-4 no-scrollbar">
           {pendingOrders.map(order => (
             <div key={order.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col group hover:border-indigo-200 transition-all">
               <div className="flex justify-between items-start mb-4 border-b border-slate-50 pb-4">
                 <div>
-                  <h4 className="font-black text-slate-800 uppercase tracking-tight">Order #{order.id.slice(-6)}</h4>
+                  <h4 className="font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
+                    <span className="bg-indigo-600 text-white px-3 py-1 rounded-lg text-sm">Ticket #{order.ticketNumber || 'N/A'}</span>
+                    <span className="text-slate-300 text-[10px]">ID: {order.id.slice(-4)}</span>
+                  </h4>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Waiter: {order.createdBy || 'Unknown'}</p>
                 </div>
                 <div className="text-right">
@@ -179,6 +211,21 @@ const CounterDashboard: React.FC<CounterDashboardProps> = ({ sales, staffLogs, o
              {completedOrders.length === 0 && <p className="text-[10px] text-slate-400 text-center py-4 font-bold italic">No completed orders yet</p>}
           </div>
         </div>
+
+        {/* Cancelled/Expired (Optional) */}
+        {cancelledOrders.length > 0 && (
+          <div className="bg-white rounded-[2.5rem] p-6 border border-slate-100 shadow-sm flex flex-col min-h-0">
+            <h3 className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-4">Voided Today</h3>
+            <div className="space-y-2 opacity-60">
+              {cancelledOrders.map(order => (
+                 <div key={order.id} className="flex justify-between items-center p-2 bg-rose-50/30 rounded-xl border border-rose-100/30 text-[10px] font-bold text-rose-400 uppercase">
+                    <span>Ticket #{order.ticketNumber}</span>
+                    <span>Voided</span>
+                 </div>
+              ))}
+            </div>
+          </div>
+        )}
 
       </div>
 

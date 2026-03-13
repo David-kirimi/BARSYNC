@@ -23,6 +23,11 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [search, setSearch] = useState('');
 
+  const handleTabChange = (tab: 'NODES' | 'STAFF' | 'INBOX' | 'PAYMENTS') => {
+    setActiveTab(tab);
+    setSearch(''); // Clear search when switching tabs to avoid "ghost filtering"
+  };
+
   const [newBiz, setNewBiz] = useState<Omit<Business, 'id' | 'createdAt'>>({
     name: '',
     ownerName: '',
@@ -88,19 +93,19 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
 
       <div className="flex flex-wrap gap-2 border-b border-slate-100 pb-2">
         <button
-          onClick={() => setActiveTab('NODES')}
+          onClick={() => handleTabChange('NODES')}
           className={`px-8 py-3 text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'NODES' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-slate-400 hover:text-slate-600'}`}
         >
           Partner Nodes
         </button>
         <button
-          onClick={() => setActiveTab('STAFF')}
+          onClick={() => handleTabChange('STAFF')}
           className={`px-8 py-3 text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'STAFF' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-slate-400 hover:text-slate-600'}`}
         >
           Master Staff Directory
         </button>
         <button
-          onClick={() => setActiveTab('INBOX')}
+          onClick={() => handleTabChange('INBOX')}
           className={`relative px-8 py-3 text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'INBOX' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-slate-400 hover:text-slate-600'}`}
         >
           Partner Inbox
@@ -109,7 +114,7 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
           )}
         </button>
         <button
-          onClick={() => setActiveTab('PAYMENTS')}
+          onClick={() => handleTabChange('PAYMENTS')}
           className={`px-8 py-3 text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'PAYMENTS' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-slate-400 hover:text-slate-600'}`}
         >
           Network Invoices
@@ -300,10 +305,11 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-bold text-slate-600 text-sm">
                   {businesses.flatMap(biz => (biz.invoices || []).map(inv => ({ ...inv, biz })))
-                    .filter(record => 
-                        record.id.toLowerCase().includes(search.toLowerCase()) || 
-                        record.biz.name.toLowerCase().includes(search.toLowerCase())
-                    )
+                    .filter(record => {
+                        const searchLower = (search || '').toLowerCase();
+                        return (record.id || '').toLowerCase().includes(searchLower) || 
+                               (record.biz?.name || '').toLowerCase().includes(searchLower);
+                    })
                     .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                     .map(record => (
                     <tr key={record.id} className="hover:bg-orange-50/30 transition-all group">

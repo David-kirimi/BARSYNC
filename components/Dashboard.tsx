@@ -21,8 +21,9 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, products, business, setVie
 
     const calculateTimeLeft = () => {
       const trialDuration = 3 * 24 * 60 * 60 * 1000; // 3 days in ms
-      const createdAt = new Date(business.createdAt).getTime();
-      const expiry = createdAt + trialDuration;
+      // Use trialStartedAt if available, otherwise fallback to createdAt
+      const startTime = new Date(business.trialStartedAt || business.createdAt).getTime();
+      const expiry = startTime + trialDuration;
       const now = new Date().getTime();
       const difference = expiry - now;
 
@@ -41,7 +42,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, products, business, setVie
     const timer = setInterval(calculateTimeLeft, 1000);
     calculateTimeLeft();
     return () => clearInterval(timer);
-  }, [business]);
+  }, [business.subscriptionStatus, business.trialStartedAt, business.createdAt]);
 
   const { totalRev, totalProfit } = useMemo(() => {
     let rev = 0;

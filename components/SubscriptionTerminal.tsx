@@ -83,6 +83,91 @@ const SubscriptionTerminal: React.FC<SubscriptionTerminalProps> = ({ business, o
                 ))}
             </div>
 
+            {/* Account Status & Next Billing */}
+            {(business.expiryDate || business.nextBillingDate) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="bg-white border border-slate-100 p-8 rounded-[2.5rem] shadow-sm flex items-center gap-6">
+                        <div className="w-16 h-16 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-500 text-2xl">
+                            <i className="fa-solid fa-calendar-xmark"></i>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">System Expiry</p>
+                            <h4 className="text-xl font-black text-slate-800 tracking-tight">
+                                {business.expiryDate ? new Date(business.expiryDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'}
+                            </h4>
+                        </div>
+                    </div>
+                    <div className="bg-white border border-slate-100 p-8 rounded-[2.5rem] shadow-sm flex items-center gap-6">
+                        <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500 text-2xl">
+                            <i className="fa-solid fa-calendar-check"></i>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Next Billing Date</p>
+                            <h4 className="text-xl font-black text-slate-800 tracking-tight">
+                                {business.nextBillingDate ? new Date(business.nextBillingDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'}
+                            </h4>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Invoice History */}
+            <div className="bg-slate-50 border border-slate-100 rounded-[3rem] p-10 space-y-8">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h3 className="text-xl font-black text-slate-800 tracking-tight uppercase">Invoice History</h3>
+                        <p className="text-xs text-slate-500 font-medium">Review and download your recent subscription payments.</p>
+                    </div>
+                    <i className="fa-solid fa-file-invoice-dollar text-3xl text-slate-300"></i>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="border-b border-slate-200">
+                                <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Invoice ID</th>
+                                <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
+                                <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Plan</th>
+                                <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
+                                <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="text-sm font-bold text-slate-600">
+                            {business.invoices && business.invoices.length > 0 ? (
+                                business.invoices.map((inv, idx) => (
+                                    <tr key={inv.id} className="border-b border-slate-100 group hover:bg-white transition-colors">
+                                        <td className="py-6 px-2">#{inv.id}</td>
+                                        <td className="py-6 whitespace-nowrap">{new Date(inv.date).toLocaleDateString()}</td>
+                                        <td className="py-6">
+                                            <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[9px] font-black uppercase">{inv.plan}</span>
+                                        </td>
+                                        <td className="py-6">Ksh {inv.amount.toLocaleString()}</td>
+                                        <td className="py-6">
+                                            <span className={`flex items-center gap-2 ${inv.status === 'Paid' ? 'text-emerald-500' : 'text-amber-500'}`}>
+                                                <i className={`fa-solid ${inv.status === 'Paid' ? 'fa-circle-check' : 'fa-clock'}`}></i>
+                                                {inv.status === 'Paid' ? 'Paid' : 'Pending Verification'}
+                                            </span>
+                                        </td>
+                                        <td className="py-6 text-right">
+                                            <button className="text-indigo-600 hover:text-indigo-700 transition-colors">
+                                                <i className="fa-solid fa-download"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={6} className="py-12 text-center text-slate-400 font-bold uppercase tracking-widest text-[10px]">
+                                        No invoice history found
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <div className="bg-slate-950 rounded-[3rem] p-10 md:p-16 text-white shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/20 blur-[100px] rounded-full -mr-32 -mt-32"></div>
                 <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">

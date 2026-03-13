@@ -523,15 +523,39 @@ const AppContent: React.FC = () => {
   };
 
   const handleUpdateBusiness = async (updatedBiz: Business) => {
+    // Handle Subscription Logic Transitions
+    const oldBiz = businesses.find(b => b.id === updatedBiz.id) || business;
+    let bizToUpdate = { ...updatedBiz };
+
+    if (oldBiz.subscriptionStatus !== updatedBiz.subscriptionStatus) {
+      if (updatedBiz.subscriptionStatus === 'Trial' && !updatedBiz.trialStartedAt) {
+        bizToUpdate.trialStartedAt = now();
+      } else if (updatedBiz.subscriptionStatus === 'Active') {
+        const expiry = new Date();
+        expiry.setDate(expiry.getDate() + 30); // 30 days default
+        const expiryIso = expiry.toISOString();
+        bizToUpdate.expiryDate = expiryIso;
+        bizToUpdate.nextBillingDate = expiryIso;
+        bizToUpdate.paymentStatus = 'Verified';
+
+        // Mark pending invoices as Paid
+        if (bizToUpdate.invoices) {
+          bizToUpdate.invoices = bizToUpdate.invoices.map(inv =>
+            inv.status === 'Pending' ? { ...inv, status: 'Paid', expiryDate: expiryIso } : inv
+          );
+        }
+      }
+    }
+
     try {
-      const res = await fetch(`/api/auth/admin/businesses/${updatedBiz.id}`, {
+      const res = await fetch(`/api/auth/admin/businesses/${bizToUpdate.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedBiz)
+        body: JSON.stringify(bizToUpdate)
       });
       if (res.ok) {
-        setBusinesses(businesses.map(b => b.id === updatedBiz.id ? updatedBiz : b));
-        setBusiness(updatedBiz); // Critical: Update active business local state
+        setBusinesses(businesses.map(b => b.id === bizToUpdate.id ? bizToUpdate : b));
+        setBusiness(bizToUpdate);
         addToast("Business configuration synced", "success");
       } else {
         throw new Error("Sync failed");
@@ -755,12 +779,35 @@ const AppContent: React.FC = () => {
                 <SubscriptionTerminal
                   business={business}
                   onUpdateStatus={(status, note) => {
-                    setBusiness((prev: any) => ({
-                      ...prev,
+                    const planInfo = {
+                      'Basic': 1500,
+                      'Pro': 3500,
+                      'Enterprise': 7000
+                    };
+                    const amount = planInfo[business.subscriptionPlan as 'Basic' | 'Pro' | 'Enterprise'] || 1500;
+                    
+                    const newInvoice: any = {
+                      id: `INV-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+                      businessId: business.id,
+                      date: now(),
+                      amount: amount,
+                      plan: business.subscriptionPlan || 'Basic',
+                      status: 'Pending',
+                      expiryDate: now(), // Placeholder
+                    };
+
+                    const updatedInvList = [...(business.invoices || []), newInvoice];
+
+                    const updatedBiz = {
+                      ...business,
                       subscriptionStatus: status,
                       verificationNote: note,
+                      invoices: updatedInvList,
                       updatedAt: now()
-                    }));
+                    };
+
+                    setBusiness(updatedBiz);
+                    handleUpdateBusiness(updatedBiz);
                   }}
                 />
               )}

@@ -18,9 +18,25 @@ export interface Business {
   paymentStatus: 'Pending' | 'Verified' | 'Overdue';
   verificationNote?: string;
 
+  trialStartedAt?: string;    // ✅ ADD
+  expiryDate?: string;        // ✅ ADD
+  nextBillingDate?: string;   // ✅ ADD
+  invoices?: Invoice[];       // ✅ ADD
+
   createdAt: string;
   updatedAt: string;          // ✅ ADD
   logo?: string;
+}
+
+export interface Invoice {
+  id: string;
+  businessId: string;
+  date: string;
+  amount: number;
+  plan: 'Basic' | 'Pro' | 'Enterprise';
+  status: 'Paid' | 'Pending';
+  expiryDate: string;
+  reference?: string;
 }
 
 export interface User {

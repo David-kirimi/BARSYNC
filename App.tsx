@@ -528,8 +528,10 @@ const AppContent: React.FC = () => {
     let bizToUpdate = { ...updatedBiz };
 
     if (oldBiz.subscriptionStatus !== updatedBiz.subscriptionStatus) {
-      if (updatedBiz.subscriptionStatus === 'Trial' && !updatedBiz.trialStartedAt) {
+      if (updatedBiz.subscriptionStatus === 'Trial') {
         bizToUpdate.trialStartedAt = now();
+        bizToUpdate.expiryDate = undefined;
+        bizToUpdate.nextBillingDate = undefined;
       } else if (updatedBiz.subscriptionStatus === 'Active') {
         const expiry = new Date();
         expiry.setDate(expiry.getDate() + 30); // 30 days default

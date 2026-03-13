@@ -161,6 +161,11 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
                           }`}>
                           {biz.subscriptionStatus}
                         </span>
+                        {biz.verificationNote && (
+                          <div className="text-[9px] text-slate-400 font-bold truncate max-w-[150px]" title={biz.verificationNote}>
+                            Note: {biz.verificationNote}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-10 py-8 text-right">
@@ -241,9 +246,12 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">By: {biz.ownerName}</span>
                         </div>
                         {biz.verificationNote && (
-                          <div className="mt-4 p-4 bg-white rounded-2xl border border-slate-200">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Transaction Message:</p>
-                            <p className="text-[11px] font-bold text-slate-600">{biz.verificationNote}</p>
+                          <div className="mt-4 p-5 bg-white rounded-2xl border-2 border-orange-100 shadow-sm">
+                            <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                <i className="fa-solid fa-envelope-open-text"></i>
+                                Verification Message:
+                            </p>
+                            <p className="text-xs font-bold text-slate-700 leading-relaxed italic">"{biz.verificationNote}"</p>
                           </div>
                         )}
                       </div>

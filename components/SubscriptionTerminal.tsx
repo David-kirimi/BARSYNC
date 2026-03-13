@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Business } from '../types';
 import { useToast } from './Toast';
 
@@ -10,7 +10,7 @@ interface SubscriptionTerminalProps {
 
 const SubscriptionTerminal: React.FC<SubscriptionTerminalProps> = ({ business, onUpdateStatus }) => {
     const { showToast } = useToast();
-    const [paymentMsg, setPaymentMsg] = useState('');
+    const [verificationNote, setVerificationNote] = useState('');
     const [selectedPlan, setSelectedPlan] = useState<'Basic' | 'Pro' | 'Enterprise'>(business.subscriptionPlan || 'Basic');
 
     const plans = [
@@ -18,33 +18,31 @@ const SubscriptionTerminal: React.FC<SubscriptionTerminalProps> = ({ business, o
             id: 'Basic',
             price: '1,500',
             features: ['Single Terminal', 'Max 5 Staff', 'Standard Reports', 'Email Support'],
-            color: 'slate'
         },
         {
             id: 'Pro',
             price: '3,500',
             features: ['Unlimited Terminals', 'Unlimited Staff', 'AI Insights', 'Profit Tracking'],
-            color: 'indigo'
         },
         {
             id: 'Enterprise',
             price: '7,000',
             features: ['Bulk Stock Management', 'Multi-Location Sync', 'API Access', 'Priority Support'],
-            color: 'emerald'
         }
     ];
 
-    const handlePaymentSubmit = () => {
-        if (!paymentMsg.trim()) {
-            showToast("Please paste the payment message!", "warning");
-            return;
-        }
-        onUpdateStatus('Pending Approval', paymentMsg);
-        showToast("Payment submitted for verification!", "success");
-    };
+    const isNearExpiry = useMemo(() => {
+        if (!business.expiryDate) return false;
+        const expiry = new Date(business.expiryDate).getTime();
+        const now = new Date().getTime();
+        const fiveDays = 5 * 24 * 60 * 60 * 1000;
+        return (expiry - now) < fiveDays;
+    }, [business.expiryDate]);
+
+    const showPaymentOptions = business.subscriptionStatus !== 'Active' || isNearExpiry;
 
     return (
-        <div className="space-y-10 p-4 md:p-10 pt-20 md:pt-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
+        <div className="space-y-12 p-4 md:p-10 pt-20 md:pt-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
             <div className="text-center space-y-4">
                 <h1 className="text-4xl font-black text-slate-800 tracking-tighter uppercase">Subscription Hub</h1>
                 <p className="text-slate-500 font-medium max-w-md mx-auto">Scale your business with professional tools designed for efficiency.</p>
@@ -111,6 +109,120 @@ const SubscriptionTerminal: React.FC<SubscriptionTerminalProps> = ({ business, o
                 </div>
             )}
 
+            {/* Payment Section */}
+            {showPaymentOptions ? (
+                <div className="bg-slate-950 rounded-[3rem] p-10 md:p-16 text-white shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/20 blur-[100px] rounded-full -mr-32 -mt-32"></div>
+                    <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                        <div>
+                            <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full mb-8">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                                </span>
+                                <span className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">Activate Terminal</span>
+                            </div>
+                            <h2 className="text-4xl md:text-5xl font-black mb-6 tracking-tighter leading-none">
+                                Ready to scale <br />your business?
+                            </h2>
+                            <p className="text-slate-400 font-medium text-lg max-w-md mb-8">
+                                Complete your payment verification to unlock the full power of BarSync.
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-6">
+                            {/* Option 1: Bank */}
+                            <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-[2.5rem] hover:bg-white/10 transition-all group">
+                                <div className="flex items-center gap-6 mb-8">
+                                    <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-2xl">
+                                        <i className="fa-solid fa-building-columns"></i>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-1">Option 1: Bank Paybill</p>
+                                        <h3 className="text-xl font-black">Direct Transfer</h3>
+                                    </div>
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center py-3 border-b border-white/5">
+                                        <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">Paybill (DTB)</span>
+                                        <span className="text-lg font-black text-white tracking-widest">516600</span>
+                                    </div>
+                                    <div className="flex justify-between items-center py-3">
+                                        <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">Account Number</span>
+                                        <span className="text-lg font-black text-indigo-400 tracking-widest">5492080001</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Option 2: MPESA */}
+                            <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-[2.5rem] hover:bg-white/10 transition-all group">
+                                <div className="flex items-center gap-6 mb-8">
+                                    <div className="w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center text-2xl">
+                                        <i className="fa-solid fa-mobile-screen-button"></i>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black text-emerald-300 uppercase tracking-widest mb-1">Option 2: M-Pesa Direct</p>
+                                        <h3 className="text-xl font-black">Instant Activation</h3>
+                                    </div>
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center py-3 border-b border-white/5">
+                                        <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">Contact Support</span>
+                                        <span className="text-lg font-black text-white tracking-widest">+254 757 983 954</span>
+                                    </div>
+                                    <div className="flex justify-between items-center py-3">
+                                        <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">Direct Send</span>
+                                        <span className="text-lg font-black text-emerald-400 tracking-widest">0757983954</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-12 pt-12 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-8">
+                        <div className="flex-1 max-w-lg">
+                            <h4 className="text-xl font-black mb-3">Submit Payment Details</h4>
+                            <p className="text-sm text-slate-400 font-medium">Paste your bank or M-Pesa confirmation message below for manual verification.</p>
+                        </div>
+                        <div className="flex-1 w-full flex gap-3">
+                            <input
+                                value={verificationNote}
+                                onChange={(e) => setVerificationNote(e.target.value)}
+                                className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-6 py-4 font-bold focus:ring-4 focus:ring-indigo-500/20 outline-none transition-all text-white"
+                                placeholder="Paste confirmation message here..."
+                            />
+                            <button
+                                onClick={() => {
+                                    if (!verificationNote) return;
+                                    onUpdateStatus('Pending Approval', verificationNote);
+                                    setVerificationNote('');
+                                    showToast("Payment submitted for verification!", "success");
+                                }}
+                                className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-xl shadow-indigo-500/20"
+                            >
+                                Submit
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="bg-emerald-50 border border-emerald-100 rounded-[3rem] p-12 flex items-center justify-between gap-8">
+                    <div className="flex items-center gap-8">
+                        <div className="w-16 h-16 bg-emerald-600 rounded-[1.5rem] flex items-center justify-center text-white text-2xl shadow-lg shadow-emerald-200">
+                            <i className="fa-solid fa-shield-check"></i>
+                        </div>
+                        <div>
+                            <h3 className="text-2xl font-black text-slate-800 tracking-tighter uppercase">Account Fully Secured</h3>
+                            <p className="text-emerald-600 font-bold text-sm">Your subscription is active and verified. Payment options are hidden until near expiry.</p>
+                        </div>
+                    </div>
+                    <div className="px-6 py-3 bg-white rounded-2xl border border-emerald-100 flex flex-col items-center">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Status</p>
+                        <p className="text-sm font-black text-emerald-600 uppercase">Verified</p>
+                    </div>
+                </div>
+            )}
+
             {/* Invoice History */}
             <div className="bg-slate-50 border border-slate-100 rounded-[3rem] p-10 space-y-8">
                 <div className="flex items-center justify-between">
@@ -135,7 +247,7 @@ const SubscriptionTerminal: React.FC<SubscriptionTerminalProps> = ({ business, o
                         </thead>
                         <tbody className="text-sm font-bold text-slate-600">
                             {business.invoices && business.invoices.length > 0 ? (
-                                business.invoices.map((inv, idx) => (
+                                business.invoices.map((inv) => (
                                     <tr key={inv.id} className="border-b border-slate-100 group hover:bg-white transition-colors">
                                         <td className="py-6 px-2">#{inv.id}</td>
                                         <td className="py-6 whitespace-nowrap">{new Date(inv.date).toLocaleDateString()}</td>
@@ -165,94 +277,6 @@ const SubscriptionTerminal: React.FC<SubscriptionTerminalProps> = ({ business, o
                             )}
                         </tbody>
                     </table>
-                </div>
-            </div>
-
-            <div className="bg-slate-950 rounded-[3rem] p-10 md:p-16 text-white shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/20 blur-[100px] rounded-full -mr-32 -mt-32"></div>
-                <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                    <div className="space-y-10">
-                        <h2 className="text-3xl font-black tracking-tighter uppercase">Activate Terminal</h2>
-                        <div className="grid grid-cols-1 gap-6">
-                            {/* Option 1: Bank Paybill */}
-                            <div className="group relative bg-white/5 border border-white/10 rounded-[2.5rem] p-8 hover:border-indigo-500/50 transition-all duration-500 overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-indigo-500/20 transition-all"></div>
-                                <div className="relative space-y-4">
-                                    <div className="flex justify-between items-center">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-indigo-500/20 rounded-xl flex items-center justify-center text-indigo-400">
-                                                <i className="fa-solid fa-building-columns"></i>
-                                            </div>
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Option 1: Bank</span>
-                                        </div>
-                                        <span className="font-black text-indigo-400 text-[10px] uppercase tracking-widest">DTB Paybill</span>
-                                    </div>
-                                    <div className="pt-4 border-t border-white/5 space-y-3">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-[10px] font-black text-slate-500 uppercase">Paybill Number</span>
-                                            <span className="text-xl font-black tracking-widest text-white">516600</span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-[10px] font-black text-slate-500 uppercase">Account Number</span>
-                                            <span className="text-lg font-black tracking-tight text-emerald-400">5492080001</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Option 2: M-Pesa Direct */}
-                            <div className="group relative bg-white/5 border border-white/10 rounded-[2.5rem] p-8 hover:border-emerald-500/50 transition-all duration-500 overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-emerald-500/20 transition-all"></div>
-                                <div className="relative space-y-4">
-                                    <div className="flex justify-between items-center">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center text-emerald-400">
-                                                <i className="fa-solid fa-mobile-screen-button"></i>
-                                            </div>
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Option 2: Mobile</span>
-                                        </div>
-                                        <span className="font-black text-emerald-400 text-[10px] uppercase tracking-widest">M-Pesa Direct</span>
-                                    </div>
-                                    <div className="pt-4 border-t border-white/5 space-y-3">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-[10px] font-black text-slate-500 uppercase">Phone Number</span>
-                                            <span className="text-xl font-black tracking-widest text-white">0757983954</span>
-                                        </div>
-                                        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-center">
-                                            <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Send Payment Directly to this Number</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="space-y-6">
-                        <div className="space-y-3">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Payment Verification</label>
-                            <textarea
-                                className="w-full h-40 bg-white/5 border border-white/10 rounded-3xl p-6 text-sm focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none font-medium placeholder:text-slate-600 text-white"
-                                placeholder="Paste your M-Pesa or Bank confirmation message here..."
-                                value={paymentMsg}
-                                onChange={(e) => setPaymentMsg(e.target.value)}
-                            />
-                        </div>
-                        <button
-                            onClick={handlePaymentSubmit}
-                            disabled={business.subscriptionStatus === 'Pending Approval'}
-                            className={`w-full py-6 rounded-3xl font-black text-[11px] uppercase tracking-[0.2em] transition-all transform active:scale-95 shadow-xl ${business.subscriptionStatus === 'Pending Approval'
-                                ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                                : 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-indigo-500/20'
-                                }`}
-                        >
-                            {business.subscriptionStatus === 'Pending Approval' ? 'Wait for Approval' : 'Submit for Verification'}
-                        </button>
-                        {business.subscriptionStatus === 'Pending Approval' && (
-                            <p className="text-center text-[10px] font-black text-emerald-400 uppercase tracking-widest animate-pulse">
-                                Verification in progress by SLIEM Tech
-                            </p>
-                        )}
-                    </div>
                 </div>
             </div>
         </div>

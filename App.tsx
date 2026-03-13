@@ -666,7 +666,7 @@ const AppContent: React.FC = () => {
   return (
     <div className="h-[100dvh] flex flex-col overflow-hidden bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 relative">
       {/* Verification / Trial Overlay */}
-      {business?.subscriptionStatus !== 'Active' && showVerificationOverlay && (
+      {currentUser?.role !== Role.SUPER_ADMIN && business?.subscriptionStatus !== 'Active' && showVerificationOverlay && (
         <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-6">
           <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-lg p-12 text-center relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-2 bg-amber-500"></div>

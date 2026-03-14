@@ -613,8 +613,8 @@ const AppContent: React.FC = () => {
     const syncInterval = setInterval(async () => {
       console.log('🔄 Background Sync Agent Active...');
       try {
-        const bid = currentUser.businessId || business.id || 'admin_node';
-        if (bid !== 'local_biz') {
+        const bid = currentUser?.businessId || business?.id || 'admin_node';
+        if (bid !== 'local_biz' && bid !== 'loading') {
           const res = await fetch(`/api/sales?businessId=${bid}`);
           if (res.ok) {
             const cloudSales = await res.json();
@@ -655,7 +655,7 @@ const AppContent: React.FC = () => {
     }, 15000); // Sync every 15 seconds
 
     return () => clearInterval(syncInterval);
-  }, [currentUser, business.id]);
+  }, [currentUser, business?.id]);
 
   const handleUpdateUserRole = async (userId: string, newRole: Role) => {
     const updatedUsers = users.map(u => 
@@ -720,37 +720,41 @@ const AppContent: React.FC = () => {
     if (savedUser && savedBiz) {
       try {
         const user = JSON.parse(savedUser);
-        const business = JSON.parse(savedBiz);
+        const businessData = JSON.parse(savedBiz);
         
-        setCurrentUser(user);
-        setBusiness(business);
-        
-        // Restore View
-        if (savedView) {
-          setView(savedView as View);
-        } else {
-          if (user.role === Role.SUPER_ADMIN) {
-            setView('SUPER_ADMIN_PORTAL');
-          } else if (user.role === Role.CASHIER) {
-            setView('COUNTER_DASHBOARD');
-          } else if (user.role === Role.SUPERVISOR) {
-            setView('SUPERVISOR_PORTAL');
+        if (user && businessData) {
+          setCurrentUser(user);
+          setBusiness(businessData);
+          
+          // Restore View
+          if (savedView) {
+            setView(savedView as View);
           } else {
-            setView('POS');
+            if (user.role === Role.SUPER_ADMIN) {
+              setView('SUPER_ADMIN_PORTAL');
+            } else if (user.role === Role.CASHIER) {
+              setView('COUNTER_DASHBOARD');
+            } else if (user.role === Role.SUPERVISOR) {
+              setView('SUPERVISOR_PORTAL');
+            } else {
+              setView('POS');
+            }
           }
-        }
 
-        // Restore Cart
-        if (savedCart) {
-          try {
-            setCart(JSON.parse(savedCart));
-          } catch (e) {
-            console.error("Cart restore failed", e);
+          // Restore Cart
+          if (savedCart) {
+            try {
+              setCart(JSON.parse(savedCart));
+            } catch (e) {
+              console.error("Cart restore failed", e);
+            }
           }
+          
+          // Fetch fresh state and active shift
+          fetchState(user.businessId || 'admin_node');
+        } else {
+          throw new Error("Invalid session data");
         }
-        
-        // Fetch fresh state and active shift
-        fetchState(user.businessId || 'admin_node');
       } catch (e) {
         console.error("Session restore failed", e);
         Cookies.remove('barsync_user');
@@ -1137,7 +1141,7 @@ const AppContent: React.FC = () => {
                       addToast("User with this name already exists!", "error");
                       return;
                     }
-                    const userWithId: User = { ...newUser, id: Math.random().toString(36).substr(2, 9), businessId: business.id || 'local_biz', status: 'Active', updatedAt: now() };
+                    const userWithId: User = { ...newUser, id: Math.random().toString(36).substr(2, 9), businessId: business?.id || 'local_biz', status: 'Active', updatedAt: now() };
 
                     try {
                       const res = await fetch(`/api/auth/admin/users`, {
@@ -1163,8 +1167,8 @@ const AppContent: React.FC = () => {
                   sales={sales}
                   products={products}
                   currentUser={currentUser}
-                  businessName={business.name}
-                  logo={business.logo}
+                  businessName={business?.name || 'BarSync'}
+                  logo={business?.logo}
                 />
               )}
               {(view === 'PROFILE' || view === 'SETTINGS') && currentUser && (
@@ -1193,7 +1197,7 @@ const AppContent: React.FC = () => {
                     
                     const newInvoice: any = {
                       id: `INV-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
-                      businessId: business.id,
+                      businessId: business?.id || 'local_biz',
                       date: now(),
                       amount: amount,
                       plan: business.subscriptionPlan || 'Basic',

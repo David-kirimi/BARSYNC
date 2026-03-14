@@ -121,7 +121,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
       <aside className="hidden md:flex w-64 bg-slate-950 flex-col shrink-0 border-r border-slate-800 overflow-y-auto no-scrollbar">
         <div className="p-8">
           <div className="flex items-center gap-3 mb-10 overflow-hidden">
-            {business.logo ? (
+            {business?.logo ? (
               <img src={business.logo} className="w-12 h-12 rounded-xl object-cover shadow-lg cursor-pointer" onClick={() => setView('POS')} />
             ) : (
               <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg shadow-orange-500/20 rotate-3 cursor-pointer" onClick={() => setView('POS')}>
@@ -129,7 +129,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
               </div>
             )}
             <div className="min-w-0 overflow-hidden">
-              <h2 className="text-white font-black text-lg tracking-tighter leading-tight uppercase truncate">{business.name || 'BARSYNC'}</h2>
+              <h2 className="text-white font-black text-lg tracking-tighter leading-tight uppercase truncate">{business?.name || 'BARSYNC'}</h2>
               <p className="text-[9px] text-orange-400 font-bold uppercase tracking-widest mt-0.5">Network Node</p>
             </div>
           </div>

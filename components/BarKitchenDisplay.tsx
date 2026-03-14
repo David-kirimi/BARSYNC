@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sale } from '../types';
+import { Sale, Role } from '../types';
 
 interface BarKitchenDisplayProps {
   sales: Sale[];
@@ -23,6 +23,7 @@ const BarKitchenDisplay: React.FC<BarKitchenDisplayProps> = ({ sales, onUpdateSt
 
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
   const [collapsedColumns, setCollapsedColumns] = useState<Record<string, boolean>>({});
+  const [activeSubView, setActiveSubView] = useState<'pending' | 'preparing' | 'ready' | null>(null);
 
   const toggleOrder = (id: string) => setExpandedOrders(prev => ({ ...prev, [id]: !prev[id] }));
   const toggleColumn = (col: string) => setCollapsedColumns(prev => ({ ...prev, [col]: !prev[col] }));
@@ -82,7 +83,7 @@ const OrderCard: React.FC<{
           <div className="p-4 pt-3 border-t border-slate-50 shrink-0">
             {order.status === 'PENDING_PAYMENT' && (
               <button 
-                onClick={() => onUpdateStatus(order.id, 'PREPARING')}
+                onClick={(e) => { e.stopPropagation(); onUpdateStatus(order.id, 'PREPARING'); }}
                 className="w-full py-3 bg-indigo-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-md hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2"
               >
                 <i className="fa-solid fa-play"></i> Start
@@ -90,7 +91,7 @@ const OrderCard: React.FC<{
             )}
             {order.status === 'PREPARING' && (
               <button 
-                onClick={() => onUpdateStatus(order.id, 'READY')}
+                onClick={(e) => { e.stopPropagation(); onUpdateStatus(order.id, 'READY'); }}
                 className="w-full py-3 bg-emerald-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-md hover:bg-emerald-700 transition-all active:scale-95 flex items-center justify-center gap-2"
               >
                 <i className="fa-solid fa-check"></i> Ready
@@ -125,7 +126,7 @@ const OrderCard: React.FC<{
               <div className="p-4 pt-3 border-t border-slate-50 shrink-0">
                 {order.status === 'PENDING_PAYMENT' && (
                   <button 
-                    onClick={() => onUpdateStatus(order.id, 'PREPARING')}
+                    onClick={(e) => { e.stopPropagation(); onUpdateStatus(order.id, 'PREPARING'); }}
                     className="w-full py-3 bg-indigo-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-md hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2"
                   >
                     <i className="fa-solid fa-play"></i> Start
@@ -133,7 +134,7 @@ const OrderCard: React.FC<{
                 )}
                 {order.status === 'PREPARING' && (
                   <button 
-                    onClick={() => onUpdateStatus(order.id, 'READY')}
+                    onClick={(e) => { e.stopPropagation(); onUpdateStatus(order.id, 'READY'); }}
                     className="w-full py-3 bg-emerald-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-md hover:bg-emerald-700 transition-all active:scale-95 flex items-center justify-center gap-2"
                   >
                     <i className="fa-solid fa-check"></i> Ready
@@ -154,11 +155,41 @@ const OrderCard: React.FC<{
 };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50/30 overflow-hidden">
+    <div className="flex flex-col h-full bg-slate-50/30 overflow-hidden relative">
+      <AnimatePresence>
+        {activeSubView === 'pending' && (
+          <SubViewPortal 
+            title="Incoming Orders" 
+            orders={pending} 
+            onBack={() => setActiveSubView(null)} 
+            colorClass="text-amber-500"
+            onUpdateStatus={onUpdateStatus}
+          />
+        )}
+        {activeSubView === 'preparing' && (
+          <SubViewPortal 
+            title="Orders in Prep" 
+            orders={preparing} 
+            onBack={() => setActiveSubView(null)} 
+            colorClass="text-indigo-600"
+            onUpdateStatus={onUpdateStatus}
+          />
+        )}
+        {activeSubView === 'ready' && (
+          <SubViewPortal 
+            title="Collection Queue" 
+            orders={ready} 
+            onBack={() => setActiveSubView(null)} 
+            colorClass="text-emerald-600"
+            onUpdateStatus={onUpdateStatus}
+          />
+        )}
+      </AnimatePresence>
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 shrink-0 gap-4">
         <div>
           <h2 className="text-2xl lg:text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Kitchen Display</h2>
-          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.3em] mt-1.5 font-mono">
+          <p className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.3em] mt-2 font-mono">
             {activeOrders.length} Tickets • {pending.length} New • {preparing.length} Active
           </p>
         </div>
@@ -174,12 +205,15 @@ const OrderCard: React.FC<{
         {/* NEW / PENDING */}
         <div className={`flex flex-col min-h-0 bg-white/40 rounded-[2rem] border border-slate-200/50 overflow-hidden shadow-inner transition-all duration-500 ${collapsedColumns['pending'] ? 'flex-none h-16 lg:h-auto lg:flex-1' : 'flex-1'}`}>
           <div 
-            className="p-4 pb-2 shrink-0 cursor-pointer lg:cursor-default"
-            onClick={() => window.innerWidth < 1024 && toggleColumn('pending')}
+            className="p-4 py-5 shrink-0 cursor-pointer lg:cursor-default active:opacity-60 transition-opacity"
+            onClick={() => window.innerWidth < 1024 ? setActiveSubView('pending') : toggleColumn('pending')}
           >
-            <h3 className="text-[9px] font-black text-amber-500 uppercase tracking-widest flex items-center justify-between px-2">
+            <h3 className="text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center justify-between px-2">
               <span className="flex items-center gap-2"><i className="fa-solid fa-fire text-amber-400"></i> Incoming ({pending.length})</span>
-              <i className={`fa-solid fa-chevron-down lg:hidden transition-transform ${collapsedColumns['pending'] ? '' : 'rotate-180'}`}></i>
+              <div className="flex items-center gap-3">
+                <i className="fa-solid fa-arrow-right text-[10px] text-amber-300 lg:hidden"></i>
+                <i className={`fa-solid fa-chevron-down lg:hidden transition-transform ${collapsedColumns['pending'] ? '' : 'rotate-180'} hidden`}></i>
+              </div>
             </h3>
           </div>
           <motion.div 
@@ -209,12 +243,15 @@ const OrderCard: React.FC<{
         {/* PREPARING */}
         <div className={`flex flex-col min-h-0 bg-indigo-50/20 rounded-[2rem] border border-indigo-100/30 overflow-hidden shadow-inner transition-all duration-500 ${collapsedColumns['preparing'] ? 'flex-none h-16 lg:h-auto lg:flex-1' : 'flex-1'}`}>
           <div 
-            className="p-4 pb-2 shrink-0 cursor-pointer lg:cursor-default"
-            onClick={() => window.innerWidth < 1024 && toggleColumn('preparing')}
+            className="p-4 py-5 shrink-0 cursor-pointer lg:cursor-default active:opacity-60 transition-opacity"
+            onClick={() => window.innerWidth < 1024 ? setActiveSubView('preparing') : toggleColumn('preparing')}
           >
-            <h3 className="text-[9px] font-black text-indigo-600 uppercase tracking-widest flex items-center justify-between px-2">
+            <h3 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center justify-between px-2">
               <span className="flex items-center gap-2"><i className="fa-solid fa-whiskey-glass text-indigo-400"></i> Preparing ({preparing.length})</span>
-              <i className={`fa-solid fa-chevron-down lg:hidden transition-transform ${collapsedColumns['preparing'] ? '' : 'rotate-180'}`}></i>
+              <div className="flex items-center gap-3">
+                <i className="fa-solid fa-arrow-right text-[10px] text-indigo-300 lg:hidden"></i>
+                <i className={`fa-solid fa-chevron-down lg:hidden transition-transform ${collapsedColumns['preparing'] ? '' : 'rotate-180'} hidden`}></i>
+              </div>
             </h3>
           </div>
           <motion.div 
@@ -244,12 +281,15 @@ const OrderCard: React.FC<{
         {/* READY FOR PICKUP */}
         <div className={`flex flex-col min-h-0 bg-emerald-50/20 rounded-[2rem] border border-emerald-100/30 overflow-hidden shadow-inner transition-all duration-500 ${collapsedColumns['ready'] ? 'flex-none h-16 lg:h-auto lg:flex-1' : 'flex-1'}`}>
           <div 
-            className="p-4 pb-2 shrink-0 cursor-pointer lg:cursor-default"
-            onClick={() => window.innerWidth < 1024 && toggleColumn('ready')}
+            className="p-4 py-5 shrink-0 cursor-pointer lg:cursor-default active:opacity-60 transition-opacity"
+            onClick={() => window.innerWidth < 1024 ? setActiveSubView('ready') : toggleColumn('ready')}
           >
-            <h3 className="text-[9px] font-black text-emerald-600 uppercase tracking-widest flex items-center justify-between px-2">
+            <h3 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center justify-between px-2">
               <span className="flex items-center gap-2"><i className="fa-solid fa-circle-check text-emerald-500"></i> Ready ({ready.length})</span>
-              <i className={`fa-solid fa-chevron-down lg:hidden transition-transform ${collapsedColumns['ready'] ? '' : 'rotate-180'}`}></i>
+              <div className="flex items-center gap-3">
+                <i className="fa-solid fa-arrow-right text-[10px] text-emerald-300 lg:hidden"></i>
+                <i className={`fa-solid fa-chevron-down lg:hidden transition-transform ${collapsedColumns['ready'] ? '' : 'rotate-180'} hidden`}></i>
+              </div>
             </h3>
           </div>
           <motion.div 
@@ -277,6 +317,103 @@ const OrderCard: React.FC<{
         </div>
       </div>
     </div>
+  );
+};
+
+const SubViewPortal: React.FC<{
+  title: string,
+  orders: Sale[],
+  onBack: () => void,
+  colorClass: string,
+  onUpdateStatus: (id: string, status: Sale['status']) => void
+}> = ({ title, orders, onBack, colorClass, onUpdateStatus }) => {
+  // We need to define OrderCard inside or pass it? It's better to render it here directly for simplicity or use the same logic
+  return (
+    <motion.div 
+      initial={{ x: '100vw' }}
+      animate={{ x: 0 }}
+      exit={{ x: '100vw' }}
+      transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+      className="fixed inset-0 bg-slate-50 z-[200] flex flex-col overflow-hidden"
+    >
+      <div className="p-6 bg-white border-b border-slate-100 flex items-center gap-6 shrink-0">
+        <button 
+          onClick={onBack} 
+          className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 active:scale-90 transition-all shadow-sm"
+        >
+          <i className="fa-solid fa-arrow-left text-lg"></i>
+        </button>
+        <div>
+          <h2 className={`text-2xl font-black uppercase tracking-tight leading-none ${colorClass}`}>{title}</h2>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5">{orders.length} ACTIVE TICKETS</p>
+        </div>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 no-scrollbar pb-32">
+        <AnimatePresence mode="popLayout">
+          {orders.map(order => (
+            <motion.div 
+              key={order.id}
+              layout
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-[2rem] border border-slate-100 shadow-sm flex flex-col overflow-hidden h-fit"
+            >
+              <div className="p-6 border-b border-slate-50 flex justify-between items-center">
+                <div>
+                  <h4 className="font-black text-slate-900 text-xl tracking-tighter uppercase leading-none">TICKET #{order.ticketNumber}</h4>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1.5 italic">W: {order.created_by_waiter}</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{new Date(order.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+              </div>
+              
+              <div className="p-6 bg-slate-50/30 space-y-2">
+                {order.items.map((item, idx) => (
+                  <div key={idx} className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200/50 shadow-sm">
+                    <span className="text-xs font-black text-slate-700 uppercase leading-none">{item.quantity}x {item.name}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-6 pt-0">
+                {order.status === 'PENDING_PAYMENT' && (
+                  <button 
+                    onClick={() => onUpdateStatus(order.id, 'PREPARING')}
+                    className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-indigo-100 transition-all active:scale-95 flex items-center justify-center gap-3"
+                  >
+                    <i className="fa-solid fa-play"></i> Start Preparation
+                  </button>
+                )}
+                {order.status === 'PREPARING' && (
+                  <button 
+                    onClick={() => onUpdateStatus(order.id, 'READY')}
+                    className="w-full py-5 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-100 transition-all active:scale-95 flex items-center justify-center gap-3"
+                  >
+                    <i className="fa-solid fa-check"></i> Mark as Ready
+                  </button>
+                )}
+                {order.status === 'READY' && (
+                  <div className="py-5 bg-emerald-50 text-emerald-600 rounded-2xl font-black text-[10px] uppercase tracking-widest text-center border border-emerald-100 animate-pulse">
+                    Waiting for Collection
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+        {orders.length === 0 && (
+          <div className="col-span-full h-96 flex flex-col items-center justify-center text-slate-300 opacity-60">
+            <div className="w-24 h-24 rounded-full bg-slate-100 flex items-center justify-center mb-6">
+              <i className="fa-solid fa-check-double text-4xl text-slate-200"></i>
+            </div>
+            <p className="text-sm font-black uppercase tracking-[0.3em]">All Clear</p>
+          </div>
+        )}
+      </div>
+    </motion.div>
   );
 };
 

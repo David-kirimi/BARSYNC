@@ -21,6 +21,7 @@ const CounterDashboard: React.FC<CounterDashboardProps> = ({
   const [ticketSearch, setTicketSearch] = useState('');
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [activeSubView, setActiveSubView] = useState<'pending' | 'ready' | 'served' | null>(null);
 
   const toggleOrder = (id: string) => setExpandedOrders(prev => ({ ...prev, [id]: !prev[id] }));
   const toggleSection = (sec: string) => setCollapsedSections(prev => ({ ...prev, [sec]: !prev[sec] }));
@@ -221,7 +222,45 @@ const OrderItem: React.FC<{
 };
 
   return (
-    <div className="flex h-full flex-col gap-6 pb-20 lg:pb-0 overflow-hidden">
+    <div className="flex h-full flex-col gap-6 pb-20 lg:pb-0 overflow-hidden relative">
+      <AnimatePresence>
+        {activeSubView === 'pending' && (
+          <SubViewPortal 
+            title="Orders Pending" 
+            orders={pendingOrders} 
+            onBack={() => setActiveSubView(null)} 
+            colorClass="text-indigo-600"
+            onVerifyCash={handleVerifyCash}
+            onStartMpesaVerify={handleStartMpesaVerify}
+            onUpdateStatus={onUpdateStatus}
+            onCancelOrder={onCancelOrder}
+          />
+        )}
+        {activeSubView === 'ready' && (
+          <SubViewPortal 
+            title="Ready for Pickup" 
+            orders={readyOrders} 
+            onBack={() => setActiveSubView(null)} 
+            colorClass="text-emerald-600"
+            onVerifyCash={handleVerifyCash}
+            onStartMpesaVerify={handleStartMpesaVerify}
+            onUpdateStatus={onUpdateStatus}
+            onCancelOrder={onCancelOrder}
+          />
+        )}
+        {activeSubView === 'served' && (
+          <SubViewPortal 
+            title="Served Today" 
+            orders={servedOrders} 
+            onBack={() => setActiveSubView(null)} 
+            colorClass="text-slate-800"
+            onVerifyCash={handleVerifyCash}
+            onStartMpesaVerify={handleStartMpesaVerify}
+            onUpdateStatus={onUpdateStatus}
+            onCancelOrder={onCancelOrder}
+          />
+        )}
+      </AnimatePresence>
       
       {/* HEADER SECTION */}
       <div className="flex flex-col lg:flex-row items-center justify-between gap-6 bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm shrink-0">
@@ -259,13 +298,16 @@ const OrderItem: React.FC<{
         {/* SECTION 1: PENDING / PREPARING */}
         <div className={`flex flex-col bg-slate-50 rounded-[3rem] border border-slate-200 p-8 shadow-inner overflow-hidden transition-all duration-500 ${collapsedSections['pending'] ? 'flex-none h-24 lg:h-auto lg:flex-1' : 'flex-1'}`}>
           <div 
-            className="flex items-center justify-between mb-8 shrink-0 cursor-pointer lg:cursor-default"
-            onClick={() => window.innerWidth < 1024 && toggleSection('pending')}
+            className="flex items-center justify-between mb-8 shrink-0 cursor-pointer lg:cursor-default active:opacity-60 transition-opacity"
+            onClick={() => window.innerWidth < 1024 ? setActiveSubView('pending') : toggleSection('pending')}
           >
             <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
               <span className="w-2 h-2 bg-amber-400 rounded-full"></span> Orders Pending ({pendingOrders.length})
             </h3>
-            <i className={`fa-solid fa-chevron-down lg:hidden transition-transform ${collapsedSections['pending'] ? '' : 'rotate-180'}`}></i>
+            <div className="flex items-center gap-3">
+              <i className="fa-solid fa-arrow-right text-[10px] text-slate-300 lg:hidden"></i>
+              <i className={`fa-solid fa-chevron-down lg:hidden transition-transform ${collapsedSections['pending'] ? '' : 'rotate-180'} hidden`}></i>
+            </div>
           </div>
           <motion.div 
             animate={{ height: collapsedSections['pending'] ? 0 : 'auto', opacity: collapsedSections['pending'] ? 0 : 1 }}
@@ -297,13 +339,16 @@ const OrderItem: React.FC<{
         {/* SECTION 2: READY FOR PICKUP */}
         <div className={`flex flex-col bg-emerald-50/20 rounded-[3rem] border border-emerald-100/30 p-8 shadow-inner overflow-hidden transition-all duration-500 ${collapsedSections['ready'] ? 'flex-none h-24 lg:h-auto lg:flex-1' : 'flex-1'}`}>
           <div 
-            className="flex items-center justify-between mb-8 shrink-0 cursor-pointer lg:cursor-default"
-            onClick={() => window.innerWidth < 1024 && toggleSection('ready')}
+            className="flex items-center justify-between mb-8 shrink-0 cursor-pointer lg:cursor-default active:opacity-60 transition-opacity"
+            onClick={() => window.innerWidth < 1024 ? setActiveSubView('ready') : toggleSection('ready')}
           >
             <h3 className="text-[11px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2">
               <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> Ready for Pickup ({readyOrders.length})
             </h3>
-            <i className={`fa-solid fa-chevron-down lg:hidden transition-transform ${collapsedSections['ready'] ? '' : 'rotate-180'}`}></i>
+            <div className="flex items-center gap-3">
+              <i className="fa-solid fa-arrow-right text-[10px] text-emerald-300 lg:hidden"></i>
+              <i className={`fa-solid fa-chevron-down lg:hidden transition-transform ${collapsedSections['ready'] ? '' : 'rotate-180'} hidden`}></i>
+            </div>
           </div>
           <motion.div 
             animate={{ height: collapsedSections['ready'] ? 0 : 'auto', opacity: collapsedSections['ready'] ? 0 : 1 }}
@@ -336,13 +381,16 @@ const OrderItem: React.FC<{
         {/* SECTION 3: SERVED / RECENT */}
         <div className={`flex flex-col bg-white rounded-[3rem] border border-slate-200 p-8 overflow-hidden transition-all duration-500 ${collapsedSections['served'] ? 'flex-none h-24 lg:h-auto lg:flex-1' : 'flex-1'}`}>
           <div 
-            className="flex items-center justify-between mb-8 shrink-0 cursor-pointer lg:cursor-default"
-            onClick={() => window.innerWidth < 1024 && toggleSection('served')}
+            className="flex items-center justify-between mb-8 shrink-0 cursor-pointer lg:cursor-default active:opacity-60 transition-opacity"
+            onClick={() => window.innerWidth < 1024 ? setActiveSubView('served') : toggleSection('served')}
           >
             <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
               <span className="w-2 h-2 bg-indigo-600 rounded-full"></span> Served / Waiting Payment ({servedOrders.length})
             </h3>
-            <i className={`fa-solid fa-chevron-down lg:hidden transition-transform ${collapsedSections['served'] ? '' : 'rotate-180'}`}></i>
+            <div className="flex items-center gap-3">
+              <i className="fa-solid fa-arrow-right text-[10px] text-slate-300 lg:hidden"></i>
+              <i className={`fa-solid fa-chevron-down lg:hidden transition-transform ${collapsedSections['served'] ? '' : 'rotate-180'} hidden`}></i>
+            </div>
           </div>
           <motion.div 
             animate={{ height: collapsedSections['served'] ? 0 : 'auto', opacity: collapsedSections['served'] ? 0 : 1 }}
@@ -411,5 +459,72 @@ const OrderItem: React.FC<{
     </div>
   );
 };
+
+const SubViewPortal: React.FC<{ 
+  title: string, 
+  orders: Sale[], 
+  onBack: () => void, 
+  colorClass: string,
+  onVerifyCash: (id: string) => Promise<void>,
+  onStartMpesaVerify: (id: string) => void,
+  onUpdateStatus: (id: string, status: Sale['status']) => void,
+  onCancelOrder: (id: string) => Promise<void>
+}> = ({ 
+  title, 
+  orders, 
+  onBack, 
+  colorClass,
+  onVerifyCash,
+  onStartMpesaVerify,
+  onUpdateStatus,
+  onCancelOrder
+}) => (
+  <motion.div 
+    initial={{ x: '100vw' }}
+    animate={{ x: 0 }}
+    exit={{ x: '100vw' }}
+    transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+    className="fixed inset-0 bg-slate-50 z-[200] flex flex-col overflow-hidden"
+  >
+    <div className="p-6 bg-white border-b border-slate-100 flex items-center gap-6 shrink-0">
+      <button 
+        onClick={onBack} 
+        className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 active:scale-90 transition-all shadow-sm"
+      >
+        <i className="fa-solid fa-arrow-left text-lg"></i>
+      </button>
+      <div>
+        <h2 className={`text-2xl font-black uppercase tracking-tight leading-none ${colorClass}`}>{title}</h2>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5">{orders.length} ACTIVE ORDERS</p>
+      </div>
+    </div>
+    
+    <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6 no-scrollbar pb-32">
+      <AnimatePresence mode="popLayout">
+        {orders.map(order => (
+          <OrderItem 
+            key={order.id} 
+            order={order} 
+            isReady={order.status === 'READY'} 
+            isExpanded={true} 
+            onToggle={() => {}}
+            onVerifyCash={onVerifyCash}
+            onStartMpesaVerify={onStartMpesaVerify}
+            onUpdateStatus={onUpdateStatus}
+            onCancelOrder={onCancelOrder}
+          />
+        ))}
+      </AnimatePresence>
+      {orders.length === 0 && (
+        <div className="col-span-full h-96 flex flex-col items-center justify-center text-slate-300 opacity-60">
+          <div className="w-24 h-24 rounded-full bg-slate-100 flex items-center justify-center mb-6">
+            <i className="fa-solid fa-clipboard-check text-4xl text-slate-200"></i>
+          </div>
+          <p className="text-sm font-black uppercase tracking-[0.3em]">All Caught Up</p>
+        </div>
+      )}
+    </div>
+  </motion.div>
+);
 
 export default CounterDashboard;

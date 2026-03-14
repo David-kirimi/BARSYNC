@@ -856,6 +856,7 @@ const AppContent: React.FC = () => {
                 </p>
                 <button
                   onClick={() => {
+                    setShowVerificationOverlay(false);
                     setView('SUBSCRIPTION');
                   }}
                   className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95"

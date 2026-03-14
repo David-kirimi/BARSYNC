@@ -22,17 +22,19 @@ const CounterDashboard: React.FC<CounterDashboardProps> = ({
   // 1. Pending / In Prep (anything before READY)
   const pendingOrders = sales.filter(s => 
     (s.status === 'PENDING_PAYMENT' || s.status === 'PREPARING') && 
-    (ticketSearch === '' || s.ticketNumber?.toString().includes(ticketSearch))
+    (ticketSearch === '' || s.ticketNumber?.toString().includes(ticketSearch)) &&
+    s.ticketNumber !== 1
   ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   // 2. Ready for Pickup (status === 'READY')
   const readyOrders = sales.filter(s => 
     s.status === 'READY' && 
-    (ticketSearch === '' || s.ticketNumber?.toString().includes(ticketSearch))
+    (ticketSearch === '' || s.ticketNumber?.toString().includes(ticketSearch)) &&
+    s.ticketNumber !== 1
   ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   // 3. Served (Waiters have them, waiting for payment)
-  const servedOrders = sales.filter(s => s.status === 'SERVED');
+  const servedOrders = sales.filter(s => s.status === 'SERVED' && s.ticketNumber !== 1);
 
   // 4. Recently Completed Today
   const completedOrders = sales.filter(s => s.status === 'COMPLETED').slice(0, 10);

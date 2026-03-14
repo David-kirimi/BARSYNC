@@ -139,6 +139,12 @@ const AppContent: React.FC = () => {
           setCurrentShift(activeShifts[0]);
         }
       }
+
+      // Restore Shift History
+      const histRes = await fetch(`/api/shifts?businessId=${bizId}`);
+      if (histRes.ok) {
+        setShifts(await histRes.json());
+      }
     } catch (err) {
       console.error("Sync Error:", err);
       addToast("Failed to sync with cloud", "error");

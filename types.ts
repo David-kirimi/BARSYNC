@@ -99,12 +99,20 @@ export interface Sale {
   mpesaCode?: string;
   shiftId?: string;
 
-  // New fields for role-based workflow
-  status?: 'PENDING_PAYMENT' | 'COMPLETED';
-  createdBy?: string; // Waiter ID/Name
-  verifiedBy?: string; // Cashier ID/Name
-  completedAt?: string;
+  // New fields for Kitchen/Bar workflow
+  status?: 'PENDING_PAYMENT' | 'PREPARING' | 'READY' | 'SERVED' | 'COMPLETED' | 'CANCELLED';
+  created_by_waiter?: string;
+  prepared_by_bar?: string;
+  prepared_at?: string;
+  served_by_cashier?: string;
+  served_at?: string;
+  completed_by_cashier?: string;
+  completed_at?: string;
   ticketNumber?: number;
+
+  // Cleanup old fields if duplicate/redundant
+  createdBy?: string; 
+  verifiedBy?: string; 
 
   // ❌ NO updatedAt ON PURPOSE
   // Sales are append-only
@@ -176,4 +184,5 @@ export type View =
   | 'SUBSCRIPTION'
   | 'SHIFT_HISTORY'
   | 'COUNTER_DASHBOARD'
-  | 'SUPERVISOR_PORTAL';
+  | 'SUPERVISOR_PORTAL'
+  | 'KITCHEN_DISPLAY';

@@ -18,6 +18,7 @@ import SuperAdminPortal from './components/SuperAdminPortal';
 import ShiftHistory from './components/ShiftHistory';
 import CounterDashboard from './components/CounterDashboard';
 import SupervisorPortal from './components/SupervisorPortal';
+import BarKitchenDisplay from './components/BarKitchenDisplay';
 
 const now = () => new Date().toISOString();
 
@@ -216,7 +217,7 @@ const AppContent: React.FC = () => {
       paymentMethod: method,
       status: method === 'Pending' ? 'PENDING_PAYMENT' : 'COMPLETED',
       salesPerson: currentUser.name,
-      createdBy: currentUser.name,
+      created_by_waiter: currentUser.name,
       customerPhone,
       mpesaCode,
       shiftId: currentShift?.id,
@@ -542,6 +543,60 @@ const AppContent: React.FC = () => {
       addToast("Tab cancelled and stock restored", "warning");
     } catch (err) { addToast("Cloud sync failed", "error"); }
   };
+
+  const handleUpdateOrderStatus = async (saleId: string, newStatus: Sale['status']) => {
+    if (!currentUser) return;
+    
+    const updatedSales = sales.map(s => {
+      if (s.id !== saleId) return s;
+      const update: Partial<Sale> = { status: newStatus };
+      
+      if (newStatus === 'PREPARING') {
+        update.prepared_by_bar = currentUser.name;
+        update.prepared_at = now();
+      } else if (newStatus === 'SERVED') {
+        update.served_by_cashier = currentUser.name;
+        update.served_at = now();
+      } else if (newStatus === 'COMPLETED') {
+        update.completed_by_cashier = currentUser.name;
+        update.completed_at = now();
+      }
+      
+      return { ...s, ...update };
+    });
+    
+    setSales(updatedSales);
+    
+    try {
+      await fetch('/api/sales/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId: currentUser.businessId, sales: updatedSales })
+      });
+      addToast(`Order status updated to ${newStatus}`, "success");
+    } catch (err) {
+      addToast("Failed to sync status update", "error");
+    }
+  };
+
+  const playNotificationSound = () => {
+    try {
+      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+      audio.play();
+    } catch (e) {
+      console.error("Audio play failed", e);
+    }
+  };
+
+  // Watch for new PENDING_PAYMENT orders to play sound
+  useEffect(() => {
+    if (sales.length > 0 && sales[0].status === 'PENDING_PAYMENT') {
+      const diff = new Date().getTime() - new Date(sales[0].date).getTime();
+      if (diff < 2000) {
+        playNotificationSound();
+      }
+    }
+  }, [sales.length]);
 
   const handleProductUpdate = async (updated: Product) => {
     const productWithTimestamp = { ...updated, updatedAt: now() };
@@ -1075,13 +1130,18 @@ const AppContent: React.FC = () => {
                     const sale = sales.find(s => s.id === saleId);
                     if (!sale) return;
 
+                    if (sale.status !== 'SERVED') {
+                      addToast("Order must be marked as served before completing payment.", "error");
+                      return;
+                    }
+
                     const updatedSale = { 
                       ...sale, 
                       paymentMethod: method, 
                       mpesaCode: code, 
                       status: 'COMPLETED' as const, 
-                      verifiedBy: currentUser?.name, 
-                      completedAt: now() 
+                      completed_by_cashier: currentUser?.name, 
+                      completed_at: now() 
                     };
 
                     const updatedSales = sales.map(s => s.id === saleId ? updatedSale : s);
@@ -1098,6 +1158,7 @@ const AppContent: React.FC = () => {
                       addToast("Cloud sync failed", "error");
                     }
                   }}
+                  onUpdateStatus={handleUpdateOrderStatus}
                   onCancelOrder={async (saleId) => {
                     const sale = sales.find(s => s.id === saleId);
                     if (!sale) return;
@@ -1120,6 +1181,13 @@ const AppContent: React.FC = () => {
                     }
                   }}
                   onSwitchView={setView}
+                />
+              )}
+
+              {view === 'KITCHEN_DISPLAY' && (
+                <BarKitchenDisplay 
+                  sales={sales}
+                  onUpdateStatus={handleUpdateOrderStatus}
                 />
               )}
 

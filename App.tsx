@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import Cookies from 'js-cookie';
 import { View, Product, Sale, CartItem, User, Role, AuditLog, Business, Tab, Shift, StockSnapshot, StaffLog } from './types';
 import { PRODUCT_TEMPLATES } from './constants';
 import POS from './components/POS';
@@ -128,6 +129,15 @@ const AppContent: React.FC = () => {
 
         const allUsersRes = await fetch(`/api/auth/admin/users`);
         if (allUsersRes.ok) setUsers(await allUsersRes.json());
+      }
+
+      // Restore Active Shift
+      const shRes = await fetch(`/api/shifts?businessId=${bizId}&status=OPEN`);
+      if (shRes.ok) {
+        const activeShifts = await shRes.json();
+        if (activeShifts.length > 0) {
+          setCurrentShift(activeShifts[0]);
+        }
       }
     } catch (err) {
       console.error("Sync Error:", err);
@@ -686,7 +696,46 @@ const AppContent: React.FC = () => {
     setCart([]);
     setView('LOGIN');
     addToast("Logged out successfully", "success");
+
+    // Clear Persistent Session
+    Cookies.remove('barsync_user');
+    Cookies.remove('barsync_business');
   };
+
+  /* -------------------- AUTO-LOGIN -------------------- */
+  useEffect(() => {
+    const savedUser = Cookies.get('barsync_user');
+    const savedBiz = Cookies.get('barsync_business');
+
+    if (savedUser && savedBiz) {
+      try {
+        const user = JSON.parse(savedUser);
+        const business = JSON.parse(savedBiz);
+        
+        setCurrentUser(user);
+        setBusiness(business);
+        
+        if (user.role === Role.SUPER_ADMIN) {
+          setView('SUPER_ADMIN_PORTAL');
+        } else if (user.role === Role.CASHIER) {
+          setView('COUNTER_DASHBOARD');
+        } else if (user.role === Role.SUPERVISOR) {
+          setView('SUPERVISOR_PORTAL');
+        } else {
+          setView('POS');
+        }
+        
+        // Fetch fresh state and active shift
+        fetchState(user.businessId || 'admin_node');
+        // Toast is shown inside fetchState or handled here
+        // addToast(`Welcome back, ${user.name}`, "success");
+      } catch (e) {
+        console.error("Session restore failed", e);
+        Cookies.remove('barsync_user');
+        Cookies.remove('barsync_business');
+      }
+    }
+  }, []);
 
   const handleUpdateUser = async (updatedUser: User) => {
     try {
@@ -795,9 +844,19 @@ const AppContent: React.FC = () => {
   if (!currentUser) {
     return (
       <Login
-        onLogin={(user, biz) => {
+        onLogin={(user, biz, state, rememberMe) => {
           setCurrentUser(user);
           if (biz) setBusiness(biz);
+          
+          // Persistence Logic
+          if (rememberMe) {
+            Cookies.set('barsync_user', JSON.stringify(user), { expires: 30 });
+            Cookies.set('barsync_business', JSON.stringify(biz), { expires: 30 });
+          } else {
+            Cookies.set('barsync_user', JSON.stringify(user));
+            Cookies.set('barsync_business', JSON.stringify(biz));
+          }
+
           setShowVerificationOverlay(true);
 
           setStaffLogs(prev => [

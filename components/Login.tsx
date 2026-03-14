@@ -4,7 +4,7 @@ import { User, Business, Role } from '../types';
 import Register from './Register';
 
 interface LoginProps {
-  onLogin: (user: User, business?: Business, initialState?: any) => void;
+  onLogin: (user: User, business?: Business, initialState?: any, rememberMe?: boolean) => void;
   backendUrl: string;
 }
 
@@ -12,6 +12,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
   const [businessName, setBusinessName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [view, setView] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
@@ -52,7 +53,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
         throw new Error("Access Revoked: Account Deactivated");
       }
 
-      onLogin(result.user, result.business, result.state);
+      onLogin(result.user, result.business, result.state, rememberMe);
     } catch (err: any) {
       clearTimeout(timeoutId);
       console.error("Login Error:", err);
@@ -121,6 +122,23 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
                       onChange={e => setPassword(e.target.value)}
                     />
                   </div>
+                </div>
+
+                <div className="flex items-center justify-between px-2">
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <div className="relative w-6 h-6">
+                      <input
+                        type="checkbox"
+                        className="peer hidden"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                      />
+                      <div className={`absolute inset-0 border-2 rounded-lg transition-all ${rememberMe ? 'bg-orange-600 border-orange-600' : 'border-orange-200 bg-orange-50 group-hover:border-orange-400'}`}></div>
+                      <i className={`fa-solid fa-check absolute inset-0 flex items-center justify-center text-[10px] text-white transition-opacity ${rememberMe ? 'opacity-100' : 'opacity-0'}`}></i>
+                    </div>
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Remember Me</span>
+                  </label>
+                  <button type="button" className="text-[10px] font-black text-orange-600 uppercase tracking-widest hover:text-orange-700">Lost PIN?</button>
                 </div>
 
                 {error && (

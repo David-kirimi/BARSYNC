@@ -939,6 +939,7 @@ const AppContent: React.FC = () => {
                   onStartShift={onStartShift}
                   onCloseShift={onCloseShift}
                   userRole={currentUser.role}
+                  scannerEnabled={business.scannerEnabled}
                 />
               )}
 

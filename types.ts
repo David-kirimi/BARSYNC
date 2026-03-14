@@ -29,6 +29,7 @@ export interface Business {
   createdAt: string;
   updatedAt: string;          // ✅ ADD
   logo?: string;
+  scannerEnabled?: boolean;   // ✅ BARCODE SCANNER CONFIG
 }
 
 export interface Invoice {

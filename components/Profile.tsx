@@ -19,7 +19,8 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate, business, onUpdateBus
 
   const [bizData, setBizData] = useState({
     name: business.name,
-    logo: business.logo || ''
+    logo: business.logo || '',
+    scannerEnabled: business.scannerEnabled || false
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -66,6 +67,7 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate, business, onUpdateBus
           ...business,
           name: bizData.name,
           logo: bizData.logo,
+          scannerEnabled: bizData.scannerEnabled,
           updatedAt: new Date().toISOString()
         });
       }
@@ -181,6 +183,34 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate, business, onUpdateBus
                       />
                     </div>
                     <p className="text-[9px] text-slate-400 font-bold px-2 italic">* Branding changes will be reflected on all reports and terminal headers.</p>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {(user.role === Role.OWNER || user.role === Role.ADMIN) && (
+              <section className="space-y-6 pt-6">
+                <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] border-b border-indigo-50 pb-4">Hardware Configuration</h3>
+                <div className="bg-slate-50 rounded-3xl p-6 border border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight">USB Barcode Scanner</h4>
+                      <p className="text-[10px] text-slate-500 font-medium mt-1">Enable auto-focus for physical barcode scanners in the POS terminal.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setBizData(prev => ({ ...prev, scannerEnabled: !prev.scannerEnabled }))}
+                      className={`w-14 h-8 rounded-full relative transition-all duration-300 ${bizData.scannerEnabled ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                    >
+                      <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all duration-300 ${bizData.scannerEnabled ? 'right-1' : 'left-1'}`}></div>
+                    </button>
+                  </div>
+                  <div className="mt-4 flex items-start gap-2 text-amber-600">
+                    <i className="fa-solid fa-circle-info text-xs mt-0.5"></i>
+                    <p className="text-[9px] font-bold leading-tight uppercase font-mono italic">
+                      Warning: Keeping this ON may invoke the mobile keyboard unintentionally on some Android devices. 
+                      Turn OFF if you only use manual touch selection.
+                    </p>
                   </div>
                 </div>
               </section>

@@ -28,6 +28,7 @@ interface POSProps {
   isUnverified?: boolean;
   sales: Sale[];
   userRole?: Role;
+  scannerEnabled?: boolean;
 
   // Shift Management
   currentShift: Shift | null;
@@ -84,7 +85,7 @@ const POS: React.FC<POSProps> = ({
   products, addToCart, cart, updateCartQuantity, removeFromCart, onCheckout,
   businessName, onReorder, tabs, onOpenTab, onAddToTab, onSettleTab, onCancelTab,
   onUpdateTabQuantity, onAddCartToTab, activeView, isUnverified,
-  currentShift, onStartShift, onCloseShift, sales, userRole
+  currentShift, onStartShift, onCloseShift, sales, userRole, scannerEnabled
 }) => {
   const alphanumeric = /^[a-z0-9]+$/i;
   const { showToast } = useToast();
@@ -121,7 +122,6 @@ const POS: React.FC<POSProps> = ({
   const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
   const [closeShiftStep, setCloseShiftStep] = useState(1); // 1: Tabs, 2: Sales, 3: Stock
   const [closingStockInput, setClosingStockInput] = useState<StockSnapshot[]>([]);
-  const [scannerEnabled, setScannerEnabled] = useState(false); // Default to off to prevent Android keyboard popups
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -550,24 +550,12 @@ const POS: React.FC<POSProps> = ({
                       }
                     }}
                   />
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setScannerEnabled(!scannerEnabled);
-                      }}
-                      className={`px-3 py-2 rounded-xl flex items-center gap-2 transition-all active:scale-95 ${
-                        scannerEnabled 
-                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' 
-                        : 'bg-slate-200 text-slate-500 hover:bg-slate-300'
-                      }`}
-                    >
-                      <span className="text-[8px] font-black uppercase tracking-widest hidden sm:block">
-                        {scannerEnabled ? 'Scanner Active' : 'Scanner Off'}
-                      </span>
-                      <i className={`fa-solid ${scannerEnabled ? 'fa-toggle-on' : 'fa-toggle-off'} text-xs`}></i>
-                    </button>
-                  </div>
+                  {scannerEnabled && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                      <span className="hidden sm:block text-[8px] font-black text-indigo-400 uppercase tracking-widest">Scanner Active</span>
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="relative flex-1 group">

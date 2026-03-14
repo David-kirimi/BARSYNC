@@ -216,8 +216,8 @@ const AppContent: React.FC = () => {
       totalAmount,
       paymentMethod: method,
       status: method === 'Pending' ? 'PENDING_PAYMENT' : 'COMPLETED',
-      salesPerson: currentUser.name,
-      created_by_waiter: currentUser.name,
+      salesPerson: `${currentUser.name} (${currentUser.role})`,
+      created_by_waiter: `${currentUser.name} (${currentUser.role})`,
       customerPhone,
       mpesaCode,
       shiftId: currentShift?.id,
@@ -552,13 +552,13 @@ const AppContent: React.FC = () => {
       const update: Partial<Sale> = { status: newStatus };
       
       if (newStatus === 'PREPARING') {
-        update.prepared_by_bar = currentUser.name;
+        update.prepared_by_bar = `${currentUser.name} (${currentUser.role})`;
         update.prepared_at = now();
       } else if (newStatus === 'SERVED') {
-        update.served_by_cashier = currentUser.name;
+        update.served_by_cashier = `${currentUser.name} (${currentUser.role})`;
         update.served_at = now();
       } else if (newStatus === 'COMPLETED') {
-        update.completed_by_cashier = currentUser.name;
+        update.completed_by_cashier = `${currentUser.name} (${currentUser.role})`;
         update.completed_at = now();
       }
       

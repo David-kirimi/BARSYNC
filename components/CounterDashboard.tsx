@@ -72,7 +72,14 @@ const CounterDashboard: React.FC<CounterDashboardProps> = ({
             </span>
             <span className="text-slate-300 text-[10px] uppercase font-bold tracking-widest">{order.status?.replace('_', ' ')}</span>
           </h4>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Waiter: {order.created_by_waiter || 'Unknown'}</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 flex items-center gap-1.5">
+            <i className="fa-solid fa-user-tag text-indigo-400 text-[8px]"></i> W: {order.created_by_waiter || 'Unknown'}
+          </p>
+          {order.prepared_by_bar && (
+            <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mt-0.5 flex items-center gap-1.5">
+              <i className="fa-solid fa-fire-burner text-[8px]"></i> B: {order.prepared_by_bar}
+            </p>
+          )}
         </div>
         <div className="text-right">
           <span className="text-2xl font-black text-slate-900 tracking-tighter block leading-none">Ksh {order.totalAmount.toLocaleString()}</span>

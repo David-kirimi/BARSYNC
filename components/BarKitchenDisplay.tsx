@@ -37,6 +37,11 @@ const BarKitchenDisplay: React.FC<BarKitchenDisplayProps> = ({ sales, onUpdateSt
         <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
           <i className="fa-solid fa-user-tag text-indigo-400 text-[7px]"></i> {order.created_by_waiter || 'Unknown'}
         </p>
+        {(order.status === 'PREPARING' || order.status === 'READY') && order.prepared_by_bar && (
+          <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-1.5 mt-1">
+            <i className="fa-solid fa-fire-burner text-[7px]"></i> {order.prepared_by_bar}
+          </p>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-1.5 no-scrollbar bg-slate-50/20">

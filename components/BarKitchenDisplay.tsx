@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Sale } from '../types';
 
 interface BarKitchenDisplayProps {
@@ -20,63 +21,96 @@ const BarKitchenDisplay: React.FC<BarKitchenDisplayProps> = ({ sales, onUpdateSt
   const preparing = activeOrders.filter(o => o.status === 'PREPARING');
   const ready = activeOrders.filter(o => o.status === 'READY');
 
-  const OrderCard = ({ order }: { order: Sale }) => (
-    <div className="bg-white rounded-[1.5rem] border border-slate-100 shadow-sm flex flex-col group relative overflow-hidden transition-all hover:shadow-lg h-auto max-h-[400px]">
-      <div className={`absolute top-0 left-0 w-1 h-full transition-all group-hover:w-2 ${
-        order.status === 'PENDING_PAYMENT' ? 'bg-amber-400' : 
-        order.status === 'PREPARING' ? 'bg-indigo-500' : 'bg-emerald-500'
-      }`}></div>
-      
-      <div className="p-4 pb-3 border-b border-slate-50 shrink-0">
-        <div className="flex justify-between items-start mb-1">
-          <h4 className="font-black text-slate-800 text-lg tracking-tighter uppercase leading-none">TICKET #{order.ticketNumber}</h4>
-          <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">
-            {new Date(order.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </span>
-        </div>
-        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-          <i className="fa-solid fa-user-tag text-indigo-400 text-[7px]"></i> {order.created_by_waiter || 'Unknown'}
-        </p>
-        {(order.status === 'PREPARING' || order.status === 'READY') && order.prepared_by_bar && (
-          <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-1.5 mt-1">
-            <i className="fa-solid fa-fire-burner text-[7px]"></i> {order.prepared_by_bar}
+  const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
+  const [collapsedColumns, setCollapsedColumns] = useState<Record<string, boolean>>({});
+
+  const toggleOrder = (id: string) => setExpandedOrders(prev => ({ ...prev, [id]: !prev[id] }));
+  const toggleColumn = (col: string) => setCollapsedColumns(prev => ({ ...prev, [col]: !prev[col] }));
+
+  const OrderCard = ({ order }: { order: Sale, key?: string }) => {
+    const isExpanded = expandedOrders[order.id];
+    
+    return (
+      <motion.div 
+        layout
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        className="bg-white rounded-[1.5rem] border border-slate-100 shadow-sm flex flex-col group relative overflow-hidden transition-all hover:shadow-lg h-auto"
+      >
+        <div className={`absolute top-0 left-0 w-1 h-full transition-all group-hover:w-2 ${
+          order.status === 'PENDING_PAYMENT' ? 'bg-amber-400' : 
+          order.status === 'PREPARING' ? 'bg-indigo-500' : 'bg-emerald-500'
+        }`}></div>
+        
+        <div 
+          className="p-4 pb-3 border-b border-slate-50 shrink-0 cursor-pointer"
+          onClick={() => toggleOrder(order.id)}
+        >
+          <div className="flex justify-between items-start mb-1">
+            <h4 className="font-black text-slate-800 text-lg tracking-tighter uppercase leading-none">TICKET #{order.ticketNumber}</h4>
+            <div className="flex items-center gap-2">
+              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">
+                {new Date(order.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+              <i className={`fa-solid fa-chevron-down text-[8px] text-slate-300 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''} lg:hidden`}></i>
+            </div>
+          </div>
+          <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+            <i className="fa-solid fa-user-tag text-indigo-400 text-[7px]"></i> {order.created_by_waiter || 'Unknown'}
           </p>
-        )}
-      </div>
+          {(order.status === 'PREPARING' || order.status === 'READY') && order.prepared_by_bar && (
+            <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-1.5 mt-1">
+              <i className="fa-solid fa-fire-burner text-[7px]"></i> {order.prepared_by_bar}
+            </p>
+          )}
+        </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-1.5 no-scrollbar bg-slate-50/20">
-        {order.items.map((item, idx) => (
-          <div key={idx} className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-100/50">
-            <span className="text-[11px] font-black text-slate-700 uppercase leading-none">{item.quantity}x {item.name}</span>
-          </div>
-        ))}
-      </div>
+        <AnimatePresence>
+          {(isExpanded || window.innerWidth >= 1024) && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="flex-1 overflow-hidden flex flex-col"
+            >
+              <div className="flex-1 overflow-y-auto p-4 space-y-1.5 no-scrollbar bg-slate-50/20 max-h-[250px]">
+                {order.items.map((item, idx) => (
+                  <div key={idx} className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-100/50">
+                    <span className="text-[11px] font-black text-slate-700 uppercase leading-none">{item.quantity}x {item.name}</span>
+                  </div>
+                ))}
+              </div>
 
-      <div className="p-4 pt-3 border-t border-slate-50 shrink-0">
-        {order.status === 'PENDING_PAYMENT' && (
-          <button 
-            onClick={() => onUpdateStatus(order.id, 'PREPARING')}
-            className="w-full py-3 bg-indigo-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-md hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2"
-          >
-            <i className="fa-solid fa-play"></i> Start
-          </button>
-        )}
-        {order.status === 'PREPARING' && (
-          <button 
-            onClick={() => onUpdateStatus(order.id, 'READY')}
-            className="w-full py-3 bg-emerald-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-md hover:bg-emerald-700 transition-all active:scale-95 flex items-center justify-center gap-2"
-          >
-            <i className="fa-solid fa-check"></i> Ready
-          </button>
-        )}
-        {order.status === 'READY' && (
-          <div className="py-3 bg-emerald-50 text-emerald-600 rounded-xl font-black text-[8px] uppercase tracking-widest text-center border border-emerald-100 animate-pulse">
-            Ready for Pickup
-          </div>
-        )}
-      </div>
-    </div>
-  );
+              <div className="p-4 pt-3 border-t border-slate-50 shrink-0">
+                {order.status === 'PENDING_PAYMENT' && (
+                  <button 
+                    onClick={() => onUpdateStatus(order.id, 'PREPARING')}
+                    className="w-full py-3 bg-indigo-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-md hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <i className="fa-solid fa-play"></i> Start
+                  </button>
+                )}
+                {order.status === 'PREPARING' && (
+                  <button 
+                    onClick={() => onUpdateStatus(order.id, 'READY')}
+                    className="w-full py-3 bg-emerald-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-md hover:bg-emerald-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <i className="fa-solid fa-check"></i> Ready
+                  </button>
+                )}
+                {order.status === 'READY' && (
+                  <div className="py-3 bg-emerald-50 text-emerald-600 rounded-xl font-black text-[8px] uppercase tracking-widest text-center border border-emerald-100 animate-pulse">
+                    Ready for Pickup
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    );
+  };
 
   return (
     <div className="flex flex-col h-full bg-slate-50/30 overflow-hidden">
@@ -97,69 +131,90 @@ const BarKitchenDisplay: React.FC<BarKitchenDisplayProps> = ({ sales, onUpdateSt
 
       <div className="flex-1 flex flex-col lg:flex-row gap-4 overflow-hidden min-h-0">
         {/* NEW / PENDING */}
-        <div className="flex-1 flex flex-col min-h-0 bg-white/40 rounded-[2rem] border border-slate-200/50 overflow-hidden shadow-inner">
-          <div className="p-4 pb-2 shrink-0">
-            <h3 className="text-[9px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2 px-2">
-              <i className="fa-solid fa-fire text-amber-400"></i> Incoming ({pending.length})
+        <div className={`flex flex-col min-h-0 bg-white/40 rounded-[2rem] border border-slate-200/50 overflow-hidden shadow-inner transition-all duration-500 ${collapsedColumns['pending'] ? 'flex-none h-16 lg:h-auto lg:flex-1' : 'flex-1'}`}>
+          <div 
+            className="p-4 pb-2 shrink-0 cursor-pointer lg:cursor-default"
+            onClick={() => window.innerWidth < 1024 && toggleColumn('pending')}
+          >
+            <h3 className="text-[9px] font-black text-amber-500 uppercase tracking-widest flex items-center justify-between px-2">
+              <span className="flex items-center gap-2"><i className="fa-solid fa-fire text-amber-400"></i> Incoming ({pending.length})</span>
+              <i className={`fa-solid fa-chevron-down lg:hidden transition-transform ${collapsedColumns['pending'] ? '' : 'rotate-180'}`}></i>
             </h3>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
-            {pending.map(order => (
-              <div key={order.id}>
-                <OrderCard order={order} />
-              </div>
-            ))}
+          <motion.div 
+            animate={{ height: collapsedColumns['pending'] ? 0 : 'auto', opacity: collapsedColumns['pending'] ? 0 : 1 }}
+            className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar lg:!h-auto lg:!opacity-100"
+          >
+            <AnimatePresence mode="popLayout">
+              {pending.map(order => (
+                <OrderCard key={order.id} order={order} />
+              ))}
+            </AnimatePresence>
             {pending.length === 0 && (
               <div className="h-40 flex flex-col items-center justify-center text-slate-300 opacity-40">
                 <i className="fa-solid fa-hourglass text-3xl mb-2"></i>
                 <p className="text-[8px] font-black uppercase tracking-widest">Waiting</p>
               </div>
             )}
-          </div>
+          </motion.div>
         </div>
 
         {/* PREPARING */}
-        <div className="flex-1 flex flex-col min-h-0 bg-indigo-50/20 rounded-[2rem] border border-indigo-100/30 overflow-hidden shadow-inner">
-          <div className="p-4 pb-2 shrink-0">
-            <h3 className="text-[9px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2 px-2">
-              <i className="fa-solid fa-whiskey-glass text-indigo-400"></i> Preparing ({preparing.length})
+        <div className={`flex flex-col min-h-0 bg-indigo-50/20 rounded-[2rem] border border-indigo-100/30 overflow-hidden shadow-inner transition-all duration-500 ${collapsedColumns['preparing'] ? 'flex-none h-16 lg:h-auto lg:flex-1' : 'flex-1'}`}>
+          <div 
+            className="p-4 pb-2 shrink-0 cursor-pointer lg:cursor-default"
+            onClick={() => window.innerWidth < 1024 && toggleColumn('preparing')}
+          >
+            <h3 className="text-[9px] font-black text-indigo-600 uppercase tracking-widest flex items-center justify-between px-2">
+              <span className="flex items-center gap-2"><i className="fa-solid fa-whiskey-glass text-indigo-400"></i> Preparing ({preparing.length})</span>
+              <i className={`fa-solid fa-chevron-down lg:hidden transition-transform ${collapsedColumns['preparing'] ? '' : 'rotate-180'}`}></i>
             </h3>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
-            {preparing.map(order => (
-              <div key={order.id}>
-                <OrderCard order={order} />
-              </div>
-            ))}
+          <motion.div 
+            animate={{ height: collapsedColumns['preparing'] ? 0 : 'auto', opacity: collapsedColumns['preparing'] ? 0 : 1 }}
+            className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar lg:!h-auto lg:!opacity-100"
+          >
+            <AnimatePresence mode="popLayout">
+              {preparing.map(order => (
+                <OrderCard key={order.id} order={order} />
+              ))}
+            </AnimatePresence>
             {preparing.length === 0 && (
               <div className="h-40 flex flex-col items-center justify-center text-slate-300 opacity-40">
                 <i className="fa-solid fa-glass-water text-3xl mb-2"></i>
                 <p className="text-[8px] font-black uppercase tracking-widest">Clear</p>
               </div>
             )}
-          </div>
+          </motion.div>
         </div>
 
         {/* READY FOR PICKUP */}
-        <div className="flex-1 flex flex-col min-h-0 bg-emerald-50/20 rounded-[2rem] border border-emerald-100/30 overflow-hidden shadow-inner">
-          <div className="p-4 pb-2 shrink-0">
-            <h3 className="text-[9px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2 px-2">
-              <i className="fa-solid fa-circle-check text-emerald-500"></i> Ready ({ready.length})
+        <div className={`flex flex-col min-h-0 bg-emerald-50/20 rounded-[2rem] border border-emerald-100/30 overflow-hidden shadow-inner transition-all duration-500 ${collapsedColumns['ready'] ? 'flex-none h-16 lg:h-auto lg:flex-1' : 'flex-1'}`}>
+          <div 
+            className="p-4 pb-2 shrink-0 cursor-pointer lg:cursor-default"
+            onClick={() => window.innerWidth < 1024 && toggleColumn('ready')}
+          >
+            <h3 className="text-[9px] font-black text-emerald-600 uppercase tracking-widest flex items-center justify-between px-2">
+              <span className="flex items-center gap-2"><i className="fa-solid fa-circle-check text-emerald-500"></i> Ready ({ready.length})</span>
+              <i className={`fa-solid fa-chevron-down lg:hidden transition-transform ${collapsedColumns['ready'] ? '' : 'rotate-180'}`}></i>
             </h3>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
-            {ready.map(order => (
-              <div key={order.id}>
-                <OrderCard order={order} />
-              </div>
-            ))}
+          <motion.div 
+            animate={{ height: collapsedColumns['ready'] ? 0 : 'auto', opacity: collapsedColumns['ready'] ? 0 : 1 }}
+            className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar lg:!h-auto lg:!opacity-100"
+          >
+            <AnimatePresence mode="popLayout">
+              {ready.map(order => (
+                <OrderCard key={order.id} order={order} />
+              ))}
+            </AnimatePresence>
             {ready.length === 0 && (
               <div className="h-40 flex flex-col items-center justify-center text-slate-300 opacity-40">
                 <i className="fa-solid fa-bell-concierge text-3xl mb-2"></i>
                 <p className="text-[8px] font-black uppercase tracking-widest">Empty</p>
               </div>
             )}
-          </div>
+          </motion.div>
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Product, CartItem, Sale, Shift, StockSnapshot, Role } from '../types';
 import { CATEGORIES } from '../constants';
 import { useToast } from './Toast';
@@ -618,9 +619,19 @@ const POS: React.FC<POSProps> = ({
                   strategy={rectSortingStrategy}
                 >
                   <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 pb-20">
-                    {filteredProducts.map(product => (
-                      <SortableProductCard key={product.id} product={product} addToCart={addToCart} />
-                    ))}
+                    <AnimatePresence mode="popLayout">
+                      {filteredProducts.map(product => (
+                        <motion.div
+                          layout
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.9 }}
+                          key={product.id}
+                        >
+                          <SortableProductCard product={product} addToCart={addToCart} />
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
                     {filteredProducts.length === 0 && (
                       <div className="col-span-full py-12 text-center text-slate-400">
                         <p className="font-bold">No active items found.</p>
@@ -643,28 +654,34 @@ const POS: React.FC<POSProps> = ({
         </div>
 
         <div className="flex-1 overflow-auto p-4 lg:p-6 space-y-3 lg:space-y-4">
-          {cart.map(item => (
-            <div 
-              key={item.id} 
-              className={`flex gap-3 lg:gap-4 p-3 lg:p-4 bg-slate-50 rounded-[1.5rem] lg:rounded-[2rem] border transition-all ${
-                lastScannedId === item.id ? 'border-indigo-500 bg-indigo-50 animate-flash shadow-lg shadow-indigo-100' : 'border-transparent hover:border-indigo-100'
-              }`}
-            >
-              <img src={item.imageUrl} className="w-12 h-12 lg:w-16 lg:h-16 rounded-xl lg:rounded-2xl object-cover shadow-md" alt="" />
-              <div className="flex-1 min-w-0 flex flex-col justify-center">
-                <h4 className="font-black text-[11px] lg:text-[13px] text-slate-800 truncate uppercase tracking-tight">{item.name}</h4>
-                <p className="text-[10px] lg:text-xs font-bold text-indigo-500 mt-0.5">Ksh {item.price}</p>
-              </div>
-              <div className="flex flex-col items-end gap-1">
-                <button onClick={() => removeFromCart(item.id)} className="text-slate-300 hover:text-rose-500"><i className="fa-solid fa-circle-xmark text-sm"></i></button>
-                <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-xl shadow-sm">
-                  <button onClick={() => updateCartQuantity(item.id, -1)} className="text-slate-400 hover:text-indigo-600"><i className="fa-solid fa-minus text-[10px]"></i></button>
-                  <span className="text-xs font-black w-4 text-center">{item.quantity}</span>
-                  <button onClick={() => updateCartQuantity(item.id, 1)} className="text-slate-400 hover:text-indigo-600"><i className="fa-solid fa-plus text-[10px]"></i></button>
+          <AnimatePresence mode="popLayout">
+            {cart.map(item => (
+              <motion.div 
+                layout
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                key={item.id} 
+                className={`flex gap-3 lg:gap-4 p-3 lg:p-4 bg-slate-50 rounded-[1.5rem] lg:rounded-[2rem] border transition-all ${
+                  lastScannedId === item.id ? 'border-indigo-500 bg-indigo-50 animate-flash shadow-lg shadow-indigo-100' : 'border-transparent hover:border-indigo-100'
+                }`}
+              >
+                <img src={item.imageUrl} className="w-12 h-12 lg:w-16 lg:h-16 rounded-xl lg:rounded-2xl object-cover shadow-md" alt="" />
+                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                  <h4 className="font-black text-[11px] lg:text-[13px] text-slate-800 truncate uppercase tracking-tight">{item.name}</h4>
+                  <p className="text-[10px] lg:text-xs font-bold text-indigo-500 mt-0.5">Ksh {item.price}</p>
                 </div>
-              </div>
-            </div>
-          ))}
+                <div className="flex flex-col items-end gap-1">
+                  <button onClick={() => removeFromCart(item.id)} className="text-slate-300 hover:text-rose-500"><i className="fa-solid fa-circle-xmark text-sm"></i></button>
+                  <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-xl shadow-sm">
+                    <button onClick={() => updateCartQuantity(item.id, -1)} className="text-slate-400 hover:text-indigo-600"><i className="fa-solid fa-minus text-[10px]"></i></button>
+                    <span className="text-xs font-black w-4 text-center">{item.quantity}</span>
+                    <button onClick={() => updateCartQuantity(item.id, 1)} className="text-slate-400 hover:text-indigo-600"><i className="fa-solid fa-plus text-[10px]"></i></button>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
 
         <div className="p-6 lg:p-10 bg-slate-950 text-white rounded-t-[2rem] lg:rounded-[3.5rem] space-y-4 lg:space-y-8 shrink-0">
@@ -1120,346 +1137,396 @@ const POS: React.FC<POSProps> = ({
       )}
 
       {/* Open Tab Modal */}
-      {showOpenTabModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-[150] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[3.5rem] w-full max-w-sm p-10 shadow-2xl relative animate-in zoom-in-95 duration-300">
-            <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter mb-2">Notebook Entry</h3>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">Start a new customer session</p>
+      <AnimatePresence>
+        {showOpenTabModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-[150] flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-[3.5rem] w-full max-w-sm p-10 shadow-2xl relative"
+            >
+              <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter mb-2">Notebook Entry</h3>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">Start a new customer session</p>
 
-            <div className="space-y-6">
-              <div>
-                <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2 block px-2">Customer Name / Table</label>
-                <input
-                  type="text"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all uppercase"
-                  placeholder="e.g. SLIEM @ TABLE 5"
-                  value={newTabName}
-                  onChange={e => setNewTabName(e.target.value)}
-                  autoFocus
-                />
-              </div>
+              <div className="space-y-6">
+                <div>
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2 block px-2">Customer Name / Table</label>
+                  <input
+                    type="text"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all uppercase"
+                    placeholder="e.g. SLIEM @ TABLE 5"
+                    value={newTabName}
+                    onChange={e => setNewTabName(e.target.value)}
+                    autoFocus
+                  />
+                </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => setShowOpenTabModal(false)} className="py-4 bg-slate-100 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95">Cancel</button>
-                <button
-                  onClick={handleOpenTab}
-                  disabled={!newTabName.trim() || isOpeningTab}
-                  className="py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 transition-all active:scale-95 disabled:opacity-50"
-                >
-                  {isOpeningTab ? 'Syncing...' : 'Open Tab'}
-                </button>
+                <div className="grid grid-cols-2 gap-4">
+                  <button onClick={() => setShowOpenTabModal(false)} className="py-4 bg-slate-100 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95">Cancel</button>
+                  <button
+                    onClick={handleOpenTab}
+                    disabled={!newTabName.trim() || isOpeningTab}
+                    className="py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {isOpeningTab ? 'Syncing...' : 'Open Tab'}
+                  </button>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* M-Pesa Transaction Modal */}
-      {showMpesaModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-[160] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[3.5rem] w-full max-w-sm p-10 shadow-2xl relative animate-in zoom-in-95 duration-300">
-            <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-6 shadow-xl shadow-emerald-100">
-              <i className="fa-solid fa-mobile-screen-button"></i>
-            </div>
-            <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter mb-2 text-center">M-Pesa Payment</h3>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8 text-center">Enter Transaction Code</p>
-
-            <div className="space-y-6">
-              <div>
-                <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2 block px-2">Transaction Code</label>
-                <input
-                  type="text"
-                  className={`w-full bg-slate-50 border ${mpesaError ? 'border-rose-500' : 'border-slate-200'} rounded-2xl px-6 py-4 font-bold text-slate-800 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase placeholder:text-slate-300`}
-                  placeholder="e.g. QKT7A1S2B"
-                  value={mpesaCodeInput}
-                  onChange={e => {
-                    setMpesaCodeInput(e.target.value.toUpperCase());
-                    setMpesaError('');
-                  }}
-                  autoFocus
-                  onKeyDown={(e) => e.key === 'Enter' && handleConfirmMpesa()}
-                />
-                {mpesaError && <p className="text-[9px] font-bold text-rose-500 uppercase tracking-widest mt-2 px-2">{mpesaError}</p>}
+      <AnimatePresence>
+        {showMpesaModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-[160] flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-[3.5rem] w-full max-w-sm p-10 shadow-2xl relative"
+            >
+              <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-6 shadow-xl shadow-emerald-100">
+                <i className="fa-solid fa-mobile-screen-button"></i>
               </div>
+              <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter mb-2 text-center">M-Pesa Payment</h3>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8 text-center">Enter Transaction Code</p>
 
-              <div className="grid grid-cols-2 gap-4">
-                <button 
-                  onClick={() => { setShowMpesaModal(false); setMpesaContext(null); }} 
-                  className="py-4 bg-slate-100 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmMpesa}
-                  className="py-4 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all active:scale-95 shadow-xl shadow-emerald-100"
-                >
-                  Confirm Payment
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showReceipt && lastSale && (
-        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-4 z-[100] animate-fade-in">
-          <div id="receipt-modal" className="bg-white rounded-[4rem] w-full max-w-md p-10 shadow-2xl relative overflow-hidden animate-slide-up-mobile">
-            {/* Design Accents */}
-            <div className="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-orange-400 to-amber-600"></div>
-            <div className="absolute -right-16 -top-16 w-40 h-40 bg-orange-50 rounded-full blur-3xl opacity-50"></div>
-
-            <div className="text-center mb-8 relative">
-              <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-[2rem] flex items-center justify-center text-4xl mx-auto mb-6 shadow-xl shadow-emerald-100 rotate-6">
-                <i className="fa-solid fa-circle-check"></i>
-              </div>
-              <h1 className="text-3xl font-black text-slate-800 tracking-tighter uppercase mb-2">
-                {lastSale.paymentMethod === 'Pending' ? `Ticket #${lastSale.ticketNumber}` : 'Order Confirmed!'}
-              </h1>
-              <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.3em]">{businessName} • {lastSale.paymentMethod === 'Pending' ? 'Waiter Ticket' : 'Digital Receipt'}</p>
-            </div>
-
-            <div className="bg-slate-50/50 rounded-[2.5rem] p-8 space-y-6 border border-slate-100 mb-8 max-h-60 overflow-y-auto no-scrollbar">
-              <div className="space-y-4">
-                {lastSale.items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-center text-xs font-bold text-slate-600">
-                    <span className="truncate pr-4 uppercase tracking-tight">{item.name} <span className="text-slate-400">x{item.quantity}</span></span>
-                    <span className="shrink-0 text-slate-900 tracking-tighter">Ksh {item.price * item.quantity}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="pt-6 border-t border-slate-200 border-dashed space-y-2">
-                <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest no-print">
-                  <span>Method</span>
-                  <span className="text-orange-600">{lastSale.paymentMethod}</span>
+              <div className="space-y-6">
+                <div>
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2 block px-2">Transaction Code</label>
+                  <input
+                    type="text"
+                    className={`w-full bg-slate-50 border ${mpesaError ? 'border-rose-500' : 'border-slate-200'} rounded-2xl px-6 py-4 font-bold text-slate-800 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase placeholder:text-slate-300`}
+                    placeholder="e.g. QKT7A1S2B"
+                    value={mpesaCodeInput}
+                    onChange={e => {
+                      setMpesaCodeInput(e.target.value.toUpperCase());
+                      setMpesaError('');
+                    }}
+                    autoFocus
+                    onKeyDown={(e) => e.key === 'Enter' && handleConfirmMpesa()}
+                  />
+                  {mpesaError && <p className="text-[9px] font-bold text-rose-500 uppercase tracking-widest mt-2 px-2">{mpesaError}</p>}
                 </div>
-                {lastSale.mpesaCode && (
+
+                <div className="grid grid-cols-2 gap-4">
+                  <button 
+                    onClick={() => { setShowMpesaModal(false); setMpesaContext(null); }} 
+                    className="py-4 bg-slate-100 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirmMpesa}
+                    className="py-4 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all active:scale-95 shadow-xl shadow-emerald-100"
+                  >
+                    Confirm Payment
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showReceipt && lastSale && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-4 z-[100]"
+          >
+            <motion.div 
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              id="receipt-modal" 
+              className="bg-white rounded-[4rem] w-full max-w-md p-10 shadow-2xl relative overflow-hidden"
+            >
+              {/* Design Accents */}
+              <div className="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-orange-400 to-amber-600"></div>
+              <div className="absolute -right-16 -top-16 w-40 h-40 bg-orange-50 rounded-full blur-3xl opacity-50"></div>
+
+              <div className="text-center mb-8 relative">
+                <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-[2rem] flex items-center justify-center text-4xl mx-auto mb-6 shadow-xl shadow-emerald-100 rotate-6">
+                  <i className="fa-solid fa-circle-check"></i>
+                </div>
+                <h1 className="text-3xl font-black text-slate-800 tracking-tighter uppercase mb-2">
+                  {lastSale.paymentMethod === 'Pending' ? `Ticket #${lastSale.ticketNumber}` : 'Order Confirmed!'}
+                </h1>
+                <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.3em]">{businessName} • {lastSale.paymentMethod === 'Pending' ? 'Waiter Ticket' : 'Digital Receipt'}</p>
+              </div>
+
+              <div className="bg-slate-50/50 rounded-[2.5rem] p-8 space-y-6 border border-slate-100 mb-8 max-h-60 overflow-y-auto no-scrollbar">
+                <div className="space-y-4">
+                  {lastSale.items.map((item, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-xs font-bold text-slate-600">
+                      <span className="truncate pr-4 uppercase tracking-tight">{item.name} <span className="text-slate-400">x{item.quantity}</span></span>
+                      <span className="shrink-0 text-slate-900 tracking-tighter">Ksh {item.price * item.quantity}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="pt-6 border-t border-slate-200 border-dashed space-y-2">
                   <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest no-print">
-                    <span>M-Pesa Code</span>
-                    <span className="text-emerald-600 font-mono">{lastSale.mpesaCode}</span>
+                    <span>Method</span>
+                    <span className="text-orange-600">{lastSale.paymentMethod}</span>
                   </div>
-                )}
-                {lastSale.mpesaCode && (
-                  <div className="hidden print:flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    <span>M-Pesa Code</span>
-                    <span className="text-slate-900 font-mono">{lastSale.mpesaCode}</span>
+                  {lastSale.mpesaCode && (
+                    <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest no-print">
+                      <span>M-Pesa Code</span>
+                      <span className="text-emerald-600 font-mono">{lastSale.mpesaCode}</span>
+                    </div>
+                  )}
+                  {lastSale.mpesaCode && (
+                    <div className="hidden print:flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      <span>M-Pesa Code</span>
+                      <span className="text-slate-900 font-mono">{lastSale.mpesaCode}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-black text-slate-800 uppercase tracking-widest">Total Pay</span>
+                    <span className="text-2xl font-extrabold text-slate-900 tracking-tighter">Ksh {lastSale.totalAmount.toLocaleString()}</span>
                   </div>
-                )}
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-black text-slate-800 uppercase tracking-widest">Total Pay</span>
-                  <span className="text-2xl font-extrabold text-slate-900 tracking-tighter">Ksh {lastSale.totalAmount.toLocaleString()}</span>
                 </div>
               </div>
-            </div>
 
-            <div className="space-y-4 px-4">
-              {lastSale.paymentMethod === 'Pending' && (
-                <div className="bg-orange-50 p-4 rounded-2xl border border-orange-100 text-center mb-4">
-                  <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Payment Required at Counter</p>
-                  <p className="text-[9px] text-orange-400 font-bold leading-tight">Please present this ticket number to the cashier to complete your order.</p>
+              <div className="space-y-4 px-4">
+                {lastSale.paymentMethod === 'Pending' && (
+                  <div className="bg-orange-50 p-4 rounded-2xl border border-orange-100 text-center mb-4">
+                    <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Payment Required at Counter</p>
+                    <p className="text-[9px] text-orange-400 font-bold leading-tight">Please present this ticket number to the cashier to complete your order.</p>
+                  </div>
+                )}
+                
+                <button
+                  onClick={shareReceiptWhatsApp}
+                  className="w-full py-5 bg-orange-600 text-white rounded-[2rem] font-black text-[12px] uppercase tracking-[0.2em] hover:bg-orange-700 transition-all flex items-center justify-center gap-4 shadow-2xl shadow-orange-200 active:scale-95 no-print"
+                >
+                  <i className="fa-brands fa-whatsapp text-xl"></i>
+                  Send to Customer
+                </button>
+
+                <div className="grid grid-cols-2 gap-4 no-print">
+                  <button
+                    onClick={() => window.print()}
+                    className="py-4 bg-white border-2 border-slate-100 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:border-orange-200 hover:text-orange-600 transition-all active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <i className="fa-solid fa-print"></i>
+                    Print
+                  </button>
+                  <button
+                    onClick={() => setShowReceipt(false)}
+                    className="py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-slate-200"
+                  >
+                    <i className="fa-solid fa-check"></i>
+                    Done
+                  </button>
                 </div>
-              )}
-              
-              <button
-                onClick={shareReceiptWhatsApp}
-                className="w-full py-5 bg-orange-600 text-white rounded-[2rem] font-black text-[12px] uppercase tracking-[0.2em] hover:bg-orange-700 transition-all flex items-center justify-center gap-4 shadow-2xl shadow-orange-200 active:scale-95 no-print"
-              >
-                <i className="fa-brands fa-whatsapp text-xl"></i>
-                Send to Customer
-              </button>
-
-              <div className="grid grid-cols-2 gap-4 no-print">
-                <button
-                  onClick={() => window.print()}
-                  className="py-4 bg-white border-2 border-slate-100 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:border-orange-200 hover:text-orange-600 transition-all active:scale-95 flex items-center justify-center gap-2"
-                >
-                  <i className="fa-solid fa-print"></i>
-                  Print
-                </button>
-                <button
-                  onClick={() => setShowReceipt(false)}
-                  className="py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-slate-200"
-                >
-                  <i className="fa-solid fa-check"></i>
-                  Done
-                </button>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Shift Closing Modal */}
-      {showCloseShiftModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-[200] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[3.5rem] w-full max-w-lg p-10 shadow-2xl relative animate-in zoom-in-95 duration-300 overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center mb-8 shrink-0">
-              <div>
-                <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Close Shift</h3>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
-                  Step {closeShiftStep} of 3: {closeShiftStep === 1 ? 'Open Tabs' : closeShiftStep === 2 ? 'Sales Summary' : 'Stock Reconciliation'}
-                </p>
-              </div>
-              <button 
-                onClick={() => setShowCloseShiftModal(false)}
-                className="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center hover:bg-slate-100 transition-all"
-              >
-                <i className="fa-solid fa-xmark"></i>
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto pr-2 no-scrollbar mb-8">
-              {closeShiftStep === 1 && (
-                <div className="space-y-6 animate-in slide-in-from-right-4">
-                  <div className="p-6 bg-orange-50 rounded-3xl border border-orange-100">
-                    <div className="flex items-center gap-4 mb-3">
-                      <div className="w-10 h-10 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center text-lg">
-                        <i className="fa-solid fa-triangle-exclamation"></i>
-                      </div>
-                      <h4 className="font-black text-orange-900 uppercase text-xs tracking-tight">Open Tabs Detected</h4>
-                    </div>
-                    <p className="text-xs text-orange-700 font-medium leading-relaxed">
-                      The following tabs are still open. They will be transferred to the next shift and will NOT count towards this shift's totals.
-                    </p>
-                  </div>
-                  <div className="space-y-3">
-                    {tabs.filter(t => t.status === 'OPEN').map(tab => (
-                      <div key={tab.id} className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                        <span className="text-xs font-black text-slate-700 uppercase">{tab.customerName}</span>
-                        <span className="text-sm font-black text-slate-900 tracking-tighter">Ksh {tab.totalAmount.toLocaleString()}</span>
-                      </div>
-                    ))}
-                    {tabs.filter(t => t.status === 'OPEN').length === 0 && (
-                      <p className="text-center py-10 text-slate-300 font-bold uppercase tracking-widest text-[10px]">No Open Tabs</p>
-                    )}
-                  </div>
+      <AnimatePresence>
+        {showCloseShiftModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-[200] flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-[3.5rem] w-full max-w-lg p-10 shadow-2xl relative overflow-hidden max-h-[90vh] flex flex-col"
+            >
+              <div className="flex justify-between items-center mb-8 shrink-0">
+                <div>
+                  <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Close Shift</h3>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                    Step {closeShiftStep} of 3: {closeShiftStep === 1 ? 'Open Tabs' : closeShiftStep === 2 ? 'Sales Summary' : 'Stock Reconciliation'}
+                  </p>
                 </div>
-              )}
+                <button 
+                  onClick={() => setShowCloseShiftModal(false)}
+                  className="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center hover:bg-slate-100 transition-all"
+                >
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
 
-              {closeShiftStep === 2 && (
-                <div className="space-y-8 animate-in slide-in-from-right-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Items in Cart</p>
-                      <p className="text-2xl font-black text-slate-800 tracking-tighter">{cart.length}</p>
+              <div className="flex-1 overflow-y-auto pr-2 no-scrollbar mb-8">
+                {closeShiftStep === 1 && (
+                  <div className="space-y-6 animate-in slide-in-from-right-4">
+                    <div className="p-6 bg-orange-50 rounded-3xl border border-orange-100">
+                      <div className="flex items-center gap-4 mb-3">
+                        <div className="w-10 h-10 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center text-lg">
+                          <i className="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <h4 className="font-black text-orange-900 uppercase text-xs tracking-tight">Open Tabs Detected</h4>
+                      </div>
+                      <p className="text-xs text-orange-700 font-medium leading-relaxed">
+                        The following tabs are still open. They will be transferred to the next shift and will NOT count towards this shift's totals.
+                      </p>
                     </div>
-                    <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Active View</p>
-                      <p className="text-2xl font-black text-indigo-600 tracking-tighter uppercase">{activeView}</p>
+                    <div className="space-y-3">
+                      {tabs.filter(t => t.status === 'OPEN').map(tab => (
+                        <div key={tab.id} className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                          <span className="text-xs font-black text-slate-700 uppercase">{tab.customerName}</span>
+                          <span className="text-sm font-black text-slate-900 tracking-tighter">Ksh {tab.totalAmount.toLocaleString()}</span>
+                        </div>
+                      ))}
+                      {tabs.filter(t => t.status === 'OPEN').length === 0 && (
+                        <p className="text-center py-10 text-slate-300 font-bold uppercase tracking-widest text-[10px]">No Open Tabs</p>
+                      )}
                     </div>
                   </div>
-                  <div className="p-8 bg-slate-900 rounded-[2.5rem] text-white">
-                    <div className="flex justify-between items-center mb-4">
-                      <p className="text-[10px] font-black opacity-40 uppercase tracking-[0.3em]">Shift Sale Totals</p>
-                      <span className="px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-full text-[8px] font-black uppercase tracking-widest">Live Estimate</span>
+                )}
+
+                {closeShiftStep === 2 && (
+                  <div className="space-y-8 animate-in slide-in-from-right-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Items in Cart</p>
+                        <p className="text-2xl font-black text-slate-800 tracking-tighter">{cart.length}</p>
+                      </div>
+                      <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Active View</p>
+                        <p className="text-2xl font-black text-indigo-600 tracking-tighter uppercase">{activeView}</p>
+                      </div>
+                    </div>
+                    <div className="p-8 bg-slate-900 rounded-[2.5rem] text-white">
+                      <div className="flex justify-between items-center mb-4">
+                        <p className="text-[10px] font-black opacity-40 uppercase tracking-[0.3em]">Shift Sale Totals</p>
+                        <span className="px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-full text-[8px] font-black uppercase tracking-widest">Live Estimate</span>
+                      </div>
+                      <div className="space-y-2">
+                         <div className="flex justify-between text-xs font-medium">
+                            <span className="text-slate-400">Cash:</span>
+                            <span className="font-black">Ksh {sales.filter(s => s.shiftId === currentShift?.id && s.paymentMethod === 'Cash').reduce((sum, s) => sum + s.totalAmount, 0).toLocaleString()}</span>
+                         </div>
+                         <div className="flex justify-between text-xs font-medium">
+                            <span className="text-slate-400">M-Pesa:</span>
+                            <span className="font-black">Ksh {sales.filter(s => s.shiftId === currentShift?.id && s.paymentMethod === 'Mpesa').reduce((sum, s) => sum + s.totalAmount, 0).toLocaleString()}</span>
+                         </div>
+                         <div className="h-px bg-slate-800 my-4"></div>
+                         <div className="flex justify-between items-end">
+                            <span className="text-sm font-black text-indigo-400 uppercase tracking-wider">Total Sales:</span>
+                            <span className="text-3xl font-black tracking-tighter">Ksh {sales.filter(s => s.shiftId === currentShift?.id).reduce((sum, s) => sum + s.totalAmount, 0).toLocaleString()}</span>
+                         </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {closeShiftStep === 3 && (
+                  <div className="space-y-6 animate-in slide-in-from-right-4">
+                    <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 flex items-center gap-3">
+                      <i className="fa-solid fa-list-check text-indigo-600"></i>
+                      <p className="text-[10px] font-bold text-indigo-800 uppercase tracking-tight">Verify Physical Stock Matches System Count</p>
                     </div>
                     <div className="space-y-2">
-                       <div className="flex justify-between text-xs font-medium">
-                          <span className="text-slate-400">Cash:</span>
-                          <span className="font-black">Ksh {sales.filter(s => s.shiftId === currentShift?.id && s.paymentMethod === 'Cash').reduce((sum, s) => sum + s.totalAmount, 0).toLocaleString()}</span>
-                       </div>
-                       <div className="flex justify-between text-xs font-medium">
-                          <span className="text-slate-400">M-Pesa:</span>
-                          <span className="font-black">Ksh {sales.filter(s => s.shiftId === currentShift?.id && s.paymentMethod === 'Mpesa').reduce((sum, s) => sum + s.totalAmount, 0).toLocaleString()}</span>
-                       </div>
-                       <div className="h-px bg-slate-800 my-4"></div>
-                       <div className="flex justify-between items-end">
-                          <span className="text-sm font-black text-indigo-400 uppercase tracking-wider">Total Sales:</span>
-                          <span className="text-3xl font-black tracking-tighter">Ksh {sales.filter(s => s.shiftId === currentShift?.id).reduce((sum, s) => sum + s.totalAmount, 0).toLocaleString()}</span>
-                       </div>
+                      {closingStockInput.map((item, idx) => (
+                        <div key={item.productId} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                          <div className="flex-1 min-w-0 pr-4">
+                            <span className="text-[11px] font-black text-slate-700 uppercase truncate block">{item.productName}</span>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">System expects: {products.find(p => p.id === item.productId)?.stock || 0}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <button 
+                              onClick={() => {
+                                const newStock = [...closingStockInput];
+                                newStock[idx].quantity = Math.max(0, newStock[idx].quantity - 1);
+                                setClosingStockInput(newStock);
+                              }}
+                              className="w-8 h-8 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 active:scale-90 transition-all shadow-sm"
+                            >
+                              <i className="fa-solid fa-minus text-[10px]"></i>
+                            </button>
+                            <input 
+                              type="number"
+                              className="w-12 bg-transparent text-center font-black text-slate-900 outline-none text-sm"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const newStock = [...closingStockInput];
+                                newStock[idx].quantity = parseInt(e.target.value) || 0;
+                                setClosingStockInput(newStock);
+                              }}
+                            />
+                            <button 
+                              onClick={() => {
+                                const newStock = [...closingStockInput];
+                                newStock[idx].quantity += 1;
+                                setClosingStockInput(newStock);
+                              }}
+                              className="w-8 h-8 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 active:scale-90 transition-all shadow-sm"
+                            >
+                              <i className="fa-solid fa-plus text-[10px]"></i>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
-              {closeShiftStep === 3 && (
-                <div className="space-y-6 animate-in slide-in-from-right-4">
-                  <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 flex items-center gap-3">
-                    <i className="fa-solid fa-list-check text-indigo-600"></i>
-                    <p className="text-[10px] font-bold text-indigo-800 uppercase tracking-tight">Verify Physical Stock Matches System Count</p>
-                  </div>
-                  <div className="space-y-2">
-                    {closingStockInput.map((item, idx) => (
-                      <div key={item.productId} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                        <div className="flex-1 min-w-0 pr-4">
-                          <span className="text-[11px] font-black text-slate-700 uppercase truncate block">{item.productName}</span>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">System expects: {products.find(p => p.id === item.productId)?.stock || 0}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <button 
-                            onClick={() => {
-                              const newStock = [...closingStockInput];
-                              newStock[idx].quantity = Math.max(0, newStock[idx].quantity - 1);
-                              setClosingStockInput(newStock);
-                            }}
-                            className="w-8 h-8 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 active:scale-90 transition-all shadow-sm"
-                          >
-                            <i className="fa-solid fa-minus text-[10px]"></i>
-                          </button>
-                          <input 
-                            type="number"
-                            className="w-12 bg-transparent text-center font-black text-slate-900 outline-none text-sm"
-                            value={item.quantity}
-                            onChange={(e) => {
-                              const newStock = [...closingStockInput];
-                              newStock[idx].quantity = parseInt(e.target.value) || 0;
-                              setClosingStockInput(newStock);
-                            }}
-                          />
-                          <button 
-                            onClick={() => {
-                              const newStock = [...closingStockInput];
-                              newStock[idx].quantity += 1;
-                              setClosingStockInput(newStock);
-                            }}
-                            className="w-8 h-8 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 active:scale-90 transition-all shadow-sm"
-                          >
-                            <i className="fa-solid fa-plus text-[10px]"></i>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 shrink-0">
-              {closeShiftStep > 1 ? (
-                <button 
-                  onClick={() => setCloseShiftStep(prev => prev - 1)} 
-                  className="py-5 bg-slate-100 text-slate-500 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
-                >
-                  <i className="fa-solid fa-arrow-left mr-2"></i> Back
-                </button>
-              ) : (
-                <button 
-                  onClick={() => setShowCloseShiftModal(false)} 
-                  className="py-5 bg-slate-100 text-slate-500 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
-                >
-                  Discard
-                </button>
-              )}
-              
-              {closeShiftStep < 3 ? (
-                <button 
-                  onClick={() => setCloseShiftStep(prev => prev + 1)} 
-                  className="py-5 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 active:scale-95 shadow-xl shadow-slate-200 transition-all"
-                >
-                  Next Step <i className="fa-solid fa-arrow-right ml-2"></i>
-                </button>
-              ) : (
-                <button 
-                  onClick={() => { onCloseShift(closingStockInput); setShowCloseShiftModal(false); }}
-                  className="py-5 bg-rose-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-700 active:scale-95 shadow-xl shadow-rose-200 transition-all"
-                >
-                  <i className="fa-solid fa-check-double mr-2"></i> Finalize
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+              <div className="grid grid-cols-2 gap-4 shrink-0">
+                {closeShiftStep > 1 ? (
+                  <button 
+                    onClick={() => setCloseShiftStep(prev => prev - 1)} 
+                    className="py-5 bg-slate-100 text-slate-500 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
+                  >
+                    <i className="fa-solid fa-arrow-left mr-2"></i> Back
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => setShowCloseShiftModal(false)} 
+                    className="py-5 bg-slate-100 text-slate-500 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
+                  >
+                    Discard
+                  </button>
+                )}
+                
+                {closeShiftStep < 3 ? (
+                  <button 
+                    onClick={() => setCloseShiftStep(prev => prev + 1)} 
+                    className="py-5 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 active:scale-95 shadow-xl shadow-slate-200 transition-all"
+                  >
+                    Next Step <i className="fa-solid fa-arrow-right ml-2"></i>
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => { onCloseShift(closingStockInput); setShowCloseShiftModal(false); }}
+                    className="py-5 bg-rose-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-700 active:scale-95 shadow-xl shadow-rose-200 transition-all"
+                  >
+                    <i className="fa-solid fa-check-double mr-2"></i> Finalize
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <style>{`
         @keyframes slide-up-mobile {

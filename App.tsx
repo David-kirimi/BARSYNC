@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import Cookies from 'js-cookie';
+import { motion, AnimatePresence } from 'framer-motion';
 import { View, Product, Sale, CartItem, User, Role, AuditLog, Business, Tab, Shift, StockSnapshot, StaffLog } from './types';
 import { PRODUCT_TEMPLATES } from './constants';
 import POS from './components/POS';
@@ -1069,9 +1070,18 @@ const AppContent: React.FC = () => {
             </div>
           )}
 
-          <div className={`flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-8 scroll-smooth ${isAccountLocked ? 'grayscale opacity-80' : ''}`} id="main-scroll">
-            <div className="max-w-[1600px] mx-auto h-full">
-              {(view === 'POS' || view === 'TABS') && (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={view}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className={`flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-8 scroll-smooth ${isAccountLocked ? 'grayscale opacity-80' : ''}`}
+              id="main-scroll"
+            >
+              <div className="max-w-[1600px] mx-auto h-full">
+                {(view === 'POS' || view === 'TABS') && (
                 <POS
                   products={products}
                   addToCart={addToCart}
@@ -1325,8 +1335,9 @@ const AppContent: React.FC = () => {
                 />
               )}
             </div>
-          </div>
-        </main>
+          </motion.div>
+        </AnimatePresence>
+      </main>
       </div>
     </div>
   );

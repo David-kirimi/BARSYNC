@@ -68,41 +68,102 @@ const CounterDashboard: React.FC<CounterDashboardProps> = ({
     setSelectedSaleId(null);
   };
 
-  const OrderItem = ({ order, isReady }: { order: Sale, isReady?: boolean, key?: string }) => {
-    const isExpanded = expandedOrders[order.id];
-
-    return (
-      <motion.div 
-        layout
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className={`bg-white rounded-[2.5rem] border ${isReady ? 'border-emerald-100 bg-emerald-50/10' : 'border-slate-100'} shadow-sm flex flex-col group transition-all overflow-hidden`}
+const OrderItem: React.FC<{ 
+  order: Sale, 
+  isReady?: boolean, 
+  isExpanded: boolean,
+  onToggle: () => void,
+  onVerifyCash: (id: string) => Promise<void>,
+  onStartMpesaVerify: (id: string) => void,
+  onUpdateStatus: (id: string, status: Sale['status']) => void,
+  onCancelOrder: (id: string) => Promise<void>
+}> = ({ 
+  order, 
+  isReady, 
+  isExpanded, 
+  onToggle, 
+  onVerifyCash, 
+  onStartMpesaVerify, 
+  onUpdateStatus, 
+  onCancelOrder 
+}) => {
+  return (
+    <motion.div 
+      layout
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className={`bg-white rounded-[2.5rem] border ${isReady ? 'border-emerald-100 bg-emerald-50/10' : 'border-slate-100'} shadow-sm flex flex-col group transition-all overflow-hidden`}
+    >
+      <div 
+        className="p-6 cursor-pointer"
+        onClick={onToggle}
       >
-        <div 
-          className="p-6 cursor-pointer"
-          onClick={() => toggleOrder(order.id)}
-        >
-          <div className="flex justify-between items-start mb-2">
-            <div>
-              <h4 className="font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
-                <span className={`px-3 py-1 rounded-lg text-sm ${isReady ? 'bg-emerald-600' : 'bg-indigo-600'} text-white`}>
-                  Ticket #{order.ticketNumber || 'N/A'}
-                </span>
-                <span className="text-slate-300 text-[10px] uppercase font-bold tracking-widest">{order.status?.replace('_', ' ')}</span>
-              </h4>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 flex items-center gap-1.5">
-                <i className="fa-solid fa-user-tag text-indigo-400 text-[8px]"></i> W: {order.created_by_waiter || 'Unknown'}
-              </p>
-            </div>
-            <div className="text-right flex flex-col items-end">
-              <span className="text-2xl font-black text-slate-900 tracking-tighter block leading-none">Ksh {order.totalAmount.toLocaleString()}</span>
-              <i className={`fa-solid fa-chevron-down text-[10px] text-slate-300 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''} lg:hidden mt-2`}></i>
-            </div>
+        <div className="flex justify-between items-start mb-2">
+          <div>
+            <h4 className="font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
+              <span className={`px-3 py-1 rounded-lg text-sm ${isReady ? 'bg-emerald-600' : 'bg-indigo-600'} text-white`}>
+                Ticket #{order.ticketNumber || 'N/A'}
+              </span>
+              <span className="text-slate-300 text-[10px] uppercase font-bold tracking-widest">{order.status?.replace('_', ' ')}</span>
+            </h4>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 flex items-center gap-1.5">
+              <i className="fa-solid fa-user-tag text-indigo-400 text-[8px]"></i> W: {order.created_by_waiter || 'Unknown'}
+            </p>
           </div>
+          <div className="text-right flex flex-col items-end">
+            <span className="text-2xl font-black text-slate-900 tracking-tighter block leading-none">Ksh {order.totalAmount.toLocaleString()}</span>
+            <i className={`fa-solid fa-chevron-down text-[10px] text-slate-300 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''} lg:hidden mt-2`}></i>
+          </div>
+        </div>
 
+        {/* Desktop Content (Always Visible) */}
+        <div className="hidden lg:block">
+          {order.prepared_by_bar && (
+            <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mt-0.5 flex items-center gap-1.5 mb-2">
+              <i className="fa-solid fa-fire-burner text-[8px]"></i> B: {order.prepared_by_bar}
+            </p>
+          )}
+          <div className="mb-6 space-y-1 mt-4">
+            {order.items.map((item, idx) => (
+              <div key={idx} className="flex justify-between text-[11px] font-bold text-slate-500 uppercase">
+                <span className="truncate">{item.quantity}x {item.name}</span>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 gap-2 mt-auto">
+            {order.status === 'SERVED' ? (
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={(e) => { e.stopPropagation(); onVerifyCash(order.id); }} className="py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95 flex items-center justify-center gap-2">
+                  <i className="fa-solid fa-money-bill"></i> Cash
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); onStartMpesaVerify(order.id); }} className="py-4 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95 flex items-center justify-center gap-2">
+                  <i className="fa-solid fa-mobile-screen"></i> M-Pesa
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onUpdateStatus(order.id, 'SERVED'); }}
+                  className={`py-4 ${order.status === 'READY' ? 'bg-emerald-600' : 'bg-indigo-600'} text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2`}
+                >
+                  <i className="fa-solid fa-bell-concierge"></i> Mark Served
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); if(confirm("Cancel this order?")) onCancelOrder(order.id); }}
+                  className="py-4 bg-rose-50 text-rose-500 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-100 transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <i className="fa-solid fa-trash"></i> Void
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Mobile Content (Collapsible) */}
+        <div className="lg:hidden">
           <AnimatePresence>
-            {(isExpanded || window.innerWidth >= 1024) && (
+            {isExpanded && (
               <motion.div 
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}
@@ -126,10 +187,10 @@ const CounterDashboard: React.FC<CounterDashboardProps> = ({
                 <div className="grid grid-cols-1 gap-2 mt-auto">
                   {order.status === 'SERVED' ? (
                     <div className="grid grid-cols-2 gap-2">
-                      <button onClick={(e) => { e.stopPropagation(); handleVerifyCash(order.id); }} className="py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95 flex items-center justify-center gap-2">
+                      <button onClick={(e) => { e.stopPropagation(); onVerifyCash(order.id); }} className="py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95 flex items-center justify-center gap-2">
                         <i className="fa-solid fa-money-bill"></i> Cash
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); handleStartMpesaVerify(order.id); }} className="py-4 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95 flex items-center justify-center gap-2">
+                      <button onClick={(e) => { e.stopPropagation(); onStartMpesaVerify(order.id); }} className="py-4 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95 flex items-center justify-center gap-2">
                         <i className="fa-solid fa-mobile-screen"></i> M-Pesa
                       </button>
                     </div>
@@ -154,9 +215,10 @@ const CounterDashboard: React.FC<CounterDashboardProps> = ({
             )}
           </AnimatePresence>
         </div>
-      </motion.div>
-    );
-  };
+      </div>
+    </motion.div>
+  );
+};
 
   return (
     <div className="flex h-full flex-col gap-6 pb-20 lg:pb-0 overflow-hidden">
@@ -211,7 +273,16 @@ const CounterDashboard: React.FC<CounterDashboardProps> = ({
           >
             <AnimatePresence mode="popLayout">
               {pendingOrders.map(order => (
-                <OrderItem key={order.id} order={order} />
+                <OrderItem 
+                  key={order.id} 
+                  order={order} 
+                  isExpanded={!!expandedOrders[order.id]}
+                  onToggle={() => toggleOrder(order.id)}
+                  onVerifyCash={handleVerifyCash}
+                  onStartMpesaVerify={handleStartMpesaVerify}
+                  onUpdateStatus={onUpdateStatus}
+                  onCancelOrder={onCancelOrder}
+                />
               ))}
             </AnimatePresence>
             {pendingOrders.length === 0 && (
@@ -240,7 +311,17 @@ const CounterDashboard: React.FC<CounterDashboardProps> = ({
           >
             <AnimatePresence mode="popLayout">
               {readyOrders.map(order => (
-                <OrderItem key={order.id} order={order} isReady />
+                <OrderItem 
+                  key={order.id} 
+                  order={order} 
+                  isReady 
+                  isExpanded={!!expandedOrders[order.id]}
+                  onToggle={() => toggleOrder(order.id)}
+                  onVerifyCash={handleVerifyCash}
+                  onStartMpesaVerify={handleStartMpesaVerify}
+                  onUpdateStatus={onUpdateStatus}
+                  onCancelOrder={onCancelOrder}
+                />
               ))}
             </AnimatePresence>
             {readyOrders.length === 0 && (
@@ -269,7 +350,16 @@ const CounterDashboard: React.FC<CounterDashboardProps> = ({
           >
             <AnimatePresence mode="popLayout">
               {servedOrders.map(order => (
-                <OrderItem key={order.id} order={order} />
+                <OrderItem 
+                  key={order.id} 
+                  order={order} 
+                  isExpanded={!!expandedOrders[order.id]}
+                  onToggle={() => toggleOrder(order.id)}
+                  onVerifyCash={handleVerifyCash}
+                  onStartMpesaVerify={handleStartMpesaVerify}
+                  onUpdateStatus={onUpdateStatus}
+                  onCancelOrder={onCancelOrder}
+                />
               ))}
             </AnimatePresence>
             

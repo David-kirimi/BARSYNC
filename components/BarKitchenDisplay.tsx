@@ -7,27 +7,6 @@ interface BarKitchenDisplayProps {
   onUpdateStatus: (saleId: string, status: Sale['status']) => void;
 }
 
-const BarKitchenDisplay: React.FC<BarKitchenDisplayProps> = ({ sales, onUpdateStatus }) => {
-  // Filter for orders that need prep (PENDING_PAYMENT, PREPARING, READY)
-  // Also filter out mock Ticket #1 to keep display clean
-  const activeOrders = sales.filter(s => 
-    (s.status === 'PENDING_PAYMENT' || 
-     s.status === 'PREPARING' || 
-     s.status === 'READY') &&
-    s.ticketNumber !== 1
-  ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  const pending = activeOrders.filter(o => o.status === 'PENDING_PAYMENT');
-  const preparing = activeOrders.filter(o => o.status === 'PREPARING');
-  const ready = activeOrders.filter(o => o.status === 'READY');
-
-  const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
-  const [collapsedColumns, setCollapsedColumns] = useState<Record<string, boolean>>({});
-  const [activeSubView, setActiveSubView] = useState<'pending' | 'preparing' | 'ready' | null>(null);
-
-  const toggleOrder = (id: string) => setExpandedOrders(prev => ({ ...prev, [id]: !prev[id] }));
-  const toggleColumn = (col: string) => setCollapsedColumns(prev => ({ ...prev, [col]: !prev[col] }));
-
 const OrderCard: React.FC<{
   order: Sale,
   isExpanded: boolean,
@@ -153,6 +132,27 @@ const OrderCard: React.FC<{
     </motion.div>
   );
 };
+
+const BarKitchenDisplay: React.FC<BarKitchenDisplayProps> = ({ sales, onUpdateStatus }) => {
+  // Filter for orders that need prep (PENDING_PAYMENT, PREPARING, READY)
+  // Also filter out mock Ticket #1 to keep display clean
+  const activeOrders = sales.filter(s => 
+    (s.status === 'PENDING_PAYMENT' || 
+     s.status === 'PREPARING' || 
+     s.status === 'READY') &&
+    s.ticketNumber !== 1
+  ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const pending = activeOrders.filter(o => o.status === 'PENDING_PAYMENT');
+  const preparing = activeOrders.filter(o => o.status === 'PREPARING');
+  const ready = activeOrders.filter(o => o.status === 'READY');
+
+  const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
+  const [collapsedColumns, setCollapsedColumns] = useState<Record<string, boolean>>({});
+  const [activeSubView, setActiveSubView] = useState<'pending' | 'preparing' | 'ready' | null>(null);
+
+  const toggleOrder = (id: string) => setExpandedOrders(prev => ({ ...prev, [id]: !prev[id] }));
+  const toggleColumn = (col: string) => setCollapsedColumns(prev => ({ ...prev, [col]: !prev[col] }));
 
   return (
     <div className="flex flex-col h-full bg-slate-50/30 overflow-hidden relative">
@@ -327,7 +327,6 @@ const SubViewPortal: React.FC<{
   colorClass: string,
   onUpdateStatus: (id: string, status: Sale['status']) => void
 }> = ({ title, orders, onBack, colorClass, onUpdateStatus }) => {
-  // We need to define OrderCard inside or pass it? It's better to render it here directly for simplicity or use the same logic
   return (
     <motion.div 
       initial={{ x: '100vw' }}
@@ -352,56 +351,13 @@ const SubViewPortal: React.FC<{
       <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 no-scrollbar pb-32">
         <AnimatePresence mode="popLayout">
           {orders.map(order => (
-            <motion.div 
+            <OrderCard 
               key={order.id}
-              layout
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-white rounded-[2rem] border border-slate-100 shadow-sm flex flex-col overflow-hidden h-fit"
-            >
-              <div className="p-6 border-b border-slate-50 flex justify-between items-center">
-                <div>
-                  <h4 className="font-black text-slate-900 text-xl tracking-tighter uppercase leading-none">TICKET #{order.ticketNumber}</h4>
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1.5 italic">W: {order.created_by_waiter}</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{new Date(order.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-              </div>
-              
-              <div className="p-6 bg-slate-50/30 space-y-2">
-                {order.items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200/50 shadow-sm">
-                    <span className="text-xs font-black text-slate-700 uppercase leading-none">{item.quantity}x {item.name}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="p-6 pt-0">
-                {order.status === 'PENDING_PAYMENT' && (
-                  <button 
-                    onClick={() => onUpdateStatus(order.id, 'PREPARING')}
-                    className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-indigo-100 transition-all active:scale-95 flex items-center justify-center gap-3"
-                  >
-                    <i className="fa-solid fa-play"></i> Start Preparation
-                  </button>
-                )}
-                {order.status === 'PREPARING' && (
-                  <button 
-                    onClick={() => onUpdateStatus(order.id, 'READY')}
-                    className="w-full py-5 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-100 transition-all active:scale-95 flex items-center justify-center gap-3"
-                  >
-                    <i className="fa-solid fa-check"></i> Mark as Ready
-                  </button>
-                )}
-                {order.status === 'READY' && (
-                  <div className="py-5 bg-emerald-50 text-emerald-600 rounded-2xl font-black text-[10px] uppercase tracking-widest text-center border border-emerald-100 animate-pulse">
-                    Waiting for Collection
-                  </div>
-                )}
-              </div>
-            </motion.div>
+              order={order}
+              isExpanded={true}
+              onToggle={() => {}}
+              onUpdateStatus={onUpdateStatus}
+            />
           ))}
         </AnimatePresence>
         {orders.length === 0 && (

@@ -11,64 +11,6 @@ interface CounterDashboardProps {
   onSwitchView: (v: any) => void;
 }
 
-const CounterDashboard: React.FC<CounterDashboardProps> = ({ 
-  sales, staffLogs, onVerifyPayment, onUpdateStatus, onCancelOrder, onSwitchView 
-}) => {
-  const [showMpesaModal, setShowMpesaModal] = useState(false);
-  const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
-  const [mpesaCodeInput, setMpesaCodeInput] = useState('');
-  const [mpesaError, setMpesaError] = useState('');
-  const [ticketSearch, setTicketSearch] = useState('');
-  const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
-  const [activeSubView, setActiveSubView] = useState<'pending' | 'ready' | 'served' | null>(null);
-
-  const toggleOrder = (id: string) => setExpandedOrders(prev => ({ ...prev, [id]: !prev[id] }));
-  const toggleSection = (sec: string) => setCollapsedSections(prev => ({ ...prev, [sec]: !prev[sec] }));
-
-  // 1. Pending / In Prep (anything before READY)
-  const pendingOrders = sales.filter(s => 
-    (s.status === 'PENDING_PAYMENT' || s.status === 'PREPARING') && 
-    (ticketSearch === '' || s.ticketNumber?.toString().includes(ticketSearch)) &&
-    s.ticketNumber !== 1
-  ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  // 2. Ready for Pickup (status === 'READY')
-  const readyOrders = sales.filter(s => 
-    s.status === 'READY' && 
-    (ticketSearch === '' || s.ticketNumber?.toString().includes(ticketSearch)) &&
-    s.ticketNumber !== 1
-  ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  // 3. Served (Waiters have them, waiting for payment)
-  const servedOrders = sales.filter(s => s.status === 'SERVED' && s.ticketNumber !== 1);
-
-  // 4. Recently Completed Today
-  const completedOrders = sales.filter(s => s.status === 'COMPLETED').slice(0, 10);
-
-  const handleVerifyCash = async (saleId: string) => {
-    await onVerifyPayment(saleId, 'Cash');
-  };
-
-  const handleStartMpesaVerify = (saleId: string) => {
-    setSelectedSaleId(saleId);
-    setMpesaCodeInput('');
-    setMpesaError('');
-    setShowMpesaModal(true);
-  };
-
-  const handleConfirmMpesaVerify = async () => {
-    if (!selectedSaleId) return;
-    const code = mpesaCodeInput.trim().toUpperCase();
-    if (code.length < 8 || code.length > 12) {
-      setMpesaError("Code must be 8-12 characters");
-      return;
-    }
-    await onVerifyPayment(selectedSaleId, 'Mpesa', code);
-    setShowMpesaModal(false);
-    setSelectedSaleId(null);
-  };
-
 const OrderItem: React.FC<{ 
   order: Sale, 
   isReady?: boolean, 
@@ -220,6 +162,64 @@ const OrderItem: React.FC<{
     </motion.div>
   );
 };
+
+const CounterDashboard: React.FC<CounterDashboardProps> = ({ 
+  sales, staffLogs, onVerifyPayment, onUpdateStatus, onCancelOrder, onSwitchView 
+}) => {
+  const [showMpesaModal, setShowMpesaModal] = useState(false);
+  const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
+  const [mpesaCodeInput, setMpesaCodeInput] = useState('');
+  const [mpesaError, setMpesaError] = useState('');
+  const [ticketSearch, setTicketSearch] = useState('');
+  const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [activeSubView, setActiveSubView] = useState<'pending' | 'ready' | 'served' | null>(null);
+
+  const toggleOrder = (id: string) => setExpandedOrders(prev => ({ ...prev, [id]: !prev[id] }));
+  const toggleSection = (sec: string) => setCollapsedSections(prev => ({ ...prev, [sec]: !prev[sec] }));
+
+  // 1. Pending / In Prep (anything before READY)
+  const pendingOrders = sales.filter(s => 
+    (s.status === 'PENDING_PAYMENT' || s.status === 'PREPARING') && 
+    (ticketSearch === '' || s.ticketNumber?.toString().includes(ticketSearch)) &&
+    s.ticketNumber !== 1
+  ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  // 2. Ready for Pickup (status === 'READY')
+  const readyOrders = sales.filter(s => 
+    s.status === 'READY' && 
+    (ticketSearch === '' || s.ticketNumber?.toString().includes(ticketSearch)) &&
+    s.ticketNumber !== 1
+  ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  // 3. Served (Waiters have them, waiting for payment)
+  const servedOrders = sales.filter(s => s.status === 'SERVED' && s.ticketNumber !== 1);
+
+  // 4. Recently Completed Today
+  const completedOrders = sales.filter(s => s.status === 'COMPLETED').slice(0, 10);
+
+  const handleVerifyCash = async (saleId: string) => {
+    await onVerifyPayment(saleId, 'Cash');
+  };
+
+  const handleStartMpesaVerify = (saleId: string) => {
+    setSelectedSaleId(saleId);
+    setMpesaCodeInput('');
+    setMpesaError('');
+    setShowMpesaModal(true);
+  };
+
+  const handleConfirmMpesaVerify = async () => {
+    if (!selectedSaleId) return;
+    const code = mpesaCodeInput.trim().toUpperCase();
+    if (code.length < 8 || code.length > 12) {
+      setMpesaError("Code must be 8-12 characters");
+      return;
+    }
+    await onVerifyPayment(selectedSaleId, 'Mpesa', code);
+    setShowMpesaModal(false);
+    setSelectedSaleId(null);
+  };
 
   return (
     <div className="flex h-full flex-col gap-6 pb-20 lg:pb-0 overflow-hidden relative">

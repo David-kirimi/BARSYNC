@@ -108,6 +108,7 @@ const POS: React.FC<POSProps> = ({
   const [newTabName, setNewTabName] = useState('');
   const [isOpeningTab, setIsOpeningTab] = useState(false);
   const [selectedTabId, setSelectedTabId] = useState<string | null>(null);
+  const [showTabDetail, setShowTabDetail] = useState(false);
   const [isSettling, setIsSettling] = useState(false);
   const [lastScannedId, setLastScannedId] = useState<string | null>(null);
   const [lastScanError, setLastScanError] = useState(false);
@@ -452,7 +453,11 @@ const POS: React.FC<POSProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-64 lg:pb-0">
               {tabs.map(tab => (
-                <div key={tab.id} className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all p-8 flex flex-col group relative overflow-hidden">
+                <div 
+                  key={tab.id} 
+                  onClick={() => { setSelectedTabId(tab.id); setShowTabDetail(true); }}
+                  className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all p-8 flex flex-col group relative overflow-hidden cursor-pointer active:scale-[0.98]"
+                >
                   <div className="absolute top-0 left-0 w-2 h-full bg-orange-400 group-hover:w-4 transition-all"></div>
                   <div className="flex justify-between items-start mb-6">
                     <div>
@@ -462,7 +467,7 @@ const POS: React.FC<POSProps> = ({
                     <span className="text-[9px] font-black bg-orange-50 text-orange-600 px-3 py-1 rounded-full border border-orange-100 uppercase tracking-widest">Open</span>
                   </div>
 
-                  <div className="flex-1 space-y-3 mb-8 max-h-48 overflow-y-auto no-scrollbar border-y border-slate-50 py-4">
+                  <div className="flex-1 space-y-3 mb-8 max-h-48 overflow-y-auto no-scrollbar border-y border-slate-50 py-4" onClick={(e) => e.stopPropagation()}>
                     {tab.items.map((i: any, idx: number) => (
                       <div key={idx} className="flex justify-between items-center bg-slate-50 p-2 rounded-xl">
                         <div className="flex-1 min-w-0">
@@ -489,14 +494,14 @@ const POS: React.FC<POSProps> = ({
 
                   {cart.length > 0 && (
                     <button
-                      onClick={() => handleAddToTab(tab.id)}
+                      onClick={(e) => { e.stopPropagation(); handleAddToTab(tab.id); }}
                       className="w-full mb-3 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-3"
                     >
                       <i className="fa-solid fa-cart-arrow-down"></i> Add Items from Terminal
                     </button>
                   )}
 
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-2" onClick={(e) => e.stopPropagation()}>
                     <button onClick={() => { handleSettleTab(tab.id, 'Cash'); }} className="py-3 bg-slate-100 text-slate-600 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-200 active:scale-95">Cash</button>
                     <button onClick={() => { handleSettleTab(tab.id, 'Mpesa'); }} className="py-3 bg-emerald-50 text-emerald-600 rounded-xl font-black text-[9px] uppercase tracking-widest border border-emerald-100 hover:bg-emerald-100 active:scale-95">M-Pesa</button>
                     <button onClick={() => { if (confirm("Cancel this tab and restore items to stock?")) onCancelTab(tab.id); }} className="py-3 bg-rose-50 text-rose-500 rounded-xl font-black text-[9px] uppercase tracking-widest border border-rose-100 hover:bg-rose-100 active:scale-95">Void</button>
@@ -700,17 +705,35 @@ const POS: React.FC<POSProps> = ({
                 <button 
                   disabled={cart.length === 0} 
                   onClick={() => handleCheckout('Pending')} 
-                  className="w-full py-5 bg-orange-600 text-white rounded-[2rem] font-black text-[14px] uppercase tracking-[0.2em] border border-orange-500 hover:bg-orange-500 shadow-2xl shadow-orange-900/40 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 animate-pulse"
+                  className="w-full py-5 bg-orange-600 text-white rounded-[2rem] font-black text-[16px] uppercase tracking-[0.2em] border border-orange-500 hover:bg-orange-500 shadow-2xl shadow-orange-900/40 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 animate-pulse"
                 >
                   Send to Counter <i className="fa-solid fa-paper-plane"></i>
                 </button>
               </div>
             ) : (
-              <>
-                <button disabled={cart.length === 0} onClick={() => handleCheckout('Cash')} className="py-4 bg-slate-800 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest border border-slate-700 hover:bg-slate-700 transition-all active:scale-95 disabled:opacity-50">Cash</button>
-                <button disabled={cart.length === 0} onClick={() => handleCheckout('Mpesa')} className="py-4 bg-emerald-600 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-emerald-500 shadow-xl shadow-emerald-900/40 transition-all active:scale-95 disabled:opacity-50">M-Pesa</button>
-                <button disabled={cart.length === 0} onClick={() => handleCheckout('Card')} className="col-span-3 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-900/40 transition-all active:scale-95 disabled:opacity-50">Card</button>
-              </>
+              <div className="grid grid-cols-2 gap-3 w-full">
+                <button 
+                  disabled={cart.length === 0} 
+                  onClick={() => handleCheckout('Cash')} 
+                  className="py-5 bg-slate-800 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest border border-slate-700 hover:bg-slate-700 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <i className="fa-solid fa-money-bills"></i> Cash
+                </button>
+                <button 
+                  disabled={cart.length === 0} 
+                  onClick={() => handleCheckout('Mpesa')} 
+                  className="py-5 bg-emerald-600 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-emerald-500 shadow-xl shadow-emerald-900/40 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <i className="fa-solid fa-mobile-screen"></i> M-Pesa
+                </button>
+                <button 
+                  disabled={cart.length === 0} 
+                  onClick={() => handleCheckout('Card')} 
+                  className="col-span-2 py-5 bg-indigo-600 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-900/40 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <i className="fa-solid fa-credit-card"></i> Card
+                </button>
+              </div>
             )}
 
             {/* Add to Tab Mechanism */}
@@ -937,33 +960,33 @@ const POS: React.FC<POSProps> = ({
                       <button
                         disabled={cart.length === 0}
                         onClick={() => { handleCheckout('Pending'); setMobileCartExpanded(false); }}
-                        className="w-full py-5 bg-orange-600 rounded-2xl font-black text-[14px] uppercase tracking-widest shadow-xl shadow-orange-900/40 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-3 animate-pulse"
+                        className="w-full py-6 bg-orange-600 rounded-2xl font-black text-[16px] uppercase tracking-widest shadow-xl shadow-orange-900/40 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-3 animate-pulse"
                       >
                         Send to Counter <i className="fa-solid fa-paper-plane"></i>
                       </button>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                        <button
                         disabled={cart.length === 0}
                         onClick={() => { handleCheckout('Cash'); setMobileCartExpanded(false); }}
-                        className="py-4 bg-slate-800 rounded-xl font-black text-[10px] uppercase tracking-widest border border-slate-700 active:scale-95 disabled:opacity-50 transition-all"
+                        className="py-5 bg-slate-800 rounded-2xl font-black text-[12px] uppercase tracking-widest border border-slate-700 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg"
                       >
-                        Cash
+                        <i className="fa-solid fa-money-bills"></i> Cash
                       </button>
                       <button
                         disabled={cart.length === 0}
                         onClick={() => { handleCheckout('Mpesa'); setMobileCartExpanded(false); }}
-                        className="py-4 bg-emerald-600 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-900/40 active:scale-95 disabled:opacity-50 transition-all"
+                        className="py-5 bg-emerald-600 rounded-2xl font-black text-[12px] uppercase tracking-widest shadow-xl shadow-emerald-900/40 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                       >
-                        M-Pesa
+                        <i className="fa-solid fa-mobile-screen"></i> M-Pesa
                       </button>
                       <button
                         disabled={cart.length === 0}
                         onClick={() => { handleCheckout('Card'); setMobileCartExpanded(false); }}
-                        className="col-span-2 py-4 bg-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-indigo-900/40 active:scale-95 disabled:opacity-50 transition-all"
+                        className="col-span-2 py-5 bg-indigo-600 rounded-2xl font-black text-[12px] uppercase tracking-widest shadow-xl shadow-indigo-900/40 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                       >
-                        Card
+                        <i className="fa-solid fa-credit-card"></i> Card
                       </button>
                     </div>
                   )}
@@ -988,6 +1011,113 @@ const POS: React.FC<POSProps> = ({
           </div>
         )}
       </div>
+
+      {/* Tab Detail Modal */}
+      {showTabDetail && selectedTabId && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-[150] flex items-center justify-center p-4">
+          {(() => {
+            const tab = tabs.find(t => t.id === selectedTabId);
+            if (!tab) return null;
+            return (
+              <div className="bg-white rounded-[4rem] w-full max-w-2xl p-10 lg:p-14 shadow-2xl relative animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
+                <div className="absolute top-0 left-0 w-full h-4 bg-orange-400"></div>
+                
+                <div className="flex justify-between items-start mb-10">
+                  <div className="min-w-0">
+                    <h3 className="text-4xl font-black text-slate-800 uppercase tracking-tighter mb-2 truncate">{tab.customerName}</h3>
+                    <div className="flex items-center gap-3">
+                      <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Served By: {tab.servedBy}</p>
+                      <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
+                      <p className="text-[11px] font-black text-indigo-500 uppercase tracking-widest">{tab.items.length} Items</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setShowTabDetail(false)}
+                    className="w-14 h-14 bg-slate-100 rounded-3xl flex items-center justify-center text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition-all active:scale-90"
+                  >
+                    <i className="fa-solid fa-xmark text-2xl"></i>
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto space-y-4 pr-2 mb-10 no-scrollbar">
+                  {tab.items.map((i: any, idx: number) => (
+                    <div key={idx} className="flex justify-between items-center bg-slate-50 p-6 rounded-[2rem] border border-slate-100 hover:shadow-md transition-all">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm lg:text-md font-black text-slate-800 uppercase block truncate mb-1">{i.name}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tighter">Unit: Ksh {i.price}</span>
+                          <span className="px-2 py-0.5 bg-indigo-50 text-indigo-500 rounded-lg text-[10px] font-black uppercase tracking-widest">Current: {i.quantity}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-8">
+                        <div className="flex items-center gap-4 bg-white p-2 rounded-2xl shadow-inner border border-slate-200">
+                          <button onClick={() => onUpdateTabQuantity(tab.id, i.id, -1)} className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-rose-500 transition-all active:scale-90">
+                            <i className="fa-solid fa-minus"></i>
+                          </button>
+                          <span className="text-lg font-black w-8 text-center text-slate-900">{i.quantity}</span>
+                          <button onClick={() => onUpdateTabQuantity(tab.id, i.id, 1)} className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-indigo-600 transition-all active:scale-90">
+                            <i className="fa-solid fa-plus"></i>
+                          </button>
+                        </div>
+                        <div className="text-right min-w-[100px]">
+                           <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-1">Subtotal</span>
+                           <span className="text-xl font-black text-slate-900 tracking-tighter">Ksh {(i.price * i.quantity).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {tab.items.length === 0 && (
+                    <div className="text-center py-20 bg-slate-50 rounded-[3rem] border border-dashed border-slate-200">
+                       <i className="fa-solid fa-cart-shopping text-4xl text-slate-200 mb-4"></i>
+                       <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">No items assigned yet</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-slate-950 p-10 rounded-[3rem] text-white">
+                   <div className="flex justify-between items-center mb-10">
+                      <div>
+                        <p className="text-[11px] font-black text-orange-500 uppercase tracking-[0.3em] mb-2">Total Outstanding</p>
+                        <p className="text-5xl font-black tracking-tighter">Ksh {tab.totalAmount.toLocaleString()}</p>
+                      </div>
+                      <div className="text-right">
+                         {cart.length > 0 && (
+                           <button 
+                            onClick={() => { handleAddToTab(tab.id); setShowTabDetail(false); }}
+                            className="px-6 py-4 bg-indigo-600 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-500 active:scale-95 transition-all flex items-center gap-3 shadow-xl shadow-indigo-900/40"
+                           >
+                            <i className="fa-solid fa-cart-plus"></i> Add Terminal Items
+                           </button>
+                         )}
+                      </div>
+                   </div>
+
+                   <div className="grid grid-cols-3 gap-4">
+                      <button 
+                        onClick={() => { handleSettleTab(tab.id, 'Cash'); setShowTabDetail(false); }}
+                        className="py-5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-2xl font-black text-[12px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-3"
+                      >
+                         <i className="fa-solid fa-money-bill-1-wave"></i> Cash Settlement
+                      </button>
+                      <button 
+                        onClick={() => { handleSettleTab(tab.id, 'Mpesa'); setShowTabDetail(false); }}
+                        className="py-5 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-black text-[12px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl shadow-emerald-950/50"
+                      >
+                         <i className="fa-solid fa-mobile-screen-button"></i> M-Pesa Code
+                      </button>
+                      <button 
+                        onClick={() => { if (confirm("Cancel session?")) { onCancelTab(tab.id); setShowTabDetail(false); } }}
+                        className="py-5 bg-rose-600/20 text-rose-400 border border-rose-600/30 rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-rose-600/30 transition-all active:scale-95 flex items-center justify-center gap-3"
+                      >
+                         <i className="fa-solid fa-trash-can"></i> Void Tab
+                      </button>
+                   </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {/* Open Tab Modal */}
       {showOpenTabModal && (

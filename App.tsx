@@ -706,12 +706,16 @@ const AppContent: React.FC = () => {
     // Clear Persistent Session
     Cookies.remove('barsync_user');
     Cookies.remove('barsync_business');
+    Cookies.remove('barsync_view');
+    Cookies.remove('barsync_cart');
   };
 
   /* -------------------- AUTO-LOGIN -------------------- */
   useEffect(() => {
     const savedUser = Cookies.get('barsync_user');
     const savedBiz = Cookies.get('barsync_business');
+    const savedView = Cookies.get('barsync_view');
+    const savedCart = Cookies.get('barsync_cart');
 
     if (savedUser && savedBiz) {
       try {
@@ -721,27 +725,55 @@ const AppContent: React.FC = () => {
         setCurrentUser(user);
         setBusiness(business);
         
-        if (user.role === Role.SUPER_ADMIN) {
-          setView('SUPER_ADMIN_PORTAL');
-        } else if (user.role === Role.CASHIER) {
-          setView('COUNTER_DASHBOARD');
-        } else if (user.role === Role.SUPERVISOR) {
-          setView('SUPERVISOR_PORTAL');
+        // Restore View
+        if (savedView) {
+          setView(savedView as View);
         } else {
-          setView('POS');
+          if (user.role === Role.SUPER_ADMIN) {
+            setView('SUPER_ADMIN_PORTAL');
+          } else if (user.role === Role.CASHIER) {
+            setView('COUNTER_DASHBOARD');
+          } else if (user.role === Role.SUPERVISOR) {
+            setView('SUPERVISOR_PORTAL');
+          } else {
+            setView('POS');
+          }
+        }
+
+        // Restore Cart
+        if (savedCart) {
+          try {
+            setCart(JSON.parse(savedCart));
+          } catch (e) {
+            console.error("Cart restore failed", e);
+          }
         }
         
         // Fetch fresh state and active shift
         fetchState(user.businessId || 'admin_node');
-        // Toast is shown inside fetchState or handled here
-        // addToast(`Welcome back, ${user.name}`, "success");
       } catch (e) {
         console.error("Session restore failed", e);
         Cookies.remove('barsync_user');
         Cookies.remove('barsync_business');
+        Cookies.remove('barsync_view');
+        Cookies.remove('barsync_cart');
       }
     }
   }, []);
+
+  // Save View Changes
+  useEffect(() => {
+    if (currentUser && view !== 'LOGIN') {
+      Cookies.set('barsync_view', view, { expires: 30 });
+    }
+  }, [view, currentUser]);
+
+  // Save Cart Changes
+  useEffect(() => {
+    if (currentUser) {
+      Cookies.set('barsync_cart', JSON.stringify(cart), { expires: 30 });
+    }
+  }, [cart, currentUser]);
 
   const handleUpdateUser = async (updatedUser: User) => {
     try {

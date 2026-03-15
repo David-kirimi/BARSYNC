@@ -48,4 +48,25 @@ router.post('/', async (req, res) => {
     }
 });
 
+// Update (close) a shift — persists totals, closingStock, status etc.
+router.put('/', async (req, res) => {
+    const { businessId, shift } = req.body;
+    if (!businessId || !shift) return res.status(400).json({ error: "Missing data" });
+
+    const db = await connectToMongo();
+    if (!db) return res.status(503).json({ error: "Database offline" });
+
+    try {
+        await db.collection('shifts').updateOne(
+            { businessId, id: shift.id },
+            { $set: shift },
+            { upsert: true }
+        );
+        res.json({ success: true });
+    } catch (err) {
+        console.error("Shift Update Error:", err.message);
+        res.status(500).json({ error: 'Update failed' });
+    }
+});
+
 export default router;

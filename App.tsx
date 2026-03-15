@@ -506,7 +506,7 @@ const AppContent: React.FC = () => {
 
     try {
       await fetch('/api/shifts', {
-        method: 'PUT',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ businessId: currentUser.businessId, shift: closedShift })
       });

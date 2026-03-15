@@ -1,23 +1,51 @@
 import React, { useMemo } from 'react';
-import { Sale, StaffLog, Role } from '../types';
+import { Sale, StaffLog, Role, User } from '../types';
 
 interface SupervisorPortalProps {
   sales: Sale[];
   staffLogs: StaffLog[];
   businessName: string;
   onUpdateRole: (userId: string, newRole: Role) => void;
+  users?: User[];
 }
 
-const SupervisorPortal: React.FC<SupervisorPortalProps> = ({ sales, staffLogs, businessName, onUpdateRole }) => {
+const SupervisorPortal: React.FC<SupervisorPortalProps> = ({ sales, staffLogs, businessName, onUpdateRole, users = [] }) => {
   // 1. Staff Sign in/out Log
   const sortedLogs = useMemo(() => {
     return [...staffLogs].sort((a, b) => new Date(b.signInTime).getTime() - new Date(a.signInTime).getTime());
   }, [staffLogs]);
 
   // 2. Active Staff (Waiters, Cashiers, etc)
+  // Primary: use staffLogs entries for today that have no signOut
+  // Fallback: if there are no in-session logs at all (e.g. page refresh),
+  //           derive from the users list so the count is never wrongly 0.
   const activeStaff = useMemo(() => {
-    return staffLogs.filter(log => !log.signOutTime);
-  }, [staffLogs]);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const logsToday = staffLogs.filter(
+      log => new Date(log.signInTime) >= todayStart
+    );
+
+    // If there are log entries for today, filter the active (unsigned-out) ones
+    if (logsToday.length > 0) {
+      return logsToday.filter(log => !log.signOutTime);
+    }
+
+    // Fallback: page was refreshed — show all active users from the users state
+    // as synthetic log-like objects so the rest of the UI still renders properly
+    return users
+      .filter(u => u.status === 'Active' && u.role !== Role.SUPER_ADMIN)
+      .map(u => ({
+        id: u.id,
+        businessId: u.businessId || '',
+        userId: u.id,
+        userName: u.name,
+        role: u.role,
+        signInTime: new Date().toISOString(),
+        signOutTime: undefined,
+      } as StaffLog));
+  }, [staffLogs, users]);
 
   // 3. Quick Stats (Today's figures)
   const todayStats = useMemo(() => {

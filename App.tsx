@@ -1129,7 +1129,7 @@ const AppContent: React.FC = () => {
               )}
 
               {view === 'SHIFT_HISTORY' && (
-                <ShiftHistory shifts={shifts} />
+                <ShiftHistory shifts={shifts} businessName={business?.name} />
               )}
 
               {view === 'COUNTER_DASHBOARD' && (
@@ -1207,6 +1207,7 @@ const AppContent: React.FC = () => {
                   staffLogs={staffLogs} 
                   businessName={business?.name || 'BarSync'} 
                   onUpdateRole={handleUpdateUserRole}
+                  users={users}
                 />
               )}
 

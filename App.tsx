@@ -1129,7 +1129,7 @@ const AppContent: React.FC = () => {
               )}
 
               {view === 'SHIFT_HISTORY' && (
-                <ShiftHistory shifts={shifts} businessName={business?.name} />
+                <ShiftHistory shifts={shifts} sales={sales} businessName={business?.name} />
               )}
 
               {view === 'COUNTER_DASHBOARD' && (

@@ -15,37 +15,11 @@ const SupervisorPortal: React.FC<SupervisorPortalProps> = ({ sales, staffLogs, b
     return [...staffLogs].sort((a, b) => new Date(b.signInTime).getTime() - new Date(a.signInTime).getTime());
   }, [staffLogs]);
 
-  // 2. Active Staff (Waiters, Cashiers, etc)
-  // Primary: use staffLogs entries for today that have no signOut
-  // Fallback: if there are no in-session logs at all (e.g. page refresh),
-  //           derive from the users list so the count is never wrongly 0.
+  // 2. Active Staff: staff who have a log entry with no sign-out time
+  // This is the accurate count — only people who are genuinely signed in.
   const activeStaff = useMemo(() => {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-
-    const logsToday = staffLogs.filter(
-      log => new Date(log.signInTime) >= todayStart
-    );
-
-    // If there are log entries for today, filter the active (unsigned-out) ones
-    if (logsToday.length > 0) {
-      return logsToday.filter(log => !log.signOutTime);
-    }
-
-    // Fallback: page was refreshed — show all active users from the users state
-    // as synthetic log-like objects so the rest of the UI still renders properly
-    return users
-      .filter(u => u.status === 'Active' && u.role !== Role.SUPER_ADMIN)
-      .map(u => ({
-        id: u.id,
-        businessId: u.businessId || '',
-        userId: u.id,
-        userName: u.name,
-        role: u.role,
-        signInTime: new Date().toISOString(),
-        signOutTime: undefined,
-      } as StaffLog));
-  }, [staffLogs, users]);
+    return staffLogs.filter(log => !log.signOutTime);
+  }, [staffLogs]);
 
   // 3. Quick Stats (Today's figures)
   const todayStats = useMemo(() => {

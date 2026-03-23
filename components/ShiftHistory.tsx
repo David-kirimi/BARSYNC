@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Shift, StockSnapshot } from '../types';
+import { Sale, Shift, StockSnapshot } from '../types';
 import { generateShiftPDF } from '../lib/shiftPDF';
 
 interface ShiftHistoryProps {
   shifts: Shift[];
+  sales: Sale[];
   businessName?: string;
 }
 
-const ShiftHistory: React.FC<ShiftHistoryProps> = ({ shifts, businessName = 'BarSync' }) => {
+const ShiftHistory: React.FC<ShiftHistoryProps> = ({ shifts, sales, businessName = 'BarSync' }) => {
   const [selectedShiftId, setSelectedShiftId] = useState<string | null>(null);
 
   const selectedShift = shifts.find(s => s.id === selectedShiftId);
@@ -216,7 +217,7 @@ const ShiftHistory: React.FC<ShiftHistoryProps> = ({ shifts, businessName = 'Bar
 
                   <div className="pt-10 flex gap-4">
                      <button
-                        onClick={() => generateShiftPDF(selectedShift, businessName)}
+                        onClick={() => generateShiftPDF(selectedShift, businessName, sales.filter(s => s.shiftId === selectedShift.id))}
                         className="flex-1 py-5 bg-slate-900 text-white rounded-[2rem] font-black text-xs uppercase tracking-widest hover:bg-slate-800 active:scale-95 shadow-2xl shadow-slate-200 transition-all"
                      >
                         <i className="fa-solid fa-print mr-3"></i> Print Shift Report

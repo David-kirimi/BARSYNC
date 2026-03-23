@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Shift } from '../types';
+import { Sale, Shift } from '../types';
 
 const formatDateTime = (dateStr: string) => {
     return new Date(dateStr).toLocaleString('en-KE', {
@@ -13,7 +13,7 @@ const formatDateTime = (dateStr: string) => {
     });
 };
 
-export const generateShiftPDF = (shift: Shift, businessName: string = 'BarSync') => {
+export const generateShiftPDF = (shift: Shift, businessName: string = 'BarSync', shiftSales: Sale[] = []) => {
     const doc = new jsPDF();
     const primaryColor: [number, number, number] = [15, 23, 42]; // slate-900
     const accentColor: [number, number, number] = [99, 102, 241]; // indigo-500
@@ -99,8 +99,62 @@ export const generateShiftPDF = (shift: Shift, businessName: string = 'BarSync')
         margin: { left: 20, right: 20 },
     });
 
+    // ── TRANSACTION LOG ──────────────────────────────────────────────────
+    const txY = (doc as any).lastAutoTable.finalY + 10;
+    doc.setFontSize(7.5);
+    doc.setTextColor(...accentColor);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TRANSACTION LOG', 20, txY);
+
+    const completedSales = shiftSales.filter(s => s.status !== 'CANCELLED');
+
+    if (completedSales.length > 0) {
+        const txRows = completedSales.map((s) => [
+            s.ticketNumber ? `#${s.ticketNumber}` : '--',
+            new Date(s.date).toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' }),
+            s.items.map(i => `${i.name} x${i.quantity}`).join(', '),
+            s.salesPerson,
+            s.paymentMethod,
+            `Ksh ${s.totalAmount.toLocaleString()}`,
+        ]);
+
+        autoTable(doc, {
+            startY: txY + 4,
+            head: [['Ticket', 'Time', 'Items', 'Staff', 'Method', 'Amount']],
+            body: txRows,
+            theme: 'striped',
+            headStyles: {
+                fillColor: accentColor,
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+                fontSize: 7.5,
+            },
+            styles: {
+                font: 'helvetica',
+                fontSize: 7.5,
+                cellPadding: 3,
+                textColor: [30, 41, 59],
+                overflow: 'linebreak',
+            },
+            columnStyles: {
+                0: { cellWidth: 14 },
+                1: { cellWidth: 16 },
+                2: { cellWidth: 60 },
+                3: { cellWidth: 28 },
+                4: { cellWidth: 20 },
+                5: { halign: 'right', fontStyle: 'bold', cellWidth: 28 },
+            },
+            margin: { left: 20, right: 20 },
+        });
+    } else {
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(9);
+        doc.setTextColor(...mutedColor);
+        doc.text('No transactions recorded for this shift.', 20, txY + 10);
+    }
+
     // ── STOCK MOVEMENT TABLE ─────────────────────────────────────────────
-    const stockY = (doc as any).lastAutoTable.finalY + 10;
+    const stockY = (doc as any).lastAutoTable?.finalY + 10 || txY + 20;
     doc.setFontSize(7.5);
     doc.setTextColor(...accentColor);
     doc.setFont('helvetica', 'bold');

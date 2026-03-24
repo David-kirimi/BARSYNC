@@ -175,24 +175,41 @@ const ShiftHistory: React.FC<ShiftHistoryProps> = ({ shifts, sales, businessName
                           </tr>
                         </thead>
                         <tbody className="text-xs">
-                          {selectedShift.openingStockSnapshot.map(open => {
-                            const close = selectedShift.closingStockSnapshot?.find(c => c.productId === open.productId);
-                            const soldQuantity = 0; // In a real app, calculate from sales
-                            const expected = open.quantity - soldQuantity;
-                            const variance = close ? close.quantity - expected : 0;
+                          {(() => {
+                            const currentShiftSales = sales.filter(s => {
+                              if (s.shiftId === selectedShift.id) return true;
+                              const saleDate = new Date(s.date).getTime();
+                              const shiftStart = new Date(selectedShift.startTime).getTime();
+                              const shiftEnd = selectedShift.endTime ? new Date(selectedShift.endTime).getTime() : new Date().getTime();
+                              return !s.shiftId && saleDate >= shiftStart && saleDate <= shiftEnd;
+                            });
 
-                            return (
+                            return selectedShift.openingStockSnapshot.map(open => {
+                              const close = selectedShift.closingStockSnapshot?.find(c => c.productId === open.productId);
+                              
+                              const soldQuantity = currentShiftSales
+                                .filter(s => s.status !== 'CANCELLED')
+                                .reduce((total, sale) => {
+                                  const item = sale.items.find(i => i.id === open.productId);
+                                  return total + (item ? item.quantity : 0);
+                                }, 0);
+                                
+                              const expected = open.quantity - soldQuantity;
+                              const variance = close ? close.quantity - expected : 0;
+
+                              return (
                               <tr key={open.productId} className="bg-slate-50 rounded-2xl group hover:bg-slate-100 transition-all">
                                 <td className="px-6 py-5 font-black text-slate-700 uppercase rounded-l-2xl">{open.productName}</td>
                                 <td className="px-6 py-5 font-black text-slate-600">{open.quantity}</td>
                                 <td className="px-6 py-5 font-black text-center text-slate-600">{close?.quantity || '--'}</td>
-                                <td className="px-6 py-5 font-black text-center text-indigo-500">{open.quantity - (close?.quantity || open.quantity)}</td>
+                                <td className="px-6 py-5 font-black text-center text-indigo-500">{soldQuantity}</td>
                                 <td className={`px-6 py-5 font-black text-right rounded-r-2xl ${variance < 0 ? 'text-rose-500' : variance > 0 ? 'text-emerald-500' : 'text-slate-400'}`}>
                                   {variance === 0 ? 'Verified' : variance > 0 ? `+${variance}` : variance}
                                 </td>
                               </tr>
                             );
-                          })}
+                          });
+                        })()}
                         </tbody>
                       </table>
                     </div>
@@ -217,7 +234,16 @@ const ShiftHistory: React.FC<ShiftHistoryProps> = ({ shifts, sales, businessName
 
                   <div className="pt-10 flex gap-4">
                      <button
-                        onClick={() => generateShiftPDF(selectedShift, businessName, sales.filter(s => s.shiftId === selectedShift.id))}
+                        onClick={() => {
+                          const shiftSales = sales.filter(s => {
+                            if (s.shiftId === selectedShift.id) return true;
+                            const saleDate = new Date(s.date).getTime();
+                            const shiftStart = new Date(selectedShift.startTime).getTime();
+                            const shiftEnd = selectedShift.endTime ? new Date(selectedShift.endTime).getTime() : new Date().getTime();
+                            return !s.shiftId && saleDate >= shiftStart && saleDate <= shiftEnd;
+                          });
+                          generateShiftPDF(selectedShift, businessName, shiftSales);
+                        }}
                         className="flex-1 py-5 bg-slate-900 text-white rounded-[2rem] font-black text-xs uppercase tracking-widest hover:bg-slate-800 active:scale-95 shadow-2xl shadow-slate-200 transition-all"
                      >
                         <i className="fa-solid fa-print mr-3"></i> Print Shift Report

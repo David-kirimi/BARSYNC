@@ -100,7 +100,11 @@ export const generateShiftPDF = (shift: Shift, businessName: string = 'BarSync',
     });
 
     // ── TRANSACTION LOG ──────────────────────────────────────────────────
-    const txY = (doc as any).lastAutoTable.finalY + 10;
+    let txY = (doc as any).lastAutoTable.finalY + 10;
+    if (txY > doc.internal.pageSize.height - 20) {
+        doc.addPage();
+        txY = 20;
+    }
     doc.setFontSize(7.5);
     doc.setTextColor(...accentColor);
     doc.setFont('helvetica', 'bold');
@@ -154,7 +158,11 @@ export const generateShiftPDF = (shift: Shift, businessName: string = 'BarSync',
     }
 
     // ── STOCK MOVEMENT TABLE ─────────────────────────────────────────────
-    const stockY = (doc as any).lastAutoTable?.finalY + 10 || txY + 20;
+    let stockY = (doc as any).lastAutoTable?.finalY + 10 || txY + 20;
+    if (stockY > doc.internal.pageSize.height - 20) {
+        doc.addPage();
+        stockY = 20;
+    }
     doc.setFontSize(7.5);
     doc.setTextColor(...accentColor);
     doc.setFont('helvetica', 'bold');
@@ -162,7 +170,12 @@ export const generateShiftPDF = (shift: Shift, businessName: string = 'BarSync',
 
     const stockRows = shift.openingStockSnapshot.map((open) => {
         const close = shift.closingStockSnapshot?.find((c) => c.productId === open.productId);
-        const sold = open.quantity - (close?.quantity ?? open.quantity);
+        const sold = shiftSales
+            .filter((s) => s.status !== 'CANCELLED')
+            .reduce((total, sale) => {
+                const item = sale.items.find((i) => i.id === open.productId);
+                return total + (item ? item.quantity : 0);
+            }, 0);
         const expected = open.quantity - sold;
         const variance = close ? close.quantity - expected : 0;
         return [
@@ -209,7 +222,11 @@ export const generateShiftPDF = (shift: Shift, businessName: string = 'BarSync',
 
     // ── TRANSFERRED TABS ─────────────────────────────────────────────────
     if (shift.openTabsTransferred && shift.openTabsTransferred.length > 0) {
-        const tabY = (doc as any).lastAutoTable?.finalY + 10 || stockY + 20;
+        let tabY = (doc as any).lastAutoTable?.finalY + 10 || stockY + 20;
+        if (tabY > doc.internal.pageSize.height - 20) {
+            doc.addPage();
+            tabY = 20;
+        }
         doc.setFontSize(7.5);
         doc.setTextColor(...accentColor);
         doc.setFont('helvetica', 'bold');

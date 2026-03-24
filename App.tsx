@@ -45,7 +45,14 @@ const AppContent: React.FC = () => {
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [currentShift, setCurrentShift] = useState<Shift | null>(null);
-  const [staffLogs, setStaffLogs] = useState<StaffLog[]>([]);
+  const [staffLogs, setStaffLogs] = useState<StaffLog[]>(() => {
+    try { const saved = localStorage.getItem('barsync_staffLogs'); return saved ? JSON.parse(saved) : []; } catch { return []; }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('barsync_staffLogs', JSON.stringify(staffLogs));
+  }, [staffLogs]);
+
   const [users, setUsers] = useState<User[]>([]);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);

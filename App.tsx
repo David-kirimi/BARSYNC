@@ -1171,6 +1171,7 @@ const AppContent: React.FC = () => {
 
               {view === 'COUNTER_DASHBOARD' && (
                 <CounterDashboard
+                  currentShift={currentShift}
                   sales={sales}
                   staffLogs={staffLogs}
                   onVerifyPayment={async (saleId, method, code) => {
@@ -1233,6 +1234,7 @@ const AppContent: React.FC = () => {
 
               {view === 'KITCHEN_DISPLAY' && (
                 <BarKitchenDisplay 
+                  currentShift={currentShift}
                   sales={sales}
                   onUpdateStatus={handleUpdateOrderStatus}
                 />

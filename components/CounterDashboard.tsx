@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sale, StaffLog, Role } from '../types';
+import { Sale, StaffLog, Role, Shift } from '../types';
 
 interface CounterDashboardProps {
+  currentShift: Shift | null;
   sales: Sale[];
   staffLogs: StaffLog[];
   onVerifyPayment: (saleId: string, method: 'Cash' | 'Mpesa', mpesaCode?: string) => Promise<void>;
@@ -164,7 +165,7 @@ const OrderItem: React.FC<{
 };
 
 const CounterDashboard: React.FC<CounterDashboardProps> = ({ 
-  sales, staffLogs, onVerifyPayment, onUpdateStatus, onCancelOrder, onSwitchView 
+  currentShift, sales, staffLogs, onVerifyPayment, onUpdateStatus, onCancelOrder, onSwitchView 
 }) => {
   const [showMpesaModal, setShowMpesaModal] = useState(false);
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
@@ -435,7 +436,6 @@ const CounterDashboard: React.FC<CounterDashboardProps> = ({
         </div>
       </div>
 
-      {/* M-Pesa Modal stays the same */}
       {showMpesaModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-[160] flex items-center justify-center p-4">
           <div className="bg-white rounded-[3.5rem] w-full max-w-sm p-10 shadow-2xl relative">
@@ -454,6 +454,24 @@ const CounterDashboard: React.FC<CounterDashboardProps> = ({
               <button onClick={handleConfirmMpesaVerify} className="py-4 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase">Verify</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {!currentShift && (
+        <div className="absolute inset-0 z-50 bg-white/80 backdrop-blur-3xl flex flex-col items-center justify-center p-8 text-center rounded-[3rem]">
+          <div className="w-24 h-24 bg-rose-50 rounded-full flex items-center justify-center mb-6 border-4 border-white shadow-xl">
+            <i className="fa-solid fa-lock text-3xl text-rose-500"></i>
+          </div>
+          <h2 className="text-3xl lg:text-5xl font-black text-slate-800 tracking-tighter uppercase mb-4">No Active Shift</h2>
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest max-w-sm mb-8">
+            Please start a shift on the Terminal before processing orders safely.
+          </p>
+          <button 
+            onClick={() => onSwitchView('POS')}
+            className="px-10 py-5 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 active:scale-95 shadow-xl shadow-slate-200 transition-all"
+          >
+            <i className="fa-solid fa-arrow-right mr-3"></i> Go to Terminal
+          </button>
         </div>
       )}
     </div>

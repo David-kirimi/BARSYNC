@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sale, Role } from '../types';
+import { Sale, Role, Shift } from '../types';
 
 interface BarKitchenDisplayProps {
+  currentShift: Shift | null;
   sales: Sale[];
   onUpdateStatus: (saleId: string, status: Sale['status']) => void;
 }
@@ -133,7 +134,7 @@ const OrderCard: React.FC<{
   );
 };
 
-const BarKitchenDisplay: React.FC<BarKitchenDisplayProps> = ({ sales, onUpdateStatus }) => {
+const BarKitchenDisplay: React.FC<BarKitchenDisplayProps> = ({ currentShift, sales, onUpdateStatus }) => {
   // Filter for orders that need prep (PENDING_PAYMENT, PREPARING, READY)
   // Also filter out mock Ticket #1 to keep display clean
   const activeOrders = sales.filter(s => 
@@ -316,6 +317,18 @@ const BarKitchenDisplay: React.FC<BarKitchenDisplayProps> = ({ sales, onUpdateSt
           </motion.div>
         </div>
       </div>
+      {/* NO SHIFT OVERLAY */}
+      {!currentShift && (
+        <div className="absolute inset-0 z-50 bg-white/80 backdrop-blur-3xl flex flex-col items-center justify-center p-8 text-center rounded-[3rem]">
+          <div className="w-24 h-24 bg-rose-50 rounded-full flex items-center justify-center mb-6 border-4 border-white shadow-xl">
+            <i className="fa-solid fa-lock text-3xl text-rose-500"></i>
+          </div>
+          <h2 className="text-3xl lg:text-5xl font-black text-slate-800 tracking-tighter uppercase mb-4">No Active Shift</h2>
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest max-w-sm mb-8">
+            Please start a shift on the Terminal before processing orders.
+          </p>
+        </div>
+      )}
     </div>
   );
 };

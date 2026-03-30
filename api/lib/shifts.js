@@ -35,9 +35,11 @@ router.post('/', async (req, res) => {
     if (!db) return res.status(503).json({ error: "Database offline" });
 
     try {
+        const { _id, ...shiftData } = shift;
+
         await db.collection('shifts').updateOne(
             { businessId, id: shift.id },
-            { $set: shift },
+            { $set: shiftData },
             { upsert: true }
         );
         res.json({ success: true });
@@ -56,9 +58,11 @@ router.put('/', async (req, res) => {
     if (!db) return res.status(503).json({ error: "Database offline" });
 
     try {
+        const { _id, ...shiftData } = shift;
+
         await db.collection('shifts').updateOne(
             { businessId, id: shift.id },
-            { $set: shift },
+            { $set: shiftData },
             { upsert: true }
         );
         res.json({ success: true });

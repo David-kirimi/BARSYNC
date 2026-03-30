@@ -18,8 +18,7 @@ router.get('/', async (req, res) => {
         const shifts = await db.collection('shifts')
             .find(query)
             .sort({ startTime: -1 })
-            .limit(100)
-            .toArray();
+            .toArray(); // No limit — all shifts are permanent records
         res.json(shifts);
     } catch (err) {
         console.error("Shifts Fetch Error:", err.message);

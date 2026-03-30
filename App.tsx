@@ -510,17 +510,24 @@ const AppContent: React.FC = () => {
       status: 'CLOSED'
     };
 
-    setShifts(prev => prev.map(s => s.id === closedShift.id ? closedShift : s));
-    setCurrentShift(null);
-
+    // FIX: Only update local state AFTER the server confirms the close.
+    // Previously, setCurrentShift(null) was called before the fetch, creating a race
+    // condition where logging out immediately would leave the shift OPEN in MongoDB,
+    // causing it to be auto-restored on next login.
     try {
-      await fetch(`${BASE_URL}/api/shifts`, {
+      const res = await fetch(`${BASE_URL}/api/shifts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ businessId: currentUser.businessId, shift: closedShift })
       });
+      if (!res.ok) throw new Error('Server returned an error');
+      // Only clear the active shift locally once the DB has confirmed the CLOSED status
+      setShifts(prev => prev.map(s => s.id === closedShift.id ? closedShift : s));
+      setCurrentShift(null);
       addToast("Shift closed successfully", "success");
-    } catch (err) { addToast("Failed to sync shift close", "error"); }
+    } catch (err) {
+      addToast("Failed to close shift — please check your connection and try again.", "error");
+    }
   };
 
   const onCancelTab = async (tabId: string) => {
@@ -747,6 +754,15 @@ const AppContent: React.FC = () => {
   };
 
   const onLogout = () => {
+    // FIX: Block logout when a shift is still active.
+    // Without this guard, users could log out while the shift-close API call was still
+    // in-flight, leaving the shift as OPEN in MongoDB. On next login, fetchState would
+    // find the OPEN shift and restore it — appearing as if a new shift auto-started.
+    if (currentShift) {
+      addToast("Active shift detected. Please close your shift before logging out.", "warning");
+      return;
+    }
+
     if (currentUser?.role === Role.WAITER) {
       const hasPendingOrders = sales.some(s => s.status === 'PENDING_PAYMENT' && s.createdBy === currentUser.name);
       if (hasPendingOrders) {
@@ -764,6 +780,7 @@ const AppContent: React.FC = () => {
     }
 
     setCurrentUser(null);
+    setCurrentShift(null);
     setCart([]);
     setView('LOGIN');
     addToast("Logged out successfully", "success");

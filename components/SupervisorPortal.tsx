@@ -10,15 +10,17 @@ interface SupervisorPortalProps {
 }
 
 const SupervisorPortal: React.FC<SupervisorPortalProps> = ({ sales, staffLogs, businessName, onUpdateRole, users = [] }) => {
-  // 1. Staff Sign in/out Log
+  // 1. Staff Sign in/out Log (Filter out SUPER_ADMIN)
   const sortedLogs = useMemo(() => {
-    return [...staffLogs].sort((a, b) => new Date(b.signInTime).getTime() - new Date(a.signInTime).getTime());
+    return [...staffLogs]
+      .filter(log => log.role !== Role.SUPER_ADMIN)
+      .sort((a, b) => new Date(b.signInTime).getTime() - new Date(a.signInTime).getTime());
   }, [staffLogs]);
 
   // 2. Active Staff: staff who have a log entry with no sign-out time
   // This is the accurate count — only people who are genuinely signed in.
   const activeStaff = useMemo(() => {
-    return staffLogs.filter(log => !log.signOutTime);
+    return staffLogs.filter(log => !log.signOutTime && log.role !== Role.SUPER_ADMIN);
   }, [staffLogs]);
 
   // 3. Quick Stats (Today's figures)

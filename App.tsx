@@ -20,6 +20,7 @@ import ShiftHistory from './components/ShiftHistory';
 import CounterDashboard from './components/CounterDashboard';
 import SupervisorPortal from './components/SupervisorPortal';
 import BarKitchenDisplay from './components/BarKitchenDisplay';
+import UnifiedReports from './components/UnifiedReports';
 
 const now = () => new Date().toISOString();
 const BASE_URL = import.meta.env.VITE_API_URL || 'https://barsync-backend.onrender.com';
@@ -1117,6 +1118,17 @@ const AppContent: React.FC = () => {
                 />
               )}
 
+              {view === 'UNIFIED_REPORTS' && (
+                <UnifiedReports
+                  sales={sales}
+                  shifts={shifts}
+                  products={products}
+                  business={business}
+                  currentUser={currentUser}
+                />
+              )}
+
+              {/* Legacy fallbacks — keep SALES/SHIFT_HISTORY/ANALYTICS/REPORTS working if any saved cookie navigates to them */}
               {view === 'ANALYTICS' && (
                 <Dashboard sales={sales} products={products} business={business} />
               )}
@@ -1258,6 +1270,7 @@ const AppContent: React.FC = () => {
                   logo={business?.logo}
                 />
               )}
+
               {(view === 'PROFILE' || view === 'SETTINGS') && currentUser && (
                 <Profile
                   user={currentUser}

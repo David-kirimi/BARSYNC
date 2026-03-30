@@ -22,6 +22,7 @@ import SupervisorPortal from './components/SupervisorPortal';
 import BarKitchenDisplay from './components/BarKitchenDisplay';
 
 const now = () => new Date().toISOString();
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://barsync-backend.onrender.com';
 
 /* -------------------- MAIN APP CONTENT -------------------- */
 const AppContent: React.FC = () => {
@@ -118,11 +119,11 @@ const AppContent: React.FC = () => {
     setIsSyncing(true);
     try {
       const [pRes, sRes, uRes, lRes, tRes] = await Promise.all([
-        fetch(`/api/products?businessId=${bizId}`),
-        fetch(`/api/sales?businessId=${bizId}`),
-        fetch(`/api/users?businessId=${bizId}`),
-        fetch(`/api/auditLogs?businessId=${bizId}`),
-        fetch(`/api/tabs?businessId=${bizId}`)
+        fetch(`${BASE_URL}/api/products?businessId=${bizId}`),
+        fetch(`${BASE_URL}/api/sales?businessId=${bizId}`),
+        fetch(`${BASE_URL}/api/users?businessId=${bizId}`),
+        fetch(`${BASE_URL}/api/auditLogs?businessId=${bizId}`),
+        fetch(`${BASE_URL}/api/tabs?businessId=${bizId}`)
       ]);
 
       if (pRes.ok) setProducts(await pRes.json());
@@ -133,15 +134,15 @@ const AppContent: React.FC = () => {
 
       // If Super Admin, fetch all businesses for the portal
       if (currentUser?.role === Role.SUPER_ADMIN) {
-        const bRes = await fetch(`/api/users/admin/businesses`);
+        const bRes = await fetch(`${BASE_URL}/api/users/admin/businesses`);
         if (bRes.ok) setBusinesses(await bRes.json());
 
-        const allUsersRes = await fetch(`/api/auth/admin/users`);
+        const allUsersRes = await fetch(`${BASE_URL}/api/auth/admin/users`);
         if (allUsersRes.ok) setUsers(await allUsersRes.json());
       }
 
       // Restore Active Shift
-      const shRes = await fetch(`/api/shifts?businessId=${bizId}&status=OPEN`);
+      const shRes = await fetch(`${BASE_URL}/api/shifts?businessId=${bizId}&status=OPEN`);
       if (shRes.ok) {
         const activeShifts = await shRes.json();
         if (activeShifts.length > 0) {
@@ -150,7 +151,7 @@ const AppContent: React.FC = () => {
       }
 
       // Restore Shift History
-      const histRes = await fetch(`/api/shifts?businessId=${bizId}`);
+      const histRes = await fetch(`${BASE_URL}/api/shifts?businessId=${bizId}`);
       if (histRes.ok) {
         setShifts(await histRes.json());
       }
@@ -244,12 +245,12 @@ const AppContent: React.FC = () => {
     // Push to Cloud
     try {
       await Promise.all([
-        fetch('/api/sales', {
+        fetch(`${BASE_URL}/api/sales`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ businessId: currentUser.businessId, sale: newSale })
         }),
-        fetch('/api/products/sync', {
+        fetch(`${BASE_URL}/api/products/sync`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ businessId: currentUser.businessId, products: updatedProducts })
@@ -279,7 +280,7 @@ const AppContent: React.FC = () => {
     const updatedTabs = [...tabs, newTab];
     setTabs(updatedTabs);
     try {
-      await fetch('/api/tabs/sync', {
+      await fetch(`${BASE_URL}/api/tabs/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ businessId: currentUser.businessId, tabs: updatedTabs })
@@ -350,12 +351,12 @@ const AppContent: React.FC = () => {
 
     try {
       await Promise.all([
-        fetch('/api/tabs/sync', {
+        fetch(`${BASE_URL}/api/tabs/sync`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ businessId: currentUser.businessId, tabs: updatedTabs })
         }),
-        fetch('/api/products/sync', {
+        fetch(`${BASE_URL}/api/products/sync`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ businessId: currentUser.businessId, products: updatedProducts })
@@ -428,12 +429,12 @@ const AppContent: React.FC = () => {
 
     try {
       await Promise.all([
-        fetch('/api/sales', {
+        fetch(`${BASE_URL}/api/sales`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ businessId: currentUser.businessId, sale })
         }),
-        fetch('/api/tabs/sync', {
+        fetch(`${BASE_URL}/api/tabs/sync`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ businessId: currentUser.businessId, tabs: updatedTabs })
@@ -475,7 +476,7 @@ const AppContent: React.FC = () => {
     setShifts(prev => [newShift, ...prev]);
 
     try {
-      await fetch('/api/shifts', {
+      await fetch(`${BASE_URL}/api/shifts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ businessId: currentUser.businessId, shift: newShift })
@@ -512,7 +513,7 @@ const AppContent: React.FC = () => {
     setCurrentShift(null);
 
     try {
-      await fetch('/api/shifts', {
+      await fetch(`${BASE_URL}/api/shifts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ businessId: currentUser.businessId, shift: closedShift })
@@ -537,12 +538,12 @@ const AppContent: React.FC = () => {
 
     try {
       await Promise.all([
-        fetch('/api/tabs/sync', {
+        fetch(`${BASE_URL}/api/tabs/sync`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ businessId: currentUser.businessId, tabs: updatedTabs })
         }),
-        fetch('/api/products/sync', {
+        fetch(`${BASE_URL}/api/products/sync`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ businessId: currentUser.businessId, products: updatedProducts })
@@ -576,7 +577,7 @@ const AppContent: React.FC = () => {
     setSales(updatedSales);
     
     try {
-      await fetch('/api/sales/sync', {
+      await fetch(`${BASE_URL}/api/sales/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ businessId: currentUser.businessId, sales: updatedSales })
@@ -612,7 +613,7 @@ const AppContent: React.FC = () => {
     setProducts(newProducts);
 
     try {
-      await fetch('/api/products/sync', {
+      await fetch(`${BASE_URL}/api/products/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ businessId: currentUser?.businessId, products: newProducts })
@@ -634,7 +635,7 @@ const AppContent: React.FC = () => {
 
     setProducts(newProducts);
     try {
-      await fetch('/api/products/sync', {
+      await fetch(`${BASE_URL}/api/products/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ businessId: currentUser?.businessId, products: newProducts })
@@ -658,7 +659,7 @@ const AppContent: React.FC = () => {
     setProducts(newProducts);
 
     try {
-      await fetch('/api/products/sync', {
+      await fetch(`${BASE_URL}/api/products/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ businessId: currentUser?.businessId, products: newProducts })
@@ -678,36 +679,36 @@ const AppContent: React.FC = () => {
       try {
         const bid = currentUser?.businessId || business?.id || 'admin_node';
         if (bid !== 'local_biz' && bid !== 'loading') {
-          const res = await fetch(`/api/sales?businessId=${bid}`);
+          const res = await fetch(`${BASE_URL}/api/sales?businessId=${bid}`);
           if (res.ok) {
             const cloudSales = await res.json();
             setSales(cloudSales);
           }
 
-          const prodRes = await fetch(`/api/products?businessId=${bid}`);
+          const prodRes = await fetch(`${BASE_URL}/api/products?businessId=${bid}`);
           if (prodRes.ok) {
             const cloudProducts = await prodRes.json();
             setProducts(cloudProducts);
           }
 
-          const tabsRes = await fetch(`/api/tabs?businessId=${bid}`);
+          const tabsRes = await fetch(`${BASE_URL}/api/tabs?businessId=${bid}`);
           if (tabsRes.ok) {
             setTabs(await tabsRes.json());
           }
         }
 
         if (currentUser.role === Role.SUPER_ADMIN) {
-          const usersRes = await fetch(`/api/auth/admin/users`);
+          const usersRes = await fetch(`${BASE_URL}/api/auth/admin/users`);
           if (usersRes.ok) {
             const cloudUsers = await usersRes.json();
             setUsers(cloudUsers);
           }
-          const bizRes = await fetch(`/api/auth/admin/businesses`);
+          const bizRes = await fetch(`${BASE_URL}/api/auth/admin/businesses`);
           if (bizRes.ok) {
             setBusinesses(await bizRes.json());
           }
         } else {
-          const usersRes = await fetch(`/api/users?businessId=${bid}`);
+          const usersRes = await fetch(`${BASE_URL}/api/users?businessId=${bid}`);
           if (usersRes.ok) {
             setUsers(await usersRes.json());
           }
@@ -733,7 +734,7 @@ const AppContent: React.FC = () => {
     }
 
     try {
-      await fetch('/api/users/update-role', {
+      await fetch(`${BASE_URL}/api/users/update-role`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ businessId: currentUser?.businessId, userId, role: newRole })
@@ -844,7 +845,7 @@ const AppContent: React.FC = () => {
 
   const handleUpdateUser = async (updatedUser: User) => {
     try {
-      const res = await fetch(`/api/auth/admin/users/${updatedUser.id}`, {
+      const res = await fetch(`${BASE_URL}/api/auth/admin/users/${updatedUser.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedUser)
@@ -867,7 +868,7 @@ const AppContent: React.FC = () => {
   const handleDeleteUser = async (id: string) => {
     if (!confirm("Are you sure? This action is permanent.")) return;
     try {
-      const res = await fetch(`/api/auth/admin/users/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${BASE_URL}/api/auth/admin/users/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setUsers(users.filter(u => u.id !== id));
         addToast("User removed", "success");
@@ -905,7 +906,7 @@ const AppContent: React.FC = () => {
     }
 
     try {
-      const res = await fetch(`/api/auth/admin/businesses/${bizToUpdate.id}`, {
+      const res = await fetch(`${BASE_URL}/api/auth/admin/businesses/${bizToUpdate.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bizToUpdate)
@@ -926,7 +927,7 @@ const AppContent: React.FC = () => {
   const handleDeleteBusiness = async (id: string) => {
     if (!confirm("CRITICAL: This will delete ALL data for this business and ALL associated staff accounts. Proceed?")) return;
     try {
-      const res = await fetch(`/api/auth/admin/businesses/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${BASE_URL}/api/auth/admin/businesses/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setBusinesses(businesses.filter(b => b.id !== id));
         addToast("Establishment and staff removed permanently", "success");
@@ -981,7 +982,7 @@ const AppContent: React.FC = () => {
           setMobileSidebarOpen(false);
           fetchState(user.businessId || 'admin_node');
         }}
-        backendUrl=""
+        backendUrl={BASE_URL}
       />
     );
   }
@@ -1165,7 +1166,7 @@ const AppContent: React.FC = () => {
                     setSales(updatedSales);
 
                     try {
-                      await fetch('/api/sales/sync', {
+                      await fetch(`${BASE_URL}/api/sales/sync`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ businessId: currentUser.businessId, sales: updatedSales })
@@ -1187,7 +1188,7 @@ const AppContent: React.FC = () => {
                     setSales(updatedSales);
 
                     try {
-                      await fetch('/api/sales/sync', {
+                      await fetch(`${BASE_URL}/api/sales/sync`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ businessId: currentUser.businessId, sales: updatedSales })
@@ -1230,7 +1231,7 @@ const AppContent: React.FC = () => {
                     const userWithId: User = { ...newUser, id: Math.random().toString(36).substr(2, 9), businessId: business?.id || 'local_biz', status: 'Active', updatedAt: now() };
 
                     try {
-                      const res = await fetch(`/api/auth/admin/users`, {
+                      const res = await fetch(`${BASE_URL}/api/auth/admin/users`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(userWithId)
@@ -1321,7 +1322,7 @@ const AppContent: React.FC = () => {
                     const createdUser: User = { ...initialUser, id: Math.random().toString(36).substr(2, 9), businessId: bizId, status: 'Active', updatedAt: now() };
 
                     try {
-                      const res = await fetch(`/api/auth/admin/businesses`, {
+                      const res = await fetch(`${BASE_URL}/api/auth/admin/businesses`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ business: createdBiz, owner: createdUser })
@@ -1331,7 +1332,7 @@ const AppContent: React.FC = () => {
                         // Only add to users list OR refetch
                         addToast("Business & Owner provisioned on cloud", "success");
                         // Trigger a refetch of all users to stay in sync
-                        const usersRes = await fetch(`/api/auth/admin/users`);
+                        const usersRes = await fetch(`${BASE_URL}/api/auth/admin/users`);
                         if (usersRes.ok) setUsers(await usersRes.json());
                       }
                     } catch (err) {

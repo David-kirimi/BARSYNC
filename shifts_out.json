@@ -1,0 +1,836 @@
+{
+  "count": 9,
+  "shifts": [
+    {
+      "_id": "69bc05f93849af14b66fcbd0",
+      "businessId": "bus_845fz",
+      "id": "SH-73U3LP",
+      "cardTotal": 0,
+      "cashTotal": 750,
+      "closedBy": "NJOKI",
+      "closingStockSnapshot": [
+        {
+          "productId": "1",
+          "productName": "Tusker Lager",
+          "quantity": 9
+        },
+        {
+          "productId": "2",
+          "productName": "Guinness Stout",
+          "quantity": 15
+        },
+        {
+          "productId": "3",
+          "productName": "White Cap Crisp",
+          "quantity": 19
+        },
+        {
+          "productId": "12",
+          "productName": "Smirnoff Vodka 750ml",
+          "quantity": 12
+        },
+        {
+          "productId": "19",
+          "productName": "Black & White Whisky",
+          "quantity": 3
+        },
+        {
+          "productId": "25",
+          "productName": "Afia Juice",
+          "quantity": 36
+        },
+        {
+          "productId": "1769099773820",
+          "productName": "KC",
+          "quantity": 0
+        },
+        {
+          "productId": "c1",
+          "productName": "Tusker",
+          "quantity": 4
+        },
+        {
+          "productId": "c2",
+          "productName": "GUINESS",
+          "quantity": 0
+        },
+        {
+          "productId": "c3",
+          "productName": "WHITECUP",
+          "quantity": 1
+        },
+        {
+          "productId": "c4",
+          "productName": "Tusker Can",
+          "quantity": 0
+        },
+        {
+          "productId": "c5",
+          "productName": "T. Cinder",
+          "quantity": 0
+        },
+        {
+          "productId": "c6",
+          "productName": "T. Cinder Can",
+          "quantity": 0
+        },
+        {
+          "productId": "c7",
+          "productName": "W. Cap",
+          "quantity": 1
+        },
+        {
+          "productId": "c8",
+          "productName": "Balozi",
+          "quantity": 0
+        },
+        {
+          "productId": "c9",
+          "productName": "Balozi can",
+          "quantity": 7
+        },
+        {
+          "productId": "c10",
+          "productName": "Guarana",
+          "quantity": 0
+        },
+        {
+          "productId": "c11",
+          "productName": "Red Bull",
+          "quantity": 0
+        },
+        {
+          "productId": "c12",
+          "productName": "Smirnoff 750Ml",
+          "quantity": 0
+        },
+        {
+          "productId": "c13",
+          "productName": "Smirnoff 250Ml",
+          "quantity": 0
+        },
+        {
+          "productId": "c14",
+          "productName": "ALVARO",
+          "quantity": 1
+        },
+        {
+          "productId": "c15",
+          "productName": "Richot 750Ml",
+          "quantity": 0
+        },
+        {
+          "productId": "c16",
+          "productName": "Richot 250Ml",
+          "quantity": 0
+        },
+        {
+          "productId": "c17",
+          "productName": "Viceroy 350Ml",
+          "quantity": 1
+        },
+        {
+          "productId": "c18",
+          "productName": "Q.B",
+          "quantity": 0
+        },
+        {
+          "productId": "c19",
+          "productName": "V&A 750Ml",
+          "quantity": 0
+        },
+        {
+          "productId": "c20",
+          "productName": "Black & White 750Ml",
+          "quantity": 0
+        },
+        {
+          "productId": "c21",
+          "productName": "VAT 69 750Ml",
+          "quantity": 0
+        },
+        {
+          "productId": "c22",
+          "productName": "Captain Morgan 750Ml",
+          "quantity": 0
+        },
+        {
+          "productId": "c23",
+          "productName": "County 3/4",
+          "quantity": 0
+        },
+        {
+          "productId": "c24",
+          "productName": "KEG",
+          "quantity": 96
+        },
+        {
+          "productId": "c25",
+          "productName": "Sports Man",
+          "quantity": 0
+        },
+        {
+          "productId": "c26",
+          "productName": "Safari",
+          "quantity": 0
+        },
+        {
+          "productId": "c27",
+          "productName": "Matchbox",
+          "quantity": 0
+        },
+        {
+          "productId": "c28",
+          "productName": "KIBAO",
+          "quantity": 0
+        },
+        {
+          "productId": "c29",
+          "productName": "KONYAGI 1/2",
+          "quantity": 0
+        },
+        {
+          "productId": "c30",
+          "productName": "KONYAGI3/4",
+          "quantity": 0
+        },
+        {
+          "productId": "c31",
+          "productName": "H.CHOICE",
+          "quantity": 0
+        },
+        {
+          "productId": "c32",
+          "productName": "B.CAN",
+          "quantity": 0
+        },
+        {
+          "productId": "c33",
+          "productName": "G.CAN",
+          "quantity": 0
+        },
+        {
+          "productId": "c34",
+          "productName": "BEST WHISKY",
+          "quantity": 0
+        },
+        {
+          "productId": "c35",
+          "productName": "BESTCREAM",
+          "quantity": 0
+        },
+        {
+          "productId": "c36",
+          "productName": "PET 500ML",
+          "quantity": 0
+        },
+        {
+          "productId": "c37",
+          "productName": "PET 1.5 L",
+          "quantity": 0
+        },
+        {
+          "productId": "c38",
+          "productName": "PET 300 ML",
+          "quantity": 0
+        },
+        {
+          "productId": "c39",
+          "productName": "WATER 1L",
+          "quantity": 0
+        },
+        {
+          "productId": "c40",
+          "productName": "1/2 WATER",
+          "quantity": 0
+        },
+        {
+          "productId": "c41",
+          "productName": "DELMONTE",
+          "quantity": 0
+        },
+        {
+          "productId": "c42",
+          "productName": "AFIA",
+          "quantity": 0
+        },
+        {
+          "productId": "c43",
+          "productName": "CARIBIA 1/4",
+          "quantity": 0
+        },
+        {
+          "productId": "c44",
+          "productName": "CARIBIA 3/4",
+          "quantity": 0
+        },
+        {
+          "productId": "c45",
+          "productName": "TRUST",
+          "quantity": 0
+        },
+        {
+          "productId": "c46",
+          "productName": "CASABUENA",
+          "quantity": 0
+        },
+        {
+          "productId": "c47",
+          "productName": "CAPRICE",
+          "quantity": 0
+        },
+        {
+          "productId": "c48",
+          "productName": "PENASOL",
+          "quantity": 0
+        },
+        {
+          "productId": "c49",
+          "productName": "SANGILIA  1.5 L",
+          "quantity": 0
+        },
+        {
+          "productId": "c50",
+          "productName": "FAXE",
+          "quantity": 0
+        },
+        {
+          "productId": "c51",
+          "productName": "LEMONADE",
+          "quantity": 0
+        },
+        {
+          "productId": "c52",
+          "productName": "PREDITOR",
+          "quantity": 0
+        },
+        {
+          "productId": "c53",
+          "productName": "Soda Take Away",
+          "quantity": 0
+        },
+        {
+          "productId": "c54",
+          "productName": "Soda Kubwa",
+          "quantity": 0
+        },
+        {
+          "productId": "c55",
+          "productName": "Soda Ndogo",
+          "quantity": 0
+        }
+      ],
+      "endTime": "2026-03-19T14:19:34.701Z",
+      "mpesaTotal": 0,
+      "openTabsTransferred": [],
+      "openedBy": "NJOKI",
+      "openingStockSnapshot": [],
+      "startTime": "2026-03-19T14:17:51.242Z",
+      "status": "CLOSED",
+      "totalSales": 750,
+      "transactionsCount": 1
+    },
+    {
+      "_id": "69b6a267c273fc28e0920e2e",
+      "businessId": "bus_ffqa6",
+      "id": "SH-EO53B7",
+      "cardTotal": 0,
+      "cashTotal": 0,
+      "mpesaTotal": 0,
+      "openTabsTransferred": [
+        {
+          "amount": 250
+        }
+      ],
+      "openedBy": "WANJOHI",
+      "openingStockSnapshot": [
+        {
+          "productId": "jmw8jv9k5",
+          "productName": "Tusker",
+          "quantity": 296
+        },
+        {
+          "productId": "dirbl5wuo",
+          "productName": "GUINESS",
+          "quantity": 38
+        },
+        {
+          "productId": "d7m3sjyf0",
+          "productName": "T. Cinder",
+          "quantity": 24
+        },
+        {
+          "productId": "h8pw6h229",
+          "productName": "WHITECUP",
+          "quantity": 58
+        },
+        {
+          "productId": "cnl5mmxbl",
+          "productName": "W. Cap",
+          "quantity": 80
+        },
+        {
+          "productId": "ndjx22jw6",
+          "productName": "",
+          "quantity": 50
+        }
+      ],
+      "startTime": "2026-03-15T12:13:25.065Z",
+      "status": "OPEN",
+      "totalSales": 0,
+      "transactionsCount": 0
+    },
+    {
+      "_id": "69b6a085c273fc28e0920e25",
+      "businessId": "bus_ffqa6",
+      "id": "SH-PYERWZ",
+      "cardTotal": 0,
+      "cashTotal": 0,
+      "mpesaTotal": 0,
+      "openTabsTransferred": [],
+      "openedBy": "MAGGY",
+      "openingStockSnapshot": [
+        {
+          "productId": "jmw8jv9k5",
+          "productName": "Tusker",
+          "quantity": 297
+        },
+        {
+          "productId": "dirbl5wuo",
+          "productName": "GUINESS",
+          "quantity": 38
+        },
+        {
+          "productId": "d7m3sjyf0",
+          "productName": "T. Cinder",
+          "quantity": 24
+        },
+        {
+          "productId": "h8pw6h229",
+          "productName": "WHITECUP",
+          "quantity": 60
+        },
+        {
+          "productId": "cnl5mmxbl",
+          "productName": "W. Cap",
+          "quantity": 80
+        },
+        {
+          "productId": "ndjx22jw6",
+          "productName": "",
+          "quantity": 50
+        }
+      ],
+      "startTime": "2026-03-15T12:05:24.692Z",
+      "status": "OPEN",
+      "totalSales": 0,
+      "transactionsCount": 0
+    },
+    {
+      "_id": "69b6a03ac273fc28e0920e24",
+      "id": "SH-AVH9B1",
+      "businessId": "bus_ffqa6",
+      "cardTotal": 0,
+      "cashTotal": 0,
+      "mpesaTotal": 0,
+      "openTabsTransferred": [],
+      "openedBy": "MAGGY",
+      "openingStockSnapshot": [
+        {
+          "productId": "jmw8jv9k5",
+          "productName": "Tusker",
+          "quantity": 297
+        },
+        {
+          "productId": "dirbl5wuo",
+          "productName": "GUINESS",
+          "quantity": 38
+        },
+        {
+          "productId": "d7m3sjyf0",
+          "productName": "T. Cinder",
+          "quantity": 24
+        },
+        {
+          "productId": "h8pw6h229",
+          "productName": "WHITECUP",
+          "quantity": 60
+        },
+        {
+          "productId": "cnl5mmxbl",
+          "productName": "W. Cap",
+          "quantity": 80
+        },
+        {
+          "productId": "ndjx22jw6",
+          "productName": "",
+          "quantity": 50
+        }
+      ],
+      "startTime": "2026-03-15T12:04:10.303Z",
+      "status": "CLOSED",
+      "totalSales": 0,
+      "transactionsCount": 0,
+      "closedBy": "MAGGY",
+      "closingStockSnapshot": [
+        {
+          "productId": "jmw8jv9k5",
+          "productName": "Tusker",
+          "quantity": 297
+        },
+        {
+          "productId": "dirbl5wuo",
+          "productName": "GUINESS",
+          "quantity": 38
+        },
+        {
+          "productId": "d7m3sjyf0",
+          "productName": "T. Cinder",
+          "quantity": 24
+        },
+        {
+          "productId": "h8pw6h229",
+          "productName": "WHITECUP",
+          "quantity": 60
+        },
+        {
+          "productId": "cnl5mmxbl",
+          "productName": "W. Cap",
+          "quantity": 80
+        },
+        {
+          "productId": "ndjx22jw6",
+          "productName": "",
+          "quantity": 50
+        }
+      ],
+      "endTime": "2026-03-15T12:04:52.220Z"
+    },
+    {
+      "_id": "69b644e8c273fc28e0920b3d",
+      "id": "SH-0XC7BC",
+      "businessId": "bus_845fz",
+      "cardTotal": 0,
+      "cashTotal": 0,
+      "mpesaTotal": 0,
+      "openTabsTransferred": [],
+      "openedBy": "SHIKU",
+      "openingStockSnapshot": [
+        {
+          "productId": "1",
+          "productName": "Tusker Lager",
+          "quantity": 11
+        },
+        {
+          "productId": "2",
+          "productName": "Guinness Stout",
+          "quantity": 17
+        },
+        {
+          "productId": "3",
+          "productName": "White Cap Crisp",
+          "quantity": 20
+        },
+        {
+          "productId": "12",
+          "productName": "Smirnoff Vodka 750ml",
+          "quantity": 12
+        },
+        {
+          "productId": "19",
+          "productName": "Black & White Whisky",
+          "quantity": 3
+        },
+        {
+          "productId": "25",
+          "productName": "Afia Juice",
+          "quantity": 36
+        },
+        {
+          "productId": "1769099773820",
+          "productName": "KC",
+          "quantity": 1
+        },
+        {
+          "productId": "c1",
+          "productName": "Tusker",
+          "quantity": 4
+        },
+        {
+          "productId": "c2",
+          "productName": "GUINESS",
+          "quantity": 0
+        },
+        {
+          "productId": "c3",
+          "productName": "WHITECUP",
+          "quantity": 1
+        },
+        {
+          "productId": "c4",
+          "productName": "Tusker Can",
+          "quantity": 0
+        },
+        {
+          "productId": "c5",
+          "productName": "T. Cinder",
+          "quantity": 0
+        },
+        {
+          "productId": "c6",
+          "productName": "T. Cinder Can",
+          "quantity": 0
+        },
+        {
+          "productId": "c7",
+          "productName": "W. Cap",
+          "quantity": 1
+        },
+        {
+          "productId": "c8",
+          "productName": "Balozi",
+          "quantity": 0
+        },
+        {
+          "productId": "c9",
+          "productName": "Balozi can",
+          "quantity": 7
+        },
+        {
+          "productId": "c10",
+          "productName": "Guarana",
+          "quantity": 0
+        },
+        {
+          "productId": "c11",
+          "productName": "Red Bull",
+          "quantity": 0
+        },
+        {
+          "productId": "c12",
+          "productName": "Smirnoff 750Ml",
+          "quantity": 0
+        },
+        {
+          "productId": "c13",
+          "productName": "Smirnoff 250Ml",
+          "quantity": 0
+        },
+        {
+          "productId": "c14",
+          "productName": "ALVARO",
+          "quantity": 1
+        },
+        {
+          "productId": "c15",
+          "productName": "Richot 750Ml",
+          "quantity": 0
+        },
+        {
+          "productId": "c16",
+          "productName": "Richot 250Ml",
+          "quantity": 0
+        },
+        {
+          "productId": "c17",
+          "productName": "Viceroy 350Ml",
+          "quantity": 1
+        },
+        {
+          "productId": "c18",
+          "productName": "Q.B",
+          "quantity": 0
+        },
+        {
+          "productId": "c19",
+          "productName": "V&A 750Ml",
+          "quantity": 0
+        },
+        {
+          "productId": "c20",
+          "productName": "Black & White 750Ml",
+          "quantity": 0
+        },
+        {
+          "productId": "c21",
+          "productName": "VAT 69 750Ml",
+          "quantity": 0
+        },
+        {
+          "productId": "c22",
+          "productName": "Captain Morgan 750Ml",
+          "quantity": 0
+        },
+        {
+          "productId": "c23",
+          "productName": "County 3/4",
+          "quantity": 0
+        },
+        {
+          "productId": "c24",
+          "productName": "KEG",
+          "quantity": 96
+        },
+        {
+          "productId": "c25",
+          "productName": "Sports Man",
+          "quantity": 0
+        },
+        {
+          "productId": "c26",
+          "productName": "Safari",
+          "quantity": 0
+        },
+        {
+          "productId": "c27",
+          "productName": "Matchbox",
+          "quantity": 0
+        },
+        {
+          "productId": "c28",
+          "productName": "KIBAO",
+          "quantity": 0
+        },
+        {
+          "productId": "c29",
+          "productName": "KONYAGI 1/2",
+          "quantity": 0
+        },
+        {
+          "productId": "c30",
+          "productName": "KONYAGI3/4",
+          "quantity": 0
+        },
+        {
+          "productId": "c31",
+          "productName": "H.CHOICE",
+          "quantity": 0
+        },
+        {
+          "productId": "c32",
+          "productName": "B.CAN",
+          "quantity": 0
+        },
+        {
+          "productId": "c33",
+          "productName": "G.CAN",
+          "quantity": 0
+        },
+        {
+          "productId": "c34",
+          "productName": "BEST WHISKY",
+          "quantity": 0
+        },
+        {
+          "productId": "c35",
+          "productName": "BESTCREAM",
+          "quantity": 0
+        },
+        {
+          "productId": "c36",
+          "productName": "PET 500ML",
+          "quantity": 0
+        },
+        {
+          "productId": "c37",
+          "productName": "PET 1.5 L",
+          "quantity": 0
+        },
+        {
+          "productId": "c38",
+          "productName": "PET 300 ML",
+          "quantity": 0
+        },
+        {
+          "productId": "c39",
+          "productName": "WATER 1L",
+          "quantity": 0
+        },
+        {
+          "productId": "c40",
+          "productName": "1/2 WATER",
+          "quantity": 0
+        },
+        {
+          "productId": "c41",
+          "productName": "DELMONTE",
+          "quantity": 0
+        },
+        {
+          "productId": "c42",
+          "productName": "AFIA",
+          "quantity": 0
+        },
+        {
+          "productId": "c43",
+          "productName": "CARIBIA 1/4",
+          "quantity": 0
+        },
+        {
+          "productId": "c44",
+          "productName": "CARIBIA 3/4",
+          "quantity": 0
+        },
+        {
+          "productId": "c45",
+          "productName": "TRUST",
+          "quantity": 0
+        },
+        {
+          "productId": "c46",
+          "productName": "CASABUENA",
+          "quantity": 0
+        },
+        {
+          "productId": "c47",
+          "productName": "CAPRICE",
+          "quantity": 0
+        },
+        {
+          "productId": "c48",
+          "productName": "PENASOL",
+          "quantity": 0
+        },
+        {
+          "productId": "c49",
+          "productName": "SANGILIA  1.5 L",
+          "quantity": 0
+        },
+        {
+          "productId": "c50",
+          "productName": "FAXE",
+          "quantity": 0
+        },
+        {
+          "productId": "c51",
+          "productName": "LEMONADE",
+          "quantity": 0
+        },
+        {
+          "productId": "c52",
+          "productName": "PREDITOR",
+          "quantity": 0
+        },
+        {
+          "productId": "c53",
+          "productName": "Soda Take Away",
+          "quantity": 0
+        },
+        {
+          "productId": "c54",
+          "productName": "Soda Kubwa",
+          "quantity": 0
+        },
+        {
+          "productId": "c55",
+          "productName": "Soda Ndogo",
+          "quantity": 0
+        }
+      ],
+      "startTime": "2026-03-15T05:34:30.469Z",
+      "status": "OPEN",
+      "totalSales": 0,
+      "transactionsCount": 0
+    }
+  ]
+}

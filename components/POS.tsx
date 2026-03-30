@@ -38,7 +38,7 @@ interface POSProps {
 }
 
 /* -------------------- SORTABLE ITEM COMPONENT -------------------- */
-const SortableProductCard: React.FC<{ product: Product, addToCart: (p: Product) => void }> = ({ product, addToCart }) => {
+const SortableProductCard: React.FC<{ product: Product, addToCart: (p: Product) => void, trackUsage: (id: string) => void }> = ({ product, addToCart, trackUsage }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: product.id });
 
   const style = {
@@ -53,29 +53,27 @@ const SortableProductCard: React.FC<{ product: Product, addToCart: (p: Product) 
     <div
       ref={setNodeRef}
       style={style}
-      className="group bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl transition-all h-full flex flex-col"
+      className="group bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl transition-all h-full flex flex-col active:scale-95"
     >
-      {/* Drag Handle (Invisible but active on long press or explicit grab area if needed) - here entire card is draggable, but we prioritize click for add */}
-
       <div
-        className="h-32 lg:h-40 overflow-hidden relative cursor-grab active:cursor-grabbing"
+        className="h-24 lg:h-40 overflow-hidden relative cursor-grab active:cursor-grabbing"
         {...attributes}
         {...listeners}
       >
         <img src={product.imageUrl || 'https://via.placeholder.com/400?text=No+Image'} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 pointer-events-none" />
         {product.stock < 10 && product.stock > 0 && (
-          <div className="absolute top-2 left-2 bg-rose-500 text-white px-2 py-0.5 rounded-lg text-[8px] font-black uppercase">
-            Low: {product.stock}
+          <div className="absolute top-1 left-1 bg-rose-500 text-white px-1.5 py-0.5 rounded-md text-[7px] font-black uppercase">
+            {product.stock}
           </div>
         )}
       </div>
 
-      <div className="p-4 flex flex-col flex-1" onClick={() => product.stock > 0 && addToCart(product)}> {/* Click logic here */}
-        <h3 className="font-black text-slate-800 mb-1 leading-tight h-8 line-clamp-2 uppercase text-[12px] tracking-tight">{product.name}</h3>
+      <div className="p-2 lg:p-4 flex flex-col flex-1" onClick={() => { if (product.stock > 0) { addToCart(product); trackUsage(product.id); } }}> 
+        <h3 className="font-black text-slate-800 mb-0.5 lg:mb-1 leading-tight h-6 lg:h-8 line-clamp-2 uppercase text-[9px] lg:text-[12px] tracking-tight">{product.name}</h3>
         <div className="flex items-center justify-between mt-auto">
-          <span className="text-xs lg:text-md font-black text-indigo-600">Ksh {product.price}</span>
-          <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-lg lg:rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all cursor-pointer">
-            <i className="fa-solid fa-plus text-xs"></i>
+          <span className="text-[10px] lg:text-md font-black text-indigo-600">Ksh {product.price}</span>
+          <div className="w-6 h-6 lg:w-8 lg:h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all cursor-pointer">
+            <i className="fa-solid fa-plus text-[10px]"></i>
           </div>
         </div>
       </div>
@@ -137,6 +135,16 @@ const POS: React.FC<POSProps> = ({
   );
 
 
+  const [popularity, setPopularity] = useState<Record<string, number>>(() => {
+    try { const saved = localStorage.getItem('barsync_popularity'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
+  });
+
+  const trackUsage = (productId: string) => {
+    const updated = { ...popularity, [productId]: (popularity[productId] || 0) + 1 };
+    setPopularity(updated);
+    localStorage.setItem('barsync_popularity', JSON.stringify(updated));
+  };
+
   const handleBarcodeScan = (code: string) => {
     if (!code.trim()) return;
     
@@ -148,6 +156,7 @@ const POS: React.FC<POSProps> = ({
     if (product) {
       if (product.stock > 0) {
         addToCart(product);
+        trackUsage(product.id);
         setLastScannedId(product.id);
         setLastScanError(false);
         setTimeout(() => setLastScannedId(null), 500); 
@@ -247,13 +256,20 @@ const POS: React.FC<POSProps> = ({
   }, [activeView]);
 
   const filteredProducts = useMemo(() => {
-    return products.filter(p => {
+    const base = products.filter(p => {
       const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
       const matchesCategory = activeCategory === 'All' || p.category === activeCategory;
       const hasStock = p.stock > 0; // AUTO-HIDE OUT OF STOCK
       return matchesSearch && matchesCategory && hasStock;
     });
-  }, [products, search, activeCategory]);
+
+    // Sort by popularity (Top 6 boost)
+    return [...base].sort((a, b) => {
+      const popA = popularity[a.id] || 0;
+      const popB = popularity[b.id] || 0;
+      return popB - popA;
+    });
+  }, [products, search, activeCategory, popularity]);
 
   const cartTotal = useMemo(() => cart.reduce((sum, item) => sum + (item.price * item.quantity), 0), [cart]);
 
@@ -263,6 +279,9 @@ const POS: React.FC<POSProps> = ({
     if (active.id !== over?.id) {
       const oldIndex = filteredProducts.findIndex((p) => p.id === active.id);
       const newIndex = filteredProducts.findIndex((p) => p.id === over?.id);
+      
+      // When manual reorder happens, we can clear or adjust popularity if needed, 
+      // but for now we just allow dnd.
       const newFilteredOrder = arrayMove(filteredProducts, oldIndex, newIndex) as Product[];
       const productIds = new Set(newFilteredOrder.map(p => p.id));
       const remainingProducts = products.filter(p => !productIds.has(p.id));
@@ -618,7 +637,7 @@ const POS: React.FC<POSProps> = ({
                   items={filteredProducts.map(p => p.id)}
                   strategy={rectSortingStrategy}
                 >
-                  <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 pb-20">
+                  <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 lg:gap-4 pb-20">
                     <AnimatePresence mode="popLayout">
                       {filteredProducts.map(product => (
                         <motion.div
@@ -628,7 +647,7 @@ const POS: React.FC<POSProps> = ({
                           exit={{ opacity: 0, scale: 0.9 }}
                           key={product.id}
                         >
-                          <SortableProductCard product={product} addToCart={addToCart} />
+                          <SortableProductCard product={product} addToCart={addToCart} trackUsage={trackUsage} />
                         </motion.div>
                       ))}
                     </AnimatePresence>
@@ -798,7 +817,7 @@ const POS: React.FC<POSProps> = ({
           <div className="flex items-center justify-between mb-3">
             <div>
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Current Order</p>
-              <p className="text-xl font-black mt-0.5">Ksh {cartTotal.toLocaleString()}</p>
+              <p className="text-[10px] font-black mt-0.5">Ksh {cartTotal.toLocaleString()}</p>
             </div>
             <div className="flex items-center gap-2">
               <div className="bg-indigo-500 px-3 py-1.5 rounded-full">
@@ -812,7 +831,7 @@ const POS: React.FC<POSProps> = ({
               <button
                 disabled={cart.length === 0}
                 onClick={(e) => { e.stopPropagation(); handleCheckout('Pending'); }}
-                className="col-span-2 py-4 bg-orange-600 rounded-xl font-black text-[9px] uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all flex flex-col items-center justify-center gap-1 shadow-xl shadow-orange-900/40"
+                className="col-span-2 py-3 bg-orange-600 rounded-xl font-black text-[9px] uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all flex flex-col items-center justify-center gap-1 shadow-xl shadow-orange-900/40"
               >
                 <i className="fa-solid fa-paper-plane"></i>Send to Counter
               </button>
@@ -821,14 +840,14 @@ const POS: React.FC<POSProps> = ({
                 <button
                   disabled={cart.length === 0}
                   onClick={(e) => { e.stopPropagation(); handleCheckout('Cash'); }}
-                  className="py-4 bg-slate-800 rounded-xl font-black text-[9px] uppercase tracking-widest border border-slate-700 active:scale-95 disabled:opacity-50 transition-all flex flex-col items-center justify-center gap-1"
+                  className="py-3 bg-slate-800 rounded-xl font-black text-[9px] uppercase tracking-widest border border-slate-700 active:scale-95 disabled:opacity-50 transition-all flex flex-col items-center justify-center gap-1"
                 >
                   <i className="fa-solid fa-money-bills"></i>Cash
                 </button>
                 <button
                   disabled={cart.length === 0}
                   onClick={(e) => { e.stopPropagation(); handleCheckout('Mpesa'); }}
-                  className="py-4 bg-emerald-600 rounded-xl font-black text-[9px] uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all flex flex-col items-center justify-center gap-1"
+                  className="py-3 bg-emerald-600 rounded-xl font-black text-[9px] uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all flex flex-col items-center justify-center gap-1"
                 >
                   <i className="fa-solid fa-mobile-screen"></i>M-Pesa
                 </button>
@@ -837,7 +856,7 @@ const POS: React.FC<POSProps> = ({
             <button
               disabled={cart.length === 0}
               onClick={(e) => { e.stopPropagation(); setMobileCartExpanded(true); setTimeout(() => document.getElementById('assign-to-tab-section')?.scrollIntoView({ behavior: 'smooth' }), 300); }}
-              className="py-4 bg-orange-600 rounded-xl font-black text-[9px] uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all flex flex-col items-center justify-center gap-1"
+              className="py-3 bg-orange-600 rounded-xl font-black text-[9px] uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all flex flex-col items-center justify-center gap-1"
             >
               <i className="fa-solid fa-book-bookmark"></i>To Tab
             </button>

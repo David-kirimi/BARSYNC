@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Barsync</string>
+    <string name="title_activity_main">Barsync</string>
+    <string name="package_name">com.barsync.app</string>
+    <string name="custom_url_scheme">com.barsync.app</string>
+</resources>

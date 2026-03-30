@@ -64,8 +64,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
             <div className="flex items-center gap-3">
               <img src={user.avatar} className="w-12 h-12 rounded-2xl shadow-lg border-2 border-orange-500/20" alt="" />
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{getGreeting()},</p>
-                <p className="font-black text-white truncate text-lg tracking-tighter uppercase">{user.name.split(' ')[0]}</p>
+                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">{getGreeting()},</p>
+                <p className="font-black text-white truncate text-sm tracking-tighter uppercase">{user.name.split(' ')[0]}</p>
               </div>
             </div>
           </div>
@@ -75,24 +75,39 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, user, onLogout,
               <button
                 key={item.id}
                 onClick={() => setView(item.id)}
-                className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all ${currentView === item.id
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${currentView === item.id
                   ? 'bg-orange-600 text-white shadow-lg shadow-orange-900/50'
                   : 'text-slate-400 hover:text-white hover:bg-slate-900'
                   }`}
               >
-                <i className={`fa-solid ${item.icon} text-lg w-6`}></i>
-                <span className="text-sm font-black uppercase tracking-normal">{item.label}</span>
+                <i className={`fa-solid ${item.icon} text-sm w-5`}></i>
+                <span className="text-[10px] font-black uppercase tracking-wide">{item.label}</span>
               </button>
             ))}
           </div>
 
-          <div className="p-4 border-t border-slate-800">
+          <div className="p-3 border-t border-slate-800 space-y-2">
+            {/* DB Connection Indicator */}
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-xl ${
+              backendAlive ? 'bg-emerald-950/60 border border-emerald-800/40' : 'bg-rose-950/60 border border-rose-800/40'
+            }`}>
+              <span className={`w-2 h-2 rounded-full shrink-0 ${backendAlive ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400 animate-pulse'}`}></span>
+              <div className="flex-1 min-w-0">
+                <p className={`text-[9px] font-black uppercase tracking-widest ${backendAlive ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {backendAlive ? '🟢 Cloud DB Connected' : '🔴 Offline / No DB'}
+                </p>
+                <p className="text-[8px] text-slate-500 font-medium">{backendAlive ? 'Data synced to server' : 'Reconnect to save data'}</p>
+              </div>
+              <button onClick={onSync} disabled={isSyncing} className="text-slate-500 hover:text-orange-400 transition-all">
+                <i className={`fa-solid fa-rotate text-[10px] ${isSyncing ? 'animate-spin text-orange-400' : ''}`}></i>
+              </button>
+            </div>
             <button
               onClick={onLogout}
-              className="w-full flex items-center gap-3 p-4 rounded-2xl bg-rose-600 text-white hover:bg-rose-700 transition-all active:scale-95"
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-rose-600 text-white hover:bg-rose-700 transition-all active:scale-95"
             >
-              <i className="fa-solid fa-power-off text-lg w-5"></i>
-              <span className="text-sm font-black uppercase tracking-tight">Logout</span>
+              <i className="fa-solid fa-power-off text-sm w-5"></i>
+              <span className="text-[10px] font-black uppercase tracking-tight">Logout</span>
             </button>
           </div>
         </div>

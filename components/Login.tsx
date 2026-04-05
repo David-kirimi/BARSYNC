@@ -23,7 +23,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, backendUrl }) => {
     setIsSubmitting(true);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
 
     try {
       const targetUrl = backendUrl ? `${backendUrl}/api/auth/login` : '/api/auth/login';

@@ -10,13 +10,9 @@ let db = null;
 let client = null;
 
 const clientOptions = {
-    serverApi: {
-        version: ServerApiVersion.v1,
-        strict: true,
-        deprecationErrors: true,
-    },
-    serverSelectionTimeoutMS: 15000,
-    connectTimeoutMS: 15000,
+    serverSelectionTimeoutMS: 20000,
+    connectTimeoutMS: 20000,
+    tls: true,
 };
 
 if (uri) {
@@ -30,12 +26,17 @@ export async function connectToMongo() {
         throw new Error("CONFIG_MISSING");
     }
 
+    // Diagnostic Logging (Masking Password)
+    const maskedUri = uri.replace(/\/\/(.*):(.*)@/, (match, user, pass) => {
+        return `//${user}:****@`;
+    });
+
     if (!client) {
         client = new MongoClient(uri, clientOptions);
     }
 
     try {
-        console.log("📡 Attempting MongoDB heartbeat...");
+        console.log(`📡 Attempting MongoDB: ${maskedUri}`);
         await client.connect();
         db = client.db(DB_NAME);
         console.log("✅ Database Link Established");

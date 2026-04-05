@@ -124,14 +124,19 @@ app.all('*', (req, res) => {
 // Start server locally
 if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
     app.listen(PORT, '0.0.0.0', () => {
-        console.log(`🚀 BarSync Node local active on port ${PORT}`);
-        connectToMongo().then(() => {
-            seedDatabase();
-        });
+        console.log(`🚀 BarSync Node active on port ${PORT}`);
     });
 }
 
-// Ensure database connection is initialized for Vercel (side effect)
-connectToMongo().then(() => seedDatabase()).catch(console.error);
+// Ensure database connection is initialized for Vercel/Cloud Platforms
+connectToMongo()
+    .then(() => {
+        console.log("🌱 Syncing Database Snapshots...");
+        seedDatabase();
+    })
+    .catch((err) => {
+        console.error("❌ Database initialization error during startup:", err.message);
+        // Important: We don't crash the server here so it can still serve /health or static files
+    });
 
 export default app;

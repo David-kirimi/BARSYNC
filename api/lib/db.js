@@ -9,16 +9,18 @@ const DB_NAME = process.env.DB_NAME || 'barsync';
 let db = null;
 let client = null;
 
+const clientOptions = {
+    serverApi: {
+        version: ServerApiVersion.v1,
+        strict: true,
+        deprecationErrors: true,
+    },
+    serverSelectionTimeoutMS: 15000,
+    connectTimeoutMS: 15000,
+};
+
 if (uri) {
-    client = new MongoClient(uri, {
-        serverApi: {
-            version: ServerApiVersion.v1,
-            strict: true,
-            deprecationErrors: true,
-        },
-        serverSelectionTimeoutMS: 5000,
-        connectTimeoutMS: 5000,
-    });
+    client = new MongoClient(uri, clientOptions);
 }
 
 export async function connectToMongo() {
@@ -29,15 +31,7 @@ export async function connectToMongo() {
     }
 
     if (!client) {
-        client = new MongoClient(uri, {
-            serverApi: {
-                version: ServerApiVersion.v1,
-                strict: true,
-                deprecationErrors: true,
-            },
-            serverSelectionTimeoutMS: 10000, // Increased to 10s for Vercel cold starts
-            connectTimeoutMS: 10000,
-        });
+        client = new MongoClient(uri, clientOptions);
     }
 
     try {

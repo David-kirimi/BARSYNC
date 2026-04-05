@@ -10,9 +10,13 @@ let db = null;
 let client = null;
 
 const clientOptions = {
+    serverApi: {
+        version: ServerApiVersion.v1,
+        strict: true,
+        deprecationErrors: true,
+    },
     serverSelectionTimeoutMS: 20000,
     connectTimeoutMS: 20000,
-    tls: true,
 };
 
 if (uri) {
@@ -38,6 +42,11 @@ export async function connectToMongo() {
     try {
         console.log(`📡 Attempting MongoDB: ${maskedUri}`);
         await client.connect();
+        
+        // ping the deployment to verify a successful connection
+        await client.db("admin").command({ ping: 1 });
+        console.log("📡 Connection Pinged: Success!");
+        
         db = client.db(DB_NAME);
         console.log("✅ Database Link Established");
         return db;

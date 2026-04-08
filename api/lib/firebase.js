@@ -2,7 +2,6 @@ import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { fs } from 'fs'; // For file check
 
 dotenv.config();
 

@@ -112,7 +112,7 @@ app.get('/health', async (req, res) => {
             status: 'degraded', 
             database: 'disconnected',
             uri_found: !!process.env.MONGODB_URI,
-            uri_masked: process.env.MONGODB_URI ? process.env.MONGODB_URI.replace(/\/\/(.*):(.*)@/, "//****:****@") : 'NOT_FOUND',
+            uri_masked: process.env.MONGODB_URI ? process.env.MONGODB_URI.replace(/(mongodb(?:\+srv)?:\/\/[^:]+:)[^@]+(@.*)/, "$1****$2") : 'NOT_FOUND',
             error: err.message,
             timestamp: new Date().toISOString()
         });

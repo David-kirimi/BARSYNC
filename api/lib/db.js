@@ -1,10 +1,13 @@
 import { MongoClient, ServerApiVersion } from 'mongodb';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const uri = process.env.MONGODB_URI;
-const DB_NAME = process.env.DB_NAME || 'barsync';
+// Load .env from root (two levels up from api/lib/db.js)
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 let db = null;
 let client = null;
@@ -15,18 +18,19 @@ const clientOptions = {
         strict: true,
         deprecationErrors: true,
     },
-    serverSelectionTimeoutMS: 20000,
-    connectTimeoutMS: 20000,
+    serverSelectionTimeoutMS: 15000, // Reduced slightly for faster feedback
+    connectTimeoutMS: 15000,
 };
-
-if (uri) {
-    client = new MongoClient(uri, clientOptions);
-}
 
 export async function connectToMongo() {
     if (db) return db;
+
+    const uri = process.env.MONGODB_URI;
+    const DB_NAME = process.env.DB_NAME || 'barsync';
+
     if (!uri) {
         console.error("❌ CRITICAL: MONGODB_URI environment variable is missing!");
+        console.error("DEBUG: process.env keys present:", Object.keys(process.env).filter(k => k.includes('MONGO') || k.includes('DB')));
         throw new Error("CONFIG_MISSING");
     }
 

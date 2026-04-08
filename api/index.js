@@ -1,8 +1,12 @@
-import express from 'express';
-import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
+// Load .env at the very beginning
+dotenv.config();
+
+import express from 'express';
+import cors from 'cors';
 import { connectToMongo } from './lib/db.js';
 import usersRouter, { seedDatabase } from './lib/users.js';
 import productsRouter from './lib/products.js';
@@ -90,14 +94,24 @@ app.get('/api/diag', (req, res) => {
 
 app.get('/health', async (req, res) => {
     try {
-        const isConnected = await connectToMongo();
+        const startTime = Date.now();
+        const db = await connectToMongo();
+        const duration = Date.now() - startTime;
+        
         res.status(200).json({
             status: 'active',
-            db: !!isConnected,
+            database: 'connected',
+            latency: `${duration}ms`,
             timestamp: new Date().toISOString()
         });
     } catch (err) {
-        res.status(500).json({ error: 'Health check failed' });
+        console.error("Health Check Failed:", err.message);
+        res.status(503).json({ 
+            status: 'degraded', 
+            database: 'disconnected',
+            error: err.message,
+            timestamp: new Date().toISOString()
+        });
     }
 });
 

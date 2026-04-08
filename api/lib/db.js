@@ -13,10 +13,15 @@ let db = null;
 let client = null;
 
 const clientOptions = {
+    serverApi: {
+        version: ServerApiVersion.v1,
+        strict: true,
+        deprecationErrors: true,
+    },
     serverSelectionTimeoutMS: 20000,
     connectTimeoutMS: 20000,
     socketTimeoutMS: 20000,
-    heartbeatFrequencyMS: 10000,
+    family: 4, // Forces IPv4 (solves connection issues on some cloud providers)
 };
 
 export async function connectToMongo() {

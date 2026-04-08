@@ -103,7 +103,9 @@ app.get('/health', async (req, res) => {
             database: 'connected',
             latency: `${duration}ms`,
             uri_found: !!process.env.MONGODB_URI,
-            uri_masked: process.env.MONGODB_URI ? process.env.MONGODB_URI.replace(/\/\/(.*):(.*)@/, "//****:****@") : 'NOT_FOUND',
+            uri_masked: process.env.MONGODB_URI ? process.env.MONGODB_URI.replace(/(mongodb(?:\+srv)?:\/\/)([^:]+):([^@]+)(@.*)/, (match, p1, p2, p3, p4) => {
+                return `${p1}${p2[0]}***${p2.slice(-1)}:${p3[0]}***${p3.slice(-1)}${p4}`;
+            }) : 'NOT_FOUND',
             timestamp: new Date().toISOString()
         });
     } catch (err) {
@@ -112,7 +114,9 @@ app.get('/health', async (req, res) => {
             status: 'degraded', 
             database: 'disconnected',
             uri_found: !!process.env.MONGODB_URI,
-            uri_masked: process.env.MONGODB_URI ? process.env.MONGODB_URI.replace(/(mongodb(?:\+srv)?:\/\/[^:]+:)[^@]+(@.*)/, "$1****$2") : 'NOT_FOUND',
+            uri_masked: process.env.MONGODB_URI ? process.env.MONGODB_URI.replace(/(mongodb(?:\+srv)?:\/\/)([^:]+):([^@]+)(@.*)/, (match, p1, p2, p3, p4) => {
+                return `${p1}${p2[0]}***${p2.slice(-1)}:${p3[0]}***${p3.slice(-1)}${p4}`;
+            }) : 'NOT_FOUND',
             error: err.message,
             timestamp: new Date().toISOString()
         });

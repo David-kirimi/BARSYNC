@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { connectToMongo } from './db.js';
+import { getFirestore } from './firebase.js';
 
 const router = Router();
 
@@ -8,17 +8,19 @@ router.get('/', async (req, res) => {
     const { businessId, status } = req.query;
     if (!businessId) return res.status(400).json({ error: "Missing businessId" });
 
-    const db = await connectToMongo();
-    if (!db) return res.status(503).json({ error: "Database offline" });
-
     try {
-        const query = { businessId };
-        if (status) query.status = status;
+        const db = getFirestore();
+        let query = db.collection('shifts').where('businessId', '==', businessId);
         
-        const shifts = await db.collection('shifts')
-            .find(query)
-            .sort({ startTime: -1 })
-            .toArray(); // No limit — all shifts are permanent records
+        if (status) {
+            query = query.where('status', '==', status);
+        }
+        
+        // Note: Firestore requires a composite index for where() and orderBy() on different fields.
+        // For now, if we encounter index errors, we might need to sort in memory or create the index.
+        const snapshot = await query.orderBy('startTime', 'desc').get();
+        
+        const shifts = snapshot.docs.map(doc => doc.data());
         res.json(shifts);
     } catch (err) {
         console.error("Shifts Fetch Error:", err.message);
@@ -31,17 +33,20 @@ router.post('/', async (req, res) => {
     const { businessId, shift } = req.body;
     if (!businessId || !shift) return res.status(400).json({ error: "Missing data" });
 
-    const db = await connectToMongo();
-    if (!db) return res.status(503).json({ error: "Database offline" });
-
     try {
+        const db = getFirestore();
         const { _id, ...shiftData } = shift;
 
-        await db.collection('shifts').updateOne(
-            { businessId, id: shift.id },
-            { $set: shiftData },
-            { upsert: true }
-        );
+        const snapshot = await db.collection('shifts')
+            .where('businessId', '==', businessId)
+            .where('id', '==', shift.id)
+            .get();
+
+        if (snapshot.empty) {
+            await db.collection('shifts').add({ businessId, ...shiftData });
+        } else {
+            await snapshot.docs[0].ref.update(shiftData);
+        }
         res.json({ success: true });
     } catch (err) {
         console.error("Shift Sync Error:", err.message);
@@ -54,17 +59,20 @@ router.put('/', async (req, res) => {
     const { businessId, shift } = req.body;
     if (!businessId || !shift) return res.status(400).json({ error: "Missing data" });
 
-    const db = await connectToMongo();
-    if (!db) return res.status(503).json({ error: "Database offline" });
-
     try {
+        const db = getFirestore();
         const { _id, ...shiftData } = shift;
 
-        await db.collection('shifts').updateOne(
-            { businessId, id: shift.id },
-            { $set: shiftData },
-            { upsert: true }
-        );
+        const snapshot = await db.collection('shifts')
+            .where('businessId', '==', businessId)
+            .where('id', '==', shift.id)
+            .get();
+
+        if (snapshot.empty) {
+            await db.collection('shifts').add({ businessId, ...shiftData });
+        } else {
+            await snapshot.docs[0].ref.update(shiftData);
+        }
         res.json({ success: true });
     } catch (err) {
         console.error("Shift Update Error:", err.message);

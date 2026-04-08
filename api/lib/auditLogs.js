@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { connectToMongo } from './db.js';
+import admin, { getFirestore } from './firebase.js';
 
 const router = Router();
 
@@ -8,9 +8,11 @@ router.get('/', async (req, res) => {
     if (!businessId) return res.status(400).json({ error: "Missing businessId" });
 
     try {
-        const database = await connectToMongo();
-        const syncColl = database.collection('sync_history');
-        const state = await syncColl.findOne({ businessId });
+        const db = getFirestore();
+        const syncSnap = await db.collection('sync_history').where('businessId', '==', businessId).get();
+        if (syncSnap.empty) return res.json([]);
+
+        const state = syncSnap.docs[0].data();
         res.json(state?.auditLogs || []);
     } catch (err) {
         console.error("AuditLogs fetch Error:", err.message);
@@ -23,16 +25,21 @@ router.post('/', async (req, res) => {
     if (!businessId || !log) return res.status(400).json({ error: "Missing data" });
 
     try {
-        const database = await connectToMongo();
-        const syncColl = database.collection('sync_history');
-        await syncColl.updateOne(
-            { businessId },
-            {
-                $push: { auditLogs: log },
-                $set: { lastSync: new Date() }
-            },
-            { upsert: true }
-        );
+        const db = getFirestore();
+        const syncSnap = await db.collection('sync_history').where('businessId', '==', businessId).get();
+        
+        if (syncSnap.empty) {
+            await db.collection('sync_history').add({
+                businessId,
+                auditLogs: [log],
+                lastSync: new Date().toISOString()
+            });
+        } else {
+            await syncSnap.docs[0].ref.update({
+                auditLogs: admin.firestore.FieldValue.arrayUnion(log),
+                lastSync: new Date().toISOString()
+            });
+        }
         res.json({ success: true });
     } catch (err) {
         console.error("AuditLogs sync Error:", err.message);

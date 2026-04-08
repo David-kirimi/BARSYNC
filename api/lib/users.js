@@ -1,18 +1,18 @@
 import { Router } from 'express';
-import { connectToMongo } from './db.js';
+import { getFirestore } from './firebase.js';
 
 const router = Router();
 
 // Helper to seed master admin if it doesn't exist
 export async function seedDatabase() {
-    const db = await connectToMongo();
-    if (!db) return;
+    const db = getFirestore();
     try {
         const usersColl = db.collection('users');
-        const masterAdmin = await usersColl.findOne({ name: 'SLIEM', role: 'SUPER_ADMIN' });
-        if (!masterAdmin) {
+        const snapshot = await usersColl.where('name', '==', 'SLIEM').where('role', '==', 'SUPER_ADMIN').get();
+        
+        if (snapshot.empty) {
             console.log("🌱 Provisioning Master Admin: SLIEM...");
-            await usersColl.insertOne({
+            await usersColl.add({
                 id: 'super_sliem',
                 name: 'SLIEM',
                 role: 'SUPER_ADMIN',
@@ -28,93 +28,87 @@ export async function seedDatabase() {
 
 router.post('/login', async (req, res) => {
     try {
-        const database = await connectToMongo();
+        const db = getFirestore();
 
         let businessName = (req.body.businessName || "").trim();
         const username = (req.body.username || "").trim();
         const password = (req.body.password || "").trim();
 
-        const usersColl = database.collection('users');
-        const bizColl = database.collection('businesses');
-
         const isPlatformLogin = !businessName || businessName.toLowerCase() === 'platform';
 
-        let user;
+        let user = null;
         let business = null;
 
         if (isPlatformLogin) {
-            // Check for Super Admin first
-            user = await usersColl.findOne({
-                name: { $regex: new RegExp(`^${username}$`, 'i') },
-                role: 'SUPER_ADMIN'
-            });
-
-            // If not super admin, check if user is unique platform-wide (Unified Login)
-            if (!user) {
-                const userCandidates = await usersColl.find({
-                    name: { $regex: new RegExp(`^${username}$`, 'i') }
-                }).toArray();
-
-                if (userCandidates.length === 1) {
-                    user = userCandidates[0];
+            // Check for Super Admin
+            const superAdminSnapshot = await db.collection('users')
+                .where('name', '==', username)
+                .where('role', '==', 'SUPER_ADMIN')
+                .get();
+            
+            if (!superAdminSnapshot.empty) {
+                user = superAdminSnapshot.docs[0].data();
+            } else {
+                // Unified Login (unique platform-wide)
+                const candidateSnapshot = await db.collection('users')
+                    .where('name', '==', username)
+                    .get();
+                
+                if (candidateSnapshot.size === 1) {
+                    user = candidateSnapshot.docs[0].data();
                     if (user.businessId) {
-                        business = await bizColl.findOne({ id: user.businessId });
+                        const bizSnap = await db.collection('businesses').where('id', '==', user.businessId).get();
+                        if (!bizSnap.empty) business = bizSnap.docs[0].data();
                     }
-                } else if (userCandidates.length > 1) {
+                } else if (candidateSnapshot.size > 1) {
                     return res.status(401).json({ error: 'Multiple accounts found. Please specify Workplace.' });
                 }
             }
         } else {
-            business = await bizColl.findOne({ name: { $regex: new RegExp(`^${businessName}$`, 'i') } });
-
-            if (!business) {
+            const bizSnap = await db.collection('businesses').where('name', '==', businessName).get();
+            if (bizSnap.empty) {
                 return res.status(404).json({ error: 'Business not found' });
             }
+            business = bizSnap.docs[0].data();
 
-            user = await usersColl.findOne({
-                businessId: business.id,
-                name: { $regex: new RegExp(`^${username}$`, 'i') }
-            });
+            const userSnap = await db.collection('users')
+                .where('businessId', '==', business.id)
+                .where('name', '==', username)
+                .get();
+            
+            if (!userSnap.empty) user = userSnap.docs[0].data();
         }
 
-        if (!user) {
+        if (!user || user.password !== password) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        if (user.password !== password) {
-            return res.status(401).json({ error: 'Invalid credentials' });
-        }
-
-        // Fetch snapshot state for online mode
-        const syncColl = database.collection('sync_history');
-        const snapshot = await syncColl.findOne({ businessId: (user.role === 'SUPER_ADMIN') ? 'admin_node' : (business?.id || user.businessId) });
+        // Fetch snapshot state
+        const syncSnap = await db.collection('sync_history')
+            .where('businessId', '==', (user.role === 'SUPER_ADMIN') ? 'admin_node' : (business?.id || user.businessId))
+            .get();
+        
+        const snapshot = syncSnap.empty ? null : syncSnap.docs[0].data();
 
         const { password: _, ...userSafe } = user;
         res.status(200).json({ user: userSafe, business, state: snapshot || null });
     } catch (err) {
         console.error("Login Error:", err.message);
-        if (err.message === 'CONFIG_MISSING') return res.status(500).json({ error: "MONGODB_URI is not set in Vercel Environment Variables." });
-        if (err.message === 'IP_NOT_WHITELISTED') return res.status(403).json({ error: "Access Denied: Vercel IP not whitelisted in MongoDB Atlas." });
-        res.status(503).json({ error: `Database Connection Timeout: ${err.message}` });
+        res.status(503).json({ error: `Database Connection Error: ${err.message}` });
     }
 });
 
 router.post('/register', async (req, res) => {
     try {
-        const database = await connectToMongo();
-        if (!database) return res.status(503).json({ error: "Database offline" });
-
+        const db = getFirestore();
         const { businessName, ownerName, password, plan } = req.body;
 
         if (!businessName || !ownerName || !password) {
             return res.status(400).json({ error: "Missing required details" });
         }
 
-        const bizColl = database.collection('businesses');
-        const usersColl = database.collection('users');
-
-        const existing = await bizColl.findOne({ name: { $regex: new RegExp(`^${businessName.trim()}$`, 'i') } });
-        if (existing) {
+        const existingBiz = await db.collection('businesses').where('name', '==', businessName.trim()).get();
+        if (!existingBiz.empty) {
             return res.status(409).json({ error: "Business name already registered" });
         }
 
@@ -140,8 +134,8 @@ router.post('/register', async (req, res) => {
             password: password.trim()
         };
 
-        await bizColl.insertOne(newBusiness);
-        await usersColl.insertOne(newOwner);
+        await db.collection('businesses').add(newBusiness);
+        await db.collection('users').add(newOwner);
 
         const { password: _, ...userSafe } = newOwner;
         res.status(201).json({ user: userSafe, business: newBusiness });
@@ -151,59 +145,51 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Isolated business staff fetching
 router.get('/', async (req, res) => {
     const { businessId } = req.query;
     if (!businessId) return res.status(400).json({ error: "Missing businessId" });
-
-    const database = await connectToMongo();
-    if (!database) return res.status(503).json({ error: "Database offline" });
-
     try {
-        const users = await database.collection('users').find({ businessId }).toArray();
-        const safeUsers = users.map(u => {
-            const { password, ...safe } = u;
+        const db = getFirestore();
+        const snapshot = await db.collection('users').where('businessId', '==', businessId).get();
+        const users = snapshot.docs.map(doc => {
+            const { password, ...safe } = doc.data();
             return safe;
         });
-        res.json(safeUsers);
+        res.json(users);
     } catch (err) {
         res.status(500).json({ error: 'Fetch failed' });
     }
 });
 
 router.get('/admin/businesses', async (req, res) => {
-    const database = await connectToMongo();
-    if (!database) return res.status(503).json({ error: "Database offline" });
     try {
-        const biz = await database.collection('businesses').find().toArray();
-        res.json(biz);
+        const db = getFirestore();
+        const snapshot = await db.collection('businesses').get();
+        res.json(snapshot.docs.map(doc => doc.data()));
     } catch (err) {
         res.status(500).json({ error: 'Fetch failed' });
     }
 });
 
 router.get('/admin/users', async (req, res) => {
-    const database = await connectToMongo();
-    if (!database) return res.status(503).json({ error: "Database offline" });
     try {
-        const users = await database.collection('users').find().toArray();
-        const safeUsers = users.map(u => {
-            const { password, ...safe } = u;
+        const db = getFirestore();
+        const snapshot = await db.collection('users').get();
+        res.json(snapshot.docs.map(doc => {
+            const { password, ...safe } = doc.data();
             return safe;
-        });
-        res.json(safeUsers);
+        }));
     } catch (err) {
         res.status(500).json({ error: 'Fetch failed' });
     }
 });
 
 router.post('/admin/businesses', async (req, res) => {
-    const database = await connectToMongo();
-    if (!database) return res.status(503).json({ error: "Database offline" });
     try {
+        const db = getFirestore();
         const { business, owner } = req.body;
-        await database.collection('businesses').insertOne(business);
-        await database.collection('users').insertOne(owner);
+        await db.collection('businesses').add(business);
+        await db.collection('users').add(owner);
         res.status(201).json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Provisioning failed' });
@@ -213,11 +199,12 @@ router.post('/admin/businesses', async (req, res) => {
 router.put('/admin/businesses/:id', async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
-    const database = await connectToMongo();
-    if (!database) return res.status(503).json({ error: "Database offline" });
     try {
-        if (updateData._id) delete updateData._id;
-        await database.collection('businesses').updateOne({ id }, { $set: updateData });
+        const db = getFirestore();
+        const snapshot = await db.collection('businesses').where('id', '==', id).get();
+        if (snapshot.empty) return res.status(404).json({ error: "Not found" });
+        
+        await snapshot.docs[0].ref.update(updateData);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Update failed' });
@@ -226,12 +213,16 @@ router.put('/admin/businesses/:id', async (req, res) => {
 
 router.delete('/admin/businesses/:id', async (req, res) => {
     const { id } = req.params;
-    const database = await connectToMongo();
-    if (!database) return res.status(503).json({ error: "Database offline" });
     try {
-        await database.collection('businesses').deleteOne({ id });
-        // Optionally delete all users for this business too
-        await database.collection('users').deleteMany({ businessId: id });
+        const db = getFirestore();
+        const bizSnap = await db.collection('businesses').where('id', '==', id).get();
+        if (!bizSnap.empty) await bizSnap.docs[0].ref.delete();
+        
+        const userSnap = await db.collection('users').where('businessId', '==', id).get();
+        const batch = db.batch();
+        userSnap.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Delete failed' });
@@ -239,11 +230,9 @@ router.delete('/admin/businesses/:id', async (req, res) => {
 });
 
 router.post('/admin/users', async (req, res) => {
-    const database = await connectToMongo();
-    if (!database) return res.status(503).json({ error: "Database offline" });
     try {
-        const user = req.body;
-        await database.collection('users').insertOne(user);
+        const db = getFirestore();
+        await db.collection('users').add(req.body);
         res.status(201).json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'User creation failed' });
@@ -253,11 +242,11 @@ router.post('/admin/users', async (req, res) => {
 router.put('/admin/users/:id', async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
-    const database = await connectToMongo();
-    if (!database) return res.status(503).json({ error: "Database offline" });
     try {
-        if (updateData._id) delete updateData._id;
-        await database.collection('users').updateOne({ id }, { $set: updateData });
+        const db = getFirestore();
+        const snapshot = await db.collection('users').where('id', '==', id).get();
+        if (snapshot.empty) return res.status(404).json({ error: "Not found" });
+        await snapshot.docs[0].ref.update(updateData);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Update failed' });
@@ -266,10 +255,10 @@ router.put('/admin/users/:id', async (req, res) => {
 
 router.delete('/admin/users/:id', async (req, res) => {
     const { id } = req.params;
-    const database = await connectToMongo();
-    if (!database) return res.status(503).json({ error: "Database offline" });
     try {
-        await database.collection('users').deleteOne({ id });
+        const db = getFirestore();
+        const snapshot = await db.collection('users').where('id', '==', id).get();
+        if (!snapshot.empty) await snapshot.docs[0].ref.delete();
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Delete failed' });

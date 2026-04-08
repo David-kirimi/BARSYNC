@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { connectToMongo } from './db.js';
+import admin, { getFirestore } from './firebase.js';
 
 const router = Router();
 
@@ -8,9 +8,11 @@ router.get('/', async (req, res) => {
     if (!businessId) return res.status(400).json({ error: "Missing businessId" });
 
     try {
-        const database = await connectToMongo();
-        const syncColl = database.collection('sync_history');
-        const state = await syncColl.findOne({ businessId });
+        const db = getFirestore();
+        const syncSnap = await db.collection('sync_history').where('businessId', '==', businessId).get();
+        if (syncSnap.empty) return res.json([]);
+        
+        const state = syncSnap.docs[0].data();
         res.json(state?.sales || []);
     } catch (err) {
         console.error("Sales fetch Error:", err.message);
@@ -23,17 +25,21 @@ router.post('/', async (req, res) => {
     if (!businessId || !sale) return res.status(400).json({ error: "Missing data" });
 
     try {
-        const database = await connectToMongo();
-        const syncColl = database.collection('sync_history');
-        // Append sale to sales array
-        await syncColl.updateOne(
-            { businessId },
-            {
-                $push: { sales: sale },
-                $set: { lastSync: new Date() }
-            },
-            { upsert: true }
-        );
+        const db = getFirestore();
+        const syncSnap = await db.collection('sync_history').where('businessId', '==', businessId).get();
+        
+        if (syncSnap.empty) {
+            await db.collection('sync_history').add({
+                businessId,
+                sales: [sale],
+                lastSync: new Date().toISOString()
+            });
+        } else {
+            await syncSnap.docs[0].ref.update({
+                sales: admin.firestore.FieldValue.arrayUnion(sale),
+                lastSync: new Date().toISOString()
+            });
+        }
         res.json({ success: true });
     } catch (err) {
         console.error("Sales sync Error:", err.message);
@@ -46,13 +52,22 @@ router.post('/sync', async (req, res) => {
     if (!businessId || !sales) return res.status(400).json({ error: "Missing data" });
 
     try {
-        const database = await connectToMongo();
-        const syncColl = database.collection('sync_history');
-        await syncColl.updateOne(
-            { businessId },
-            { $set: { sales, lastSync: new Date() } },
-            { upsert: true }
-        );
+        const db = getFirestore();
+        const syncSnap = await db.collection('sync_history').where('businessId', '==', businessId).get();
+        
+        const updateData = {
+            sales,
+            lastSync: new Date().toISOString()
+        };
+
+        if (syncSnap.empty) {
+            await db.collection('sync_history').add({
+                businessId,
+                ...updateData
+            });
+        } else {
+            await syncSnap.docs[0].ref.update(updateData);
+        }
         res.json({ success: true });
     } catch (err) {
         console.error("Sales sync Error:", err.message);

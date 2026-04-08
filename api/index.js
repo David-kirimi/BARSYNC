@@ -7,7 +7,7 @@ dotenv.config();
 
 import express from 'express';
 import cors from 'cors';
-import { connectToMongo } from './lib/db.js';
+import { getFirestore } from './lib/firebase.js';
 import usersRouter, { seedDatabase } from './lib/users.js';
 import productsRouter from './lib/products.js';
 import salesRouter from './lib/sales.js';
@@ -95,17 +95,15 @@ app.get('/api/diag', (req, res) => {
 app.get('/health', async (req, res) => {
     try {
         const startTime = Date.now();
-        const db = await connectToMongo();
+        const db = getFirestore();
+        // Lightweight call to verify connection
+        await db.collection('system').limit(1).get();
         const duration = Date.now() - startTime;
         
         res.status(200).json({
             status: 'active',
-            database: 'connected',
+            database: 'firebase_connected',
             latency: `${duration}ms`,
-            uri_found: !!process.env.MONGODB_URI,
-            uri_masked: process.env.MONGODB_URI ? process.env.MONGODB_URI.replace(/(mongodb(?:\+srv)?:\/\/)([^:]+):([^@]+)(@.*)/, (match, p1, p2, p3, p4) => {
-                return `${p1}${p2[0]}***${p2.slice(-1)}:${p3[0]}***${p3.slice(-1)}${p4}`;
-            }) : 'NOT_FOUND',
             timestamp: new Date().toISOString()
         });
     } catch (err) {
@@ -113,10 +111,6 @@ app.get('/health', async (req, res) => {
         res.status(503).json({ 
             status: 'degraded', 
             database: 'disconnected',
-            uri_found: !!process.env.MONGODB_URI,
-            uri_masked: process.env.MONGODB_URI ? process.env.MONGODB_URI.replace(/(mongodb(?:\+srv)?:\/\/)([^:]+):([^@]+)(@.*)/, (match, p1, p2, p3, p4) => {
-                return `${p1}${p2[0]}***${p2.slice(-1)}:${p3[0]}***${p3.slice(-1)}${p4}`;
-            }) : 'NOT_FOUND',
             error: err.message,
             timestamp: new Date().toISOString()
         });
@@ -151,14 +145,12 @@ if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
 }
 
 // Ensure database connection is initialized for Vercel/Cloud Platforms
-connectToMongo()
-    .then(() => {
-        console.log("🌱 Syncing Database Snapshots...");
-        seedDatabase();
-    })
-    .catch((err) => {
-        console.error("❌ Database initialization error during startup:", err.message);
-        // Important: We don't crash the server here so it can still serve /health or static files
-    });
+try {
+    getFirestore(); // Will throw if not initialized
+    console.log("🌱 Syncing Database Snapshots...");
+    seedDatabase();
+} catch (err) {
+    console.error("❌ Database initialization error during startup:", err.message);
+}
 
 export default app;

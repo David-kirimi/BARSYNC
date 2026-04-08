@@ -102,6 +102,8 @@ app.get('/health', async (req, res) => {
             status: 'active',
             database: 'connected',
             latency: `${duration}ms`,
+            uri_found: !!process.env.MONGODB_URI,
+            uri_masked: process.env.MONGODB_URI ? process.env.MONGODB_URI.replace(/\/\/(.*):(.*)@/, "//****:****@") : 'NOT_FOUND',
             timestamp: new Date().toISOString()
         });
     } catch (err) {
@@ -109,6 +111,8 @@ app.get('/health', async (req, res) => {
         res.status(503).json({ 
             status: 'degraded', 
             database: 'disconnected',
+            uri_found: !!process.env.MONGODB_URI,
+            uri_masked: process.env.MONGODB_URI ? process.env.MONGODB_URI.replace(/\/\/(.*):(.*)@/, "//****:****@") : 'NOT_FOUND',
             error: err.message,
             timestamp: new Date().toISOString()
         });

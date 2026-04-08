@@ -44,9 +44,9 @@ const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ businesses, onAdd, 
 
   const totalRevenue = sales.reduce((sum, s) => sum + s.totalAmount, 0);
 
-  const filteredBusinesses = businesses.filter(b => (b.subscriptionStatus !== 'Pending Approval') && (b.name.toLowerCase().includes(search.toLowerCase()) || b.ownerName.toLowerCase().includes(search.toLowerCase())));
+  const filteredBusinesses = businesses.filter(b => (b.subscriptionStatus !== 'Pending Approval') && ((b.name || '').toLowerCase().includes(search.toLowerCase()) || (b.ownerName || '').toLowerCase().includes(search.toLowerCase())));
   const pendingBusinesses = businesses.filter(b => b.subscriptionStatus === 'Pending Approval');
-  const filteredUsers = allUsers.filter(u => u.name.toLowerCase().includes(search.toLowerCase()) || u.role.toLowerCase().includes(search.toLowerCase()));
+  const filteredUsers = allUsers.filter(u => (u.name || '').toLowerCase().includes(search.toLowerCase()) || (u.role || '').toLowerCase().includes(search.toLowerCase()));
 
   const handleAddPartner = () => {
     if (!newBiz.name || !newBiz.ownerName || !initialOwner.password) {

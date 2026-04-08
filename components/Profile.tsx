@@ -2,6 +2,8 @@
 import React, { useState, useRef } from 'react';
 import { User, Role } from '../types';
 
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://barsync-backend.onrender.com';
+
 interface ProfileProps {
   user: User;
   onUpdate: (updatedUser: User) => Promise<void>;
@@ -24,9 +26,12 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate, business, onUpdateBus
   });
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
   const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const restoreFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'avatar' | 'logo') => {
     const file = e.target.files?.[0];
@@ -78,6 +83,73 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate, business, onUpdateBus
       setMessage({ text: 'Sync failed. Please check connection.', type: 'error' });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleBackup = async () => {
+    setIsBackingUp(true);
+    setMessage(null);
+    try {
+      const res = await fetch(`${BASE_URL}/api/backup/${business.id}`);
+      if (!res.ok) throw new Error('Backup request failed');
+      const data = await res.json();
+      
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `barsync_backup_${business.id}_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      setMessage({ text: 'Backup downloaded successfully!', type: 'success' });
+    } catch (err) {
+      console.error(err);
+      setMessage({ text: 'Failed to download backup.', type: 'error' });
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
+  const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!confirm("WARNING: This will overwrite your current business data with the uploaded file. Proceed?")) {
+        if (restoreFileInputRef.current) restoreFileInputRef.current.value = '';
+        return;
+    }
+
+    setIsRestoring(true);
+    setMessage(null);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+            const backupData = JSON.parse(event.target?.result as string);
+            
+            const res = await fetch(`${BASE_URL}/api/backup/restore/${business.id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data: backupData })
+            });
+
+            if (!res.ok) throw new Error('Restore failed');
+            setMessage({ text: 'Data restored successfully! Please refresh the page.', type: 'success' });
+        } catch (err) {
+            console.error(err);
+            setMessage({ text: 'Failed to parse JSON or restore data.', type: 'error' });
+        } finally {
+            setIsRestoring(false);
+        }
+      };
+      reader.readAsText(file);
+    } catch (err) {
+      console.error(err);
+      setMessage({ text: 'Failed to read file.', type: 'error' });
+      setIsRestoring(false);
     }
   };
 
@@ -211,6 +283,49 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate, business, onUpdateBus
                       Warning: Keeping this ON may invoke the mobile keyboard unintentionally on some Android devices. 
                       Turn OFF if you only use manual touch selection.
                     </p>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {(user.role === Role.OWNER || user.role === Role.ADMIN) && (
+              <section className="space-y-6 pt-6">
+                <h3 className="text-xs font-black text-rose-600 uppercase tracking-[0.2em] border-b border-rose-50 pb-4">Data Backup & Recovery</h3>
+                <div className="bg-slate-50 rounded-3xl p-6 border border-slate-100 flex flex-col md:flex-row gap-6">
+                  <div className="flex-1">
+                    <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight">Export Data Snapshot</h4>
+                    <p className="text-[10px] text-slate-500 font-medium mt-2 leading-relaxed">
+                      Download a complete, timestamped JSON backup of all your establishment data, including sales, inventory, tabs, shifts, and staff logs. Keep this file safe.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleBackup}
+                      disabled={isBackingUp}
+                      className="mt-4 px-6 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center gap-3 disabled:opacity-50"
+                    >
+                      {isBackingUp ? <i className="fa-solid fa-spinner animate-spin"></i> : <i className="fa-solid fa-download"></i>}
+                      {isBackingUp ? 'Exporting...' : 'Download Snapshot'}
+                    </button>
+                    <p className="text-[9px] font-bold text-emerald-600 mt-3 flex items-center gap-2"><i className="fa-solid fa-cloud-check"></i> Free Local Backup available</p>
+                  </div>
+                  
+                  <div className="w-px bg-slate-200 hidden md:block"></div>
+
+                  <div className="flex-1">
+                    <h4 className="text-sm font-black text-rose-800 uppercase tracking-tight">Restore Data</h4>
+                    <p className="text-[10px] text-rose-700/80 font-medium mt-2 leading-relaxed">
+                      Upload a previously downloaded <span className="font-bold text-rose-900">.json backup file</span> to restore your data. <br/> <strong className="text-rose-900 uppercase text-[9px]">Warning: This overwrites current data.</strong>
+                    </p>
+                    <input type="file" accept=".json" className="hidden" ref={restoreFileInputRef} onChange={handleRestore} />
+                    <button
+                      type="button"
+                      onClick={() => restoreFileInputRef.current?.click()}
+                      disabled={isRestoring}
+                      className="mt-4 px-6 py-3 bg-white border-2 border-rose-200 text-rose-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 hover:border-rose-300 transition-all flex items-center gap-3 disabled:opacity-50"
+                    >
+                      {isRestoring ? <i className="fa-solid fa-spinner animate-spin"></i> : <i className="fa-solid fa-upload"></i>}
+                      {isRestoring ? 'Restoring Data...' : 'Restore JSON Backup'}
+                    </button>
                   </div>
                 </div>
               </section>

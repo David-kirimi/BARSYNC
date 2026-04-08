@@ -16,11 +16,10 @@ router.get('/', async (req, res) => {
             query = query.where('status', '==', status);
         }
         
-        // Note: Firestore requires a composite index for where() and orderBy() on different fields.
-        // For now, if we encounter index errors, we might need to sort in memory or create the index.
-        const snapshot = await query.orderBy('startTime', 'desc').get();
+        const snapshot = await query.get();
         
         const shifts = snapshot.docs.map(doc => doc.data());
+        shifts.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
         res.json(shifts);
     } catch (err) {
         console.error("Shifts Fetch Error:", err.message);

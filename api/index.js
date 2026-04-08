@@ -14,6 +14,7 @@ import salesRouter from './lib/sales.js';
 import auditLogsRouter from './lib/auditLogs.js';
 import tabsRouter from './lib/tabs.js';
 import shiftsRouter from './lib/shifts.js';
+import backupRouter from './lib/backup.js';
 
 dotenv.config();
 
@@ -63,6 +64,7 @@ app.use('/api/sales', salesRouter);
 app.use('/api/auditLogs', auditLogsRouter);
 app.use('/api/tabs', tabsRouter);
 app.use('/api/shifts', shiftsRouter);
+app.use('/api/backup', backupRouter);
 
 // Duplicate mounts for robustness
 app.use('/auth', usersRouter);
@@ -72,6 +74,7 @@ app.use('/sales', salesRouter);
 app.use('/auditLogs', auditLogsRouter);
 app.use('/tabs', tabsRouter);
 app.use('/shifts', shiftsRouter);
+app.use('/backup', backupRouter);
 
 // Test Routes
 app.get('/api/test', (req, res) => res.json({ message: 'API /api/test is reachable' }));

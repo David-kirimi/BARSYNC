@@ -94,6 +94,7 @@ const POS: React.FC<POSProps> = ({
   const [showReceipt, setShowReceipt] = useState(false);
   const [custPhone, setCustPhone] = useState('');
   const [mobileCartExpanded, setMobileCartExpanded] = useState(false);
+  const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const [barcodeInput, setBarcodeInput] = useState('');
   const barcodeRef = React.useRef<HTMLInputElement>(null);
   
@@ -703,108 +704,124 @@ const POS: React.FC<POSProps> = ({
           </AnimatePresence>
         </div>
 
-        <div className="p-6 lg:p-10 bg-slate-950 text-white rounded-t-[2rem] lg:rounded-[3.5rem] space-y-4 lg:space-y-8 shrink-0">
-          <div className="space-y-2">
-            <div className="relative">
-              <i className="fa-brands fa-whatsapp absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500"></i>
-              <input
-                type="text"
-                placeholder="Customer Phone (for WhatsApp)"
-                className="w-full pl-10 pr-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-sm focus:outline-none focus:border-emerald-500 transition-all"
-                value={custPhone}
-                onChange={e => setCustPhone(e.target.value)}
-              />
+        <div className="p-6 lg:p-8 bg-slate-950 text-white rounded-t-[2rem] lg:rounded-[3rem] shrink-0 transition-all duration-300">
+          <div 
+            className="flex justify-between items-center cursor-pointer mb-2" 
+            onClick={() => setShowPaymentOptions(!showPaymentOptions)}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Total</span>
+              <i className={`fa-solid fa-chevron-${showPaymentOptions ? 'down' : 'up'} text-slate-500 text-[10px]`}></i>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-400 font-bold text-xs uppercase tracking-widest">Total Pay</span>
-              <span className="text-2xl lg:text-4xl font-black tracking-tighter">Ksh {cartTotal.toLocaleString()}</span>
-            </div>
+            <span className="text-2xl lg:text-4xl font-black tracking-tighter">Ksh {cartTotal.toLocaleString()}</span>
           </div>
-            {userRole === Role.WAITER ? (
-              <div className="col-span-3 space-y-4">
-                <button 
-                  onClick={() => cart.forEach(i => removeFromCart(i.id))}
-                  className="w-full py-3 bg-white/10 text-white border border-white/20 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-white/20 transition-all active:scale-95 flex items-center justify-center gap-2"
-                >
-                  <i className="fa-solid fa-rotate-right"></i> New Order
-                </button>
+
+          <AnimatePresence>
+            {showPaymentOptions && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="space-y-3 lg:space-y-4 pt-4 border-t border-slate-800 overflow-hidden"
+              >
                 <div className="relative">
-                  <i className="fa-solid fa-chair absolute left-4 top-1/2 -translate-y-1/2 text-orange-400"></i>
+                  <i className="fa-brands fa-whatsapp absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500"></i>
                   <input
                     type="text"
-                    placeholder="TABLE # / CUSTOMER NAME"
-                    className="w-full pl-10 pr-4 py-4 bg-slate-900 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-orange-500 transition-all text-white placeholder:text-slate-600"
-                    value={custPhone} // Reusing custPhone state for Table/Name as requested
+                    placeholder="Customer Phone (for WhatsApp)"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-sm focus:outline-none focus:border-emerald-500 transition-all"
+                    value={custPhone}
                     onChange={e => setCustPhone(e.target.value)}
                   />
                 </div>
-                <button 
-                  disabled={cart.length === 0} 
-                  onClick={() => handleCheckout('Pending')} 
-                  className="w-full py-5 bg-orange-600 text-white rounded-[2rem] font-black text-[16px] uppercase tracking-[0.2em] border border-orange-500 hover:bg-orange-500 shadow-2xl shadow-orange-900/40 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 animate-pulse"
-                >
-                  Send to Counter <i className="fa-solid fa-paper-plane"></i>
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-3 w-full">
-                <button 
-                  disabled={cart.length === 0} 
-                  onClick={() => handleCheckout('Cash')} 
-                  className="py-5 bg-slate-800 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest border border-slate-700 hover:bg-slate-700 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
-                >
-                  <i className="fa-solid fa-money-bills"></i> Cash
-                </button>
-                <button 
-                  disabled={cart.length === 0} 
-                  onClick={() => handleCheckout('Mpesa')} 
-                  className="py-5 bg-emerald-600 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-emerald-500 shadow-xl shadow-emerald-900/40 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  <i className="fa-solid fa-mobile-screen"></i> M-Pesa
-                </button>
-                <button 
-                  disabled={cart.length === 0} 
-                  onClick={() => handleCheckout('Card')} 
-                  className="col-span-2 py-5 bg-indigo-600 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-900/40 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  <i className="fa-solid fa-credit-card"></i> Card
-                </button>
-              </div>
-            )}
+                  {userRole === Role.WAITER ? (
+                    <div className="col-span-3 space-y-4">
+                      <button 
+                        onClick={() => cart.forEach(i => removeFromCart(i.id))}
+                        className="w-full py-3 bg-white/10 text-white border border-white/20 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-white/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+                      >
+                        <i className="fa-solid fa-rotate-right"></i> New Order
+                      </button>
+                      <div className="relative">
+                        <i className="fa-solid fa-chair absolute left-4 top-1/2 -translate-y-1/2 text-orange-400"></i>
+                        <input
+                          type="text"
+                          placeholder="TABLE # / CUSTOMER NAME"
+                          className="w-full pl-10 pr-4 py-4 bg-slate-900 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-orange-500 transition-all text-white placeholder:text-slate-600"
+                          value={custPhone} // Reusing custPhone state for Table/Name as requested
+                          onChange={e => setCustPhone(e.target.value)}
+                        />
+                      </div>
+                      <button 
+                        disabled={cart.length === 0} 
+                        onClick={() => handleCheckout('Pending')} 
+                        className="w-full py-5 bg-orange-600 text-white rounded-[2rem] font-black text-[16px] uppercase tracking-[0.2em] border border-orange-500 hover:bg-orange-500 shadow-2xl shadow-orange-900/40 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 animate-pulse"
+                      >
+                        Send to Counter <i className="fa-solid fa-paper-plane"></i>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3 w-full">
+                      <button 
+                        disabled={cart.length === 0} 
+                        onClick={() => handleCheckout('Cash')} 
+                        className="py-5 bg-slate-800 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest border border-slate-700 hover:bg-slate-700 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
+                      >
+                        <i className="fa-solid fa-money-bills"></i> Cash
+                      </button>
+                      <button 
+                        disabled={cart.length === 0} 
+                        onClick={() => handleCheckout('Mpesa')} 
+                        className="py-5 bg-emerald-600 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-emerald-500 shadow-xl shadow-emerald-900/40 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        <i className="fa-solid fa-mobile-screen"></i> M-Pesa
+                      </button>
+                      <button 
+                        disabled={cart.length === 0} 
+                        onClick={() => handleCheckout('Card')} 
+                        className="col-span-2 py-5 bg-indigo-600 text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-900/40 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        <i className="fa-solid fa-credit-card"></i> Card
+                      </button>
+                    </div>
+                  )}
 
-            {/* Add to Tab Mechanism */}
-            <div className="relative group">
-              <button
-                disabled={cart.length === 0}
-                className="w-full h-full py-4 bg-orange-600 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-orange-500 shadow-xl shadow-orange-900/40 transition-all active:scale-95 disabled:opacity-50"
-              >
-                To Tab <i className="fa-solid fa-chevron-up ml-1 text-[8px]"></i>
-              </button>
-
-              {/* Dropdown for active tabs */}
-              <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden hidden group-hover:block z-50">
-                <div className="max-h-48 overflow-y-auto no-scrollbar">
-                  {tabs.map(tab => (
+                  {/* Add to Tab Mechanism */}
+                  <div className="relative group mt-2">
                     <button
-                      key={tab.id}
-                      onClick={() => handleAddToTab(tab.id)}
-                      className="w-full px-4 py-3 text-left hover:bg-orange-50 flex items-center justify-between border-b border-slate-50 last:border-0"
+                      disabled={cart.length === 0}
+                      className="w-full h-full py-4 bg-orange-600 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-orange-500 shadow-xl shadow-orange-900/40 transition-all active:scale-95 disabled:opacity-50"
                     >
-                      <span className="text-[10px] font-bold text-slate-700 uppercase truncate">{tab.customerName}</span>
-                      <i className="fa-solid fa-plus text-orange-500 text-[10px]"></i>
+                      To Tab <i className="fa-solid fa-chevron-up ml-1 text-[8px]"></i>
                     </button>
-                  ))}
-                  {tabs.length === 0 && <p className="p-3 text-[9px] text-slate-400 font-bold italic text-center">No active tabs</p>}
-                </div>
-                <button
-                  onClick={() => setShowOpenTabModal(true)}
-                  className="w-full p-3 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all"
-                >
-                  New Tab
-                </button>
-              </div>
-            </div>
-          </div>
+
+                    {/* Dropdown for active tabs */}
+                    <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden hidden group-hover:block z-50">
+                      <div className="max-h-48 overflow-y-auto no-scrollbar">
+                        {tabs.map(tab => (
+                          <button
+                            key={tab.id}
+                            onClick={() => handleAddToTab(tab.id)}
+                            className="w-full px-4 py-3 text-left hover:bg-orange-50 flex items-center justify-between border-b border-slate-50 last:border-0"
+                          >
+                            <span className="text-[10px] font-bold text-slate-700 uppercase truncate text-black">{tab.customerName}</span>
+                            <i className="fa-solid fa-plus text-orange-500 text-[10px]"></i>
+                          </button>
+                        ))}
+                        {tabs.length === 0 && <p className="p-3 text-[9px] text-slate-400 font-bold italic text-center">No active tabs</p>}
+                      </div>
+                      <button
+                        onClick={() => setShowOpenTabModal(true)}
+                        className="w-full p-3 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all"
+                      >
+                        New Tab
+                      </button>
+                    </div>
+                  </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
         </div>
       
       {/* Mobile Floating Cart - Only visible on mobile */}
